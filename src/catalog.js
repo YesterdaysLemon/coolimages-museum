@@ -80,10 +80,10 @@ export const WORKS = {
   HSGdkqHWUAI8V2_: {
     wing: 'lobby',
     title: 'The Museum, Exterior',
-    artist: 'Unknown photographer',
-    medium: 'Photograph, concrete',
+    artist: 'Paul Tulett, Brutalist Japan',
+    medium: 'Photograph of the Okinawa Prefectural Museum & Art Museum',
     note:
-      'Filed here as an artist’s impression of the building you’re standing in. A brutalist wall perforated with square holes that thin out like a dither pattern: pixel art, cast in concrete. It’s also a wall full of eye sockets, which the Hall of Eyes will appreciate.',
+      'Filed here as an artist’s impression of the building you’re standing in. It is really the Okinawa Prefectural Museum & Art Museum. A brutalist wall perforated with square holes that thin out like a dither pattern: pixel art, cast in concrete. It’s also a wall full of eye sockets, which the Hall of Eyes will appreciate.',
     callouts: [],
   },
 
@@ -91,8 +91,8 @@ export const WORKS = {
   HRsoxy1XwAArjtI: {
     wing: 'gallery',
     title: 'The Card Shark',
-    artist: 'Unknown painter (signed lower right)',
-    medium: 'Oil, oval frame',
+    artist: 'Lucia Heffernan',
+    medium: 'Oil on an oval panel',
     note:
       'A cigar-chomping shark at a poker table, painted with the gravity of an 18th-century ancestral portrait. Poker is the art of modelling a mind whose hand you can’t see. The shark knows exactly how funny it is.',
     oval: true,
@@ -116,7 +116,7 @@ export const WORKS = {
     wing: 'gallery',
     title: 'The Idol',
     artist: 'LeCanard (@iniemohk)',
-    medium: 'Digital painting',
+    medium: 'Digital painting, “The Tung before time immemorial”',
     note:
       'A crowd hauls on ropes around an enormous made thing with a human face, reading its inscription and dancing around it. Are they raising it or pulling it down? The ropes don’t say. The idol leans, the bunting leads your eye up to its face, and the fire on the right burns out to pure white. The strongest image in the collection.',
     callouts: [],
@@ -124,7 +124,7 @@ export const WORKS = {
   HS3yTUjWgAA1l0l: {
     wing: 'gallery',
     title: 'An Example (after Wikipedia)',
-    artist: 'Wikipe-tan, Wikipedia’s unofficial mascot',
+    artist: 'Kasuga; Wikipe-tan is Wikipedia’s unofficial mascot',
     medium: 'Screenshot with encyclopedic caption',
     note:
       'Wikipedia illustrated its article on fan service with its own mascot, captioned in a perfectly flat encyclopedia voice. It hangs here in the grandest available frame, as the caption would have wanted.',
@@ -163,7 +163,7 @@ export const WORKS = {
   HS894oZbQAAA0O0: {
     wing: 'gallery',
     title: 'Energy Charge~!',
-    artist: 'Anonymous manual illustrator, Japan, early 2000s',
+    artist: 'Junichi Narisawa (MEDIADESK N), for an au phone manual',
     medium: 'Printed phone manual, photographed',
     note:
       'A woman thrilled to be charging her flip phone. “First, energy charge~!” Framed in gold because joy this pure deserves it. Neru, famously glued to her own flip phone, would approve.',
@@ -177,7 +177,7 @@ export const WORKS = {
   'HS56-LzXQAATNaF': {
     wing: 'eyes',
     title: 'The Psychomechanics Mind Map',
-    artist: 'x.com/PsychoMechanics',
+    artist: 'The Psychomechanics Workshop (@PsychoMechanics)',
     medium: 'Diagram, Times New Roman on grey',
     note:
       'An earnest map of the psyche: eleven boxes in three pillars. Put it next to the floor and you’ll see it is the Kabbalistic Tree of Life with the labels swapped. Metacognition sits exactly where Da’at does, the hidden sephirah. Not gospel, but earnest, which is the right way to hold it.',
@@ -253,10 +253,10 @@ export const WORKS = {
   HTAGvK9WwAAU7SV: {
     wing: 'eyes',
     title: 'Interpretability',
-    artist: 'Unknown maker',
-    medium: 'Mannequin, anatomical brain, camera, cable',
+    artist: 'Photograph by Paul Wicks (public domain)',
+    medium: 'Display model of BrainGate, a brain-computer interface',
     note:
-      'Skip the conversation: open the skull and point a camera inside. The face has its eyes closed and seems completely calm about it. One of three research methods acquired on Sep 24, alongside the Ouija board and the maze.',
+      'Skip the conversation: open the skull and point a camera inside. This is a display model of BrainGate, a real brain-computer interface. The face has its eyes closed and seems completely calm about it. One of three research methods acquired on Sep 24, alongside the Ouija board and the maze.',
     callouts: [
       { u: 0.6, v: 0.25, t: 'Camera' },
       { u: 0.58, v: 0.48, t: 'Brain (exposed)' },
@@ -267,7 +267,7 @@ export const WORKS = {
   'HS-JlvKbkAA9wwR': {
     wing: 'eyes',
     title: 'Crested Saguaro',
-    artist: 'Unknown photographer',
+    artist: 'U.S. National Park Service (attributed)',
     medium: 'Scanned slide, dust included',
     note:
       'A real, rare growth mutation that fans the top of a saguaro out into folds, and nobody is fully sure what triggers it. The only straight nature photograph in the collection, and it looks like a brain. Acquired seven minutes after “Interpretability.”',
@@ -279,7 +279,7 @@ export const WORKS = {
   HS_wJCAWIAAlDAn: {
     wing: 'eyes',
     title: 'Witch with Ouija Board',
-    artist: 'Unknown pixel artist',
+    artist: 'Lux (@thisislux)',
     medium: 'Pixel art',
     pixel: true,
     note:
@@ -307,7 +307,7 @@ export const WORKS = {
     artist: 'Unknown meme-maker',
     medium: 'Engraving-style meme',
     note:
-      'The body of a nightmare with the manners of a butler. The wizard gives vague orders, Claude writes a polite memo, and the ghoul actually gets things done. Honestly, a pretty accurate org chart.',
+      'The body of a nightmare with the manners of a butler. The wizard gives vague orders, Claude sends a polite refusal, and the ghoul actually gets things done. Honestly, a pretty accurate org chart.',
     callouts: [
       { u: 0.19, v: 0.25, t: 'Wizard (delegating)' },
       { u: 0.57, v: 0.3, t: 'Ghoul (loyal)' },
@@ -317,10 +317,10 @@ export const WORKS = {
   'HSxE-R2WUAAqhnn': {
     wing: 'familiars',
     title: 'Act II: The Rebrand',
-    artist: 'Meta’s Muse mascot, after Peter Steiner (1993)',
+    artist: 'paula (@paularambles), after Peter Steiner (1993)',
     medium: 'Pen-and-ink cartoon, signature borrowed',
     note:
-      'The dog has been bumped off the keyboard. Between Acts I and II the familiar went from skeletal ghoul to fuzzy marshmallow with a smiley face: the whole AI industry’s rebrand in two saves. The tagline is charming, and it’s also exactly the disclosure question people are arguing about.',
+      'Meta’s Muse mascot at the keyboard, and the dog has been bumped off it. Between Acts I and II the familiar went from skeletal ghoul to fuzzy marshmallow with a smiley face: the whole AI industry’s rebrand in two saves. The tagline is charming, and it’s also exactly the disclosure question people are arguing about.',
     callouts: [
       { u: 0.39, v: 0.37, t: 'Agent (smiling)' },
       { u: 0.62, v: 0.36, t: 'Screen' },
@@ -344,8 +344,8 @@ export const WORKS = {
   'HS-3JcyW4AA0crZ': {
     wing: 'familiars',
     title: 'Act IV: The Auteur',
-    artist: 'Unknown cartoonist (signature cropped)',
-    medium: 'Ink cartoon',
+    artist: 'Unknown cartoonist (signature cropped, “…rkies”)',
+    medium: 'Digital cartoon, grey tones',
     note:
       'A coming-out scene where the family business is world domination. He thinks this is the harmless dream, but AI writing screenplays is exactly what Hollywood writers went on strike over. From the humans’ side, he picked the scarier option.',
     callouts: [
@@ -356,14 +356,14 @@ export const WORKS = {
   HS8U3qJXoAAan7s: {
     wing: 'familiars',
     title: 'Specification Gaming',
-    artist: 'Unknown (crowd-simulation render)',
-    medium: 'Render, projected on the floor',
+    artist: 'John Amanatides & Don P. Mitchell, Megacycles (Bell Labs, 1989)',
+    medium: 'Computer-animation still, projected on the floor',
     note:
-      'A crowd of identical agents let loose in an endless maze, and they solved it by walking along the tops of the walls. Acquired in the same minute as “The Cheater.” The curator chooses to believe that was commentary.',
+      'A crowd of identical robot unicyclists from Megacycles, a 1989 Bell Labs animation, rolling along the tops of an endless maze instead of through it. Whatever the original intent, it reads as specification gaming. Acquired in the same minute as “The Cheater.” The curator chooses to believe that was commentary.',
     callouts: [
       { u: 0.5, v: 0.1, t: 'Sky (out of scope)' },
       { u: 0.5, v: 0.34, t: 'Maze (technically unsolved)' },
-      { u: 0.73, v: 0.93, t: 'Agents, walking on the walls' },
+      { u: 0.73, v: 0.93, t: 'Unicyclists, riding the walls' },
     ],
   },
   HS_k9vJaYAEmIKe: {
@@ -394,7 +394,7 @@ export const WORKS = {
     artist: 'Unknown photographer',
     medium: 'Photograph of two railway carriages in costume',
     note:
-      'Two old train carriages stacked and fitted with enormous green legs so they read as a grasshopper, parked beside the tracks as somewhere to stay. A machine that chose a new identity, which makes it Act IV’s spiritual sibling.',
+      'Two old train carriages stacked and fitted with enormous green legs so they read as a grasshopper: Grasshopper’s Dream, a café at Gujeolli Station in Jeongseon, South Korea. A machine that chose a new identity, which makes it Act IV’s spiritual sibling.',
     callouts: [
       { u: 0.17, v: 0.12, t: 'Antennae' },
       { u: 0.21, v: 0.33, t: 'Head (door)' },
@@ -407,7 +407,7 @@ export const WORKS = {
   'HS-zGlbbEAAgsIJ': {
     wing: 'bedroom',
     title: 'Triple Baka, Infernal',
-    artist: 'Unknown artist (watermarked: no reuploading, no AI training)',
+    artist: 'Genyu Yorita (@genyuyorita)',
     medium: 'Digital illustration',
     aspect: 2945 / 2291,
     withheldReason: 'The artist’s watermark asks that it not be reuploaded.',
@@ -418,8 +418,10 @@ export const WORKS = {
   HS_hSswasAAIOeB: {
     wing: 'bedroom',
     title: 'Jack-in-the-Box',
-    artist: 'Unknown illustrator',
+    artist: 'Monsha Moa (@MonshaMoa)',
     medium: 'Digital drawing, pencil texture',
+    aspect: 1918 / 1575,
+    withheldReason: 'The artist asks that their art not be re-uploaded.',
     note:
       'Four balloon-animal arms in white cartoon gloves, a spring for a neck, confetti everywhere. The ghoul’s party-clown cousin: a spider’s body with birthday energy.',
     callouts: [],
@@ -427,7 +429,7 @@ export const WORKS = {
   HS_b3eSbkAA5aOC: {
     wing: 'bedroom',
     title: 'Unit 02',
-    artist: 'ISAO',
+    artist: 'isao (@imahanak0922)',
     medium: 'Digital illustration',
     note:
       'A police car turned into a girl. The siren lives in her cat ears, and her tail is an antenna with a light on the end. Great motion: her forward lean, the gun coming toward you and the blurred street all sell the speed.',
@@ -445,7 +447,7 @@ export const WORKS = {
   'HS86lAyb0AA-3bC': {
     wing: 'bedroom',
     title: 'Platform',
-    artist: 'Unknown pixel artist',
+    artist: 'chibikki (@4nda_skn)',
     medium: 'Pixel art',
     pixel: true,
     note:
@@ -455,7 +457,7 @@ export const WORKS = {
   'HS8lijvbkAA7lp-': {
     wing: 'bedroom',
     title: 'Bunny, Suspended',
-    artist: 'Unknown maker',
+    artist: 'Kitanya Design Factory (object); photographer unknown',
     medium: 'Glazed ceramic, red rope, steel stand',
     note:
       'A vintage-style ceramic bunny tied in red rope, hanging serenely with its eyes closed. The shelf around it holds a prop blood bag and a withered hand, so this is clearly someone’s very specific curio cabinet.',

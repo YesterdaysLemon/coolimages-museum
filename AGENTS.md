@@ -40,9 +40,16 @@ enters Git or the Docker image.
 - Optional generated data sits beside the images: `content/catalog.json` (pipeline-written works, merged under the hand-written `WORKS`), `content/layout.json` and `content/credits.json`.
 - Push to `main` runs `.github/workflows/deploy.yml`: syntax checks, a server smoke test, then the signed Deploy Manager webhook (app id `coolimages`, ports 3280/3281, `/opt/coolimages/app`).
 
+### Growth pipeline
+- `python tools/pipeline.py` runs build, then curation (`tools/curate.py`), then publishing. Curation failures are logged and publishing still runs. A lock file prevents overlapping runs.
+- `tools/curate.py` sends only uncovered images (not hand-written, not generated, not excluded; held works are reconsidered) to `claude-opus-5`. It uses structured JSON output, `effort: high`, and server-side refusal fallbacks (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`). It writes `content/catalog.json` (plaques and callouts) and `content/layout.json` (generated wings: 3 to 7 works, templates `salon`/`white`/`night`/`pastel`). Works that don't fit are held on the Rotunda easels. `--dry-run` lists the queue without an API call.
+- Generated wings hang off **The Annex**, a corridor reached through a portal on the Rotunda's welcome slab. It appears once any generated wing exists and grows by one portal per wing. Rooms are built by `buildGeneratedWing` in `src/world.js`.
+- Schedule: `tools/install_schedule.ps1` registers the "Coolimages Museum Pipeline" task, every 2 days at 11:00 and only while the user is signed in. It runs `tools/run_pipeline.ps1`, which injects `ANTHROPIC_API_KEY` from the Proton Pass gateway using references in `tools/pipeline.env` (gitignored; see `tools/pipeline.env.example`) and logs to `logs/pipeline.log`. Without the env file the run skips curation.
+- Python deps: `pip install -r tools/requirements.txt`.
+
 ### Layout
 - `src/catalog.js` holds the hand-written curatorial data: wings, titles, notes and callouts (`{u, v, t}` in image space), keyed by filename stem.
-- `src/credits.js` holds verified attributions (`creator`, `handle`, `profileUrl`, `sourceUrl`, `license`) plus the removal-request URL. Research notes are in `research/attributions.json`.
+- `src/credits.js` holds verified attributions (`creator`, `handle`, `profileUrl`, `sourceUrl`, `license`, `confidence`) plus the removal-request URL. Research with evidence is in `research/attributions.json`: high and medium confidence are credited, low is not. Key claims were re-checked against the creators' own posts.
 - `src/world.js` builds the rooms. Rooms sit ~200 m apart in one scene; only the current room is visible, and every room has exactly 1 hemisphere light + 2 point lights so shader programs are shared. Collision uses each room's walkable bounds minus its obstacles (`circle`/`rect`/`sector`).
 - `src/textures.js` holds the procedural canvas textures, plaques, wall text, notices and callout decals.
 - `src/audio.js` is the generative Web Audio score (a mood per wing), footsteps and the portal whoosh.
@@ -50,7 +57,7 @@ enters Git or the Docker image.
 - `server.mjs` is the static server: `/healthz`, a strict CSP (the inline import map is allowed by hash, computed at startup after CRLF normalization), `X-Robots-Tag: noindex`, and an allowlist of served paths.
 
 ### Decisions
-- The public site stays public but unindexed. Every work carries credit where traced plus a removal-request link (GitHub issues). Works in `content-policy.json` are never uploaded; a "Not shown online" card takes their place. `HS-zGlbbEAAgsIJ` is excluded because its watermark forbids reuploading and AI training.
+- The public site stays public but unindexed. Every work carries credit where traced plus a removal-request link (GitHub issues). Works in `content-policy.json` are never uploaded; a "Not shown online" card takes their place. `HS-zGlbbEAAgsIJ` is excluded because its watermark forbids reuploading and AI training. `HS_hSswasAAIOeB` is excluded because its artist's profile says "DON'T re-upload my art". Apply the same rule to any new work whose creator forbids reposting.
 - Deploy Manager's `docker run` has no volume mounts, so content is served by Caddy from the host rather than from the container.
 - Images in the folder that aren't in `WORKS` or the generated catalog appear on the Rotunda's "New acquisitions" easels (up to 4, newest first).
 - Portal paintings show render-to-texture previews made once at load; `renderer.compile` then warms every room.

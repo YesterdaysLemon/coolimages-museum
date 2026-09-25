@@ -73,6 +73,12 @@ def main():
 
     manifest = {"built": datetime.now().isoformat(timespec="seconds"), "count": len(items), "items": items}
     (ROOT / "content" / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    # Curatorial data files are owned by tools/curate.py; seed empty ones so the
+    # site never requests a missing file.
+    for name, empty in (("catalog.json", {}), ("credits.json", {}), ("layout.json", {"version": 1, "wings": {}})):
+        target = ROOT / "content" / name
+        if not target.exists():
+            target.write_text(json.dumps(empty, indent=2), encoding="utf-8")
     print(f"Built {len(items)} images from {src} -> {OUT}")
 
 

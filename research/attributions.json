@@ -1,0 +1,527 @@
+{
+  "HRsJtzQWIAA24vx": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "Found the exact media key HRsJtzQWIAA24vx on X in a post by @MemoryOffline ('Memory', bio 'o n l i n e', 107k followers). The post has no text or credit: https://x.com/MemoryOffline/status/2097339188886544608 (2026-09-08 15:00 UTC, 1320x1760; confirmed via api.fxtwitter.com and a timeline scan of @aromaterapista1, who reposted it).",
+      "@MemoryOffline is a scheduled curation account. It posts uncaptioned images every hour, including other people's anime screenshots and edits, e.g. media HRsJa4mbcAEajHW and HRsKILSbAAASsn2 posted the same day. It is not evidence of authorship.",
+      "Replies (api.fxtwitter.com/2/conversation/2097339188886544608) give no artist credit. One user asks 'Is that model from the game or did someone make it?'. Another links a TikTok photo post (tiktok.com/@user321639035/photo/7683413003928292616), but its ID decodes to 2026-09-09, which is after the X post, so it is probably a repost.",
+      "Yandex reverse search found only noise and the vanlett.net mirror of @aromaterapista1. Danbooru IQDB top score was 17, meaning no match."
+    ],
+    "notes": "Creator unknown. The earliest copy found is an uncredited post on 2026-09-08 by the curation/repost account @MemoryOffline (https://x.com/MemoryOffline/status/2097339188886544608). Do not credit that account as the artist. The Dreamcast-era low-poly look and 1320x1760 size suggest it may be AI-generated, but this is unconfirmed."
+  },
+  "HRutGhBbUAAc6Zl": {
+    "creator": "J. Christopher Jones (John Chris Jones)",
+    "handle": null,
+    "profileUrl": "https://en.wikipedia.org/wiki/John_Chris_Jones",
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "medium",
+    "evidence": [
+      "'Designer as magician' is one of Jones's three 'cybernetic portraits' of the designer (magician / computer / self-organizing system), i.e. the black-box view, from Design Methods: seeds of human futures (Wiley-Interscience, 1970); see ResearchGate figure '« Designer as a magician », « Designer as a computer » et « Designer as a self-organizing system »' https://www.researchgate.net/figure/Designer-as-a-magician-Designer-as-a-computer-et-Designer-as-a-self-organizing_fig2_364325184 (page blocked, title visible in search results).",
+      "The book's 'Designers as black boxes / glass boxes / self-organizing systems' section sits around pp. 45-56 (ResearchGate figure 'The main conceptual models of design (after: Jones, 1970/1992, pp. 46-56)').",
+      "Yandex: the same scan appears on QBN ('The More You Know' thread) and a Pinterest pin titled 'Designer as magician'."
+    ],
+    "notes": "Could not open the book text to confirm the exact figure number, page and edition (1970 1st ed. vs 1980/1992 2nd ed.; archive.org copies are lending-only). Credit as 'J. Christopher Jones, Design Methods (1970), Fig. 4.1' with the figure number taken from the image itself. X poster not identified."
+  },
+  "HRsoxy1XwAArjtI": {
+    "creator": "Lucia Heffernan",
+    "handle": "@luciaheffernan",
+    "profileUrl": "https://luciaheffernan.com/",
+    "sourceUrl": "https://luciaheffernan.com/products/card-shark",
+    "license": null,
+    "confidence": "high",
+    "evidence": [
+      "Signature 'Lucia' visible lower right of the painting.",
+      "Artist's own shop page 'Card Shark' (14\"x11\" oil on canvas-wrapped panel, original SOLD, prints available): https://luciaheffernan.com/products/card-shark ; its main image (https://cdn.shopify.com/s/files/1/0687/9569/5410/files/14x11cardsharkunframed.jpg) was fetched and visually matches exactly (same shark, cigar, cards, chips, whiskey, cash, oval format).",
+      "Artist's Instagram post (Nov 16, 2020): 'Now that I painted a card shark, I have to paint a pool shark' https://www.instagram.com/luciaheffernan/p/CHqVzEcntST/"
+    ],
+    "notes": "Title is 'Card Shark'. The dark oval frame in the saved copy is a framed presentation; the painting itself is oval. @luciaheffernan is her Instagram handle; an X account with the same handle exists ('Lucia Heffernan.NFT', inactive, no media). The X upload in the collection is a repost; poster not identified."
+  },
+  "HSCmkFiasAAH6W3": {
+    "creator": "Jan Saudek (unverified)",
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "low",
+    "evidence": [
+      "Yandex reverse search: the same image (same 1.214 aspect ratio) appears on a VK community post titled 'Jan Saudek 2026 Nudité art' https://vk.ru/wall-240449245_4268 (post body not readable), on an X-mirror repost (vanlett.net/zerrin8870241) and on rule34 image boards with no artist tag.",
+      "Style (hand-tinted painterly photograph, painted drapery, cloudy backdrop) is consistent with Saudek's known work, but no museum/auction/catalogue page showing this specific photograph was found."
+    ],
+    "notes": "Treat as unattributed until a catalogue or auction record of this exact photograph is found. The VK community name may just be a themed nude-art group. X poster not identified."
+  },
+  "HSnottDbYAAsfeg": {
+    "creator": "LeCanard",
+    "handle": "@iniemohk",
+    "profileUrl": "https://x.com/iniemohk",
+    "sourceUrl": "https://x.com/iniemohk/status/2101466993526439944",
+    "license": null,
+    "confidence": "high",
+    "evidence": [
+      "Signature in image: 'LeCanard @iniemohk'.",
+      "fxtwitter timeline scan of @iniemohk found this exact media (HSnottDbYAAsfeg) in the artist's own post of 2026-09-20 00:22 UTC, text 'The Tung before time immemorial': https://x.com/iniemohk/status/2101466993526439944"
+    ],
+    "notes": "Original title/caption: 'The Tung before time immemorial'. Artist bio: digital illustrator, commissions open; YouTube https://www.youtube.com/@LeCanard832. The saved file is the artist's own upload."
+  },
+  "HS56-LzXQAATNaF": {
+    "creator": "The Psychomechanics Workshop",
+    "handle": "@PsychoMechanics",
+    "profileUrl": "https://x.com/PsychoMechanics",
+    "sourceUrl": "https://x.com/PsychoMechanics/status/2102761422950113344",
+    "license": null,
+    "confidence": "high",
+    "evidence": [
+      "Image footer reads x.com/PsychoMechanics.",
+      "fxtwitter timeline scan of @PsychoMechanics found this exact media (HS56-LzXQAATNaF) as the first of two images in the account's own post of 2026-09-23 14:06 UTC: 'And now, for my next trick, I will perfectly integrate the Hexaflex with both the Psychomechanics Mind Map, and the Sefirot: ...' https://x.com/PsychoMechanics/status/2102761422950113344"
+    ],
+    "notes": "The account's post itself maps the Mind Map onto the Sefirot (Tree of Life), confirming the catalogue's reading. Account name 'The Psychomechanics Workshop'; personal name not given."
+  },
+  "HS66G83WoAAKSxQ": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "The catalogue description is inaccurate. The meme text actually reads: 'Claude refused your request m'lord because it says it's a security risk' / 'make the chinese one do it' / 'Yes m'lord Hermes will call Deepseek immediately'. It does not mention a polite memo.",
+      "The image uses a common meme template: an engraving-style wizard with a skeletal ghoul servant. Leftover text from an earlier caption ('ıe') peeks out from behind the top-right bubble, which shows it was re-captioned over an existing meme.",
+      "Exact-phrase web searches for the captions found nothing. Yandex found only unrelated wizard/creature images. I scanned the @NousResearch timeline with fxtwitter and did not find this media key."
+    ],
+    "notes": "Anonymous meme edit. Neither the caption author nor the template artists (the wizard engraving and the creature drawing) were identified. The X media was uploaded 2026-09-23."
+  },
+  "HS-U0fHWgAESaIL": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "No signature visible",
+      "Yandex (medium/small and the sites page) returned only unrelated or loosely similar illustrations",
+      "Danbooru mermaid+rifle search found nothing; text searches found nothing"
+    ],
+    "notes": "Creator unidentified."
+  },
+  "HS-zGlbbEAAgsIJ": {
+    "creator": "Genyu Yorita (依田玄悠)",
+    "handle": "@genyuyorita",
+    "profileUrl": "https://x.com/genyuyorita",
+    "sourceUrl": "https://x.com/genyuyorita/status/2068690965611905487",
+    "license": "Watermark: 'REUPLOADING IS PROHIBITED / 無断転載禁止 / AI学習禁止 / No reuploading / No AI training'",
+    "confidence": "high",
+    "evidence": [
+      "Yandex reverse search found Danbooru post https://danbooru.donmai.us/posts/11639534 'hatsune miku, kasane teto, and akita neru ... drawn by yorita_genyu'.",
+      "Danbooru JSON gives source https://x.com/genyuyorita/status/2068690965611905487 ; Danbooru artist entry yorita_genyu lists other names 依田玄悠, genyuyorita.",
+      "fxtwitter API for that tweet: author 依田玄悠 (@genyuyorita), text 'Triple😈', posted 2026-06-21 13:42 UTC, media https://pbs.twimg.com/media/HLV3eGebwAAStan.jpg (2048x1593); fetched and visually identical to the saved image, including watermark and signature."
+    ],
+    "notes": "Original title 'Triple😈'. The saved copy (2945x2291) is a later re-upload by another account (media uploaded ~2026-09-24), larger than the artist's 2048x1593 original, so probably upscaled by a reposter. Artist bio: commissions paused; Skeb https://skeb.jp/@genyuyorita. The watermark forbids reuploading: the project's content-policy.json already keeps this work local-only."
+  },
+  "HS3yTUjWgAA1l0l": {
+    "creator": "Kasuga (Kasuga39); vector version by Krzysztof Zajączkowski",
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Wikipe_tan_wearing_a_bikini_by_Kasuga39.svg",
+    "license": "CC BY-SA 2.5 (image); the caption text is Wikipedia article text (CC BY-SA 4.0)",
+    "confidence": "high",
+    "evidence": [
+      "English Wikipedia 'Fan service' article uses File:Wikipe_tan_wearing_a_bikini_by_Kasuga39.svg with the caption 'An illustration of Wikipe-tan depicted in a swimsuit, an example of sexual fan service', matching the screenshot exactly: https://en.wikipedia.org/wiki/Fan_service",
+      "Commons SVG page: author 'Original by Kasuga~enwiki; vectorization by Krzysztof Zajączkowski', vectorized 2011-04-10, license CC BY-SA 2.5 Generic.",
+      "Commons PNG original: author User:Kasuga~enwiki, dated 2007-05-12, source http://www.deviantart.com/deviation/55185649/ , CC BY-SA 2.5."
+    ],
+    "notes": "Wikipe-tan was created by Kasuga (User:Kasuga~enwiki on Wikipedia; Kasuga39 on DeviantArt, original source http://www.deviantart.com/deviation/55185649/). This bikini version was drawn by Kasuga in 2007 and vectorized by Krzysztof Zajączkowski in 2011. CC BY-SA 2.5 requires attribution, a license link and noting modifications; derivatives must be shared alike. The saved image is a screenshot of the Wikipedia infobox; X poster not identified."
+  },
+  "HS8x_iKXAAEexAs": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "Local copy is 928x1232, which is a Midjourney 3:4 output size. The text reads 'He gives strength to the weary and increases the power of the weak. Isaiah 40:29'. It has no signature.",
+      "Yandex matches were only visually similar: shedevrum.ai AI posts (1024x1024) and the cover art for sheqate's 'pinku no kumo 200bpm', which I checked visually and which is a different image.",
+      "Danbooru IQDB top score was 18.3, meaning no match. Text searches for the verse combined with glitch, webcore or christcore edits found nothing."
+    ],
+    "notes": "Creator unknown. This is a glitch/christcore-style edit that may be AI-assisted, given the 928x1232 Midjourney-size canvas. The X media was uploaded 2026-09-24."
+  },
+  "HS894oZbQAAA0O0": {
+    "creator": "Junichi Narisawa (成澤純一), MEDIADESK N",
+    "handle": "@misoka09",
+    "profileUrl": "https://x.com/misoka09",
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "medium",
+    "evidence": [
+      "Yandex: same photo (470x685) on Pinterest and on a Japanese blog post of 2011-03-28, '携帯の説明書の女の子が気になる' http://kininarumemo.blogspot.com/2011/03/blog-post_8069.html , linking a Hamster Sokuho roundup of the 2ch thread about the girl in au phone manuals.",
+      "INTERNET Watch (2011-03-28) on the au manual girl: reports information that the original illustrator is 成澤純一 of MEDIADESK N (presented as circulating information) https://internet.watch.impress.co.jp/docs/yajiuma/435597.html",
+      "Tsushin Yogo no Kiso Chishiki (wdic): the character is the work of 成澤純一, head of design office MEDIADESK N; he also draws manga as 長月みそか; per the author the official name is 'Keiko-chan' (from 携帯) https://www.wdic.org/w/MOE/%E6%B1%9F%E4%BA%95%E3%82%86%E3%81%86%E3%81%93",
+      "Japanese Wikipedia lists @misoka09 as the X account of 長月みそか https://ja.wikipedia.org/wiki/%E9%95%B7%E6%9C%88%E3%81%BF%E3%81%9D%E3%81%8B"
+    ],
+    "notes": "This is a phone photo of a page from an au (KDDI) mobile-phone instruction manual; the character (fan name 江井ゆうこ 'Ei Yuko', official 'Keiko-chan') appeared in au manuals from about 2004 and went viral via a 2ch thread in March 2011. Illustration copyright is presumably KDDI/the illustrator. The specific handset model and the person who photographed the page are unknown. The handle belongs to the illustrator's manga pen name (長月みそか), linked to him by wdic."
+  },
+  "HS9rkoyWwAAdx6-": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "Local copy is 720x1280 and deep-fried. At the lower right, on the pale road, there is a small handwritten mark running vertically. It resembles 'Ge..ge..' and could not be read even after zooming and rotating.",
+      "The same underlying seraph artwork (flame-crowned, many-eyed winged figure on a column or road) is used, tinted red, in Curious Archive's thumbnail for 'The Monsters that God Abandoned' (https://www.youtube.com/watch?v=-wKpbZuXw2o, published 2026-05-07 per the Nebula API). I compared it visually with i.ytimg.com/vi/-wKpbZuXw2o/maxresdefault.jpg. The base drawing therefore predates this X upload.",
+      "The available Nebula description text credits interviewees only, not thumbnail art. A Yandex search on the thumbnail found only the video itself and mirrors.",
+      "I checked a KYM 'Biblically Accurate Angels' seraph (by LiquidFrogStudios, https://knowyourmeme.com/photos/2369198) visually. It is a different image, so it is not the source."
+    ],
+    "notes": "Creator of the underlying seraph drawing not identified. The deep-fried edit is also uncredited. This is a repost/edit of an older artwork. The best lead is the illegible handwritten signature and the Curious Archive thumbnail. The X media was uploaded 2026-09-24."
+  },
+  "HS9Y32UWMAAWBb6": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "No signature visible",
+      "Yandex (medium/small/orig and the sites page) returned only unrelated MMD/creepypasta videos and pins",
+      "Danbooru searches (low_poly+wolf_ears, low_poly+heart, 3d+eyeball, 3d+heart_(organ)) found nothing"
+    ],
+    "notes": "A low-poly 3D render with a CRT/VHS capture look. Creator unidentified."
+  },
+  "HS_b3eSbkAA5aOC": {
+    "creator": "isao (イサオ)",
+    "handle": "@imahanak0922",
+    "profileUrl": "https://x.com/imahanak0922",
+    "sourceUrl": "https://x.com/imahanak0922/status/2103141302410019297",
+    "license": null,
+    "confidence": "high",
+    "evidence": [
+      "fxtwitter API: https://api.fxtwitter.com/imahanak0922/status/2103141302410019297 is an original (non-retweet) post by isao (@imahanak0922), 2026-09-24, whose only media is this exact upload https://pbs.twimg.com/media/HS_b3eSbkAA5aOC.jpg (1213x1506)",
+      "Tweet text: '2年前の絵iPhone14だよ / 左によって止まりなさい' (a drawing from two years ago, made on an iPhone 14; 'pull over to the left and stop')",
+      "Danbooru artist isao(konan) https://danbooru.donmai.us/artists/650184 lists aliases イサオ / isao / isao_imhnk and URLs x.com/imahanak0922, x.com/isao_imhnk, skeb.jp/@isao_imhnk, pixiv.net/users/78719125",
+      "The 'ISAO' signature on the image matches; X bio links skeb.jp/@isao_imhnk"
+    ],
+    "notes": "Posted by the artist on 2026-09-24 as a two-year-old drawing, so an earlier (c. 2024) first post may exist and was not located. Skeb: https://skeb.jp/@isao_imhnk. The X bio lists no reuse terms."
+  },
+  "HS_hSswasAAIOeB": {
+    "creator": "夢霞もあ (Monsha Moa)",
+    "handle": "@MonshaMoa",
+    "profileUrl": "https://x.com/MonshaMoa",
+    "sourceUrl": "https://x.com/MonshaMoa/status/2103147267284963336",
+    "license": "No re-uploading (X bio: \"DON'T re-upload my art 転載禁止\")",
+    "confidence": "high",
+    "evidence": [
+      "The kanji signature reads 夢霞 (Monsha)",
+      "Danbooru post https://danbooru.donmai.us/posts/8987185 (artist tag monsha_moa, aliases 夢霞もあ, akubimtcat) has source https://twitter.com/akubiMTCAT/status/1886631344136147317, which now resolves to @MonshaMoa. It is 1918x1575, the same aspect ratio as the local copy, and a visual comparison of the Danbooru sample shows the same image",
+      "fxtwitter API: the tweet is by 夢霞もあ (@MonshaMoa), 2025-02-04. It is a four-image set of 'reverse monster-head' girls; this image is the second (Gi6pNLdaYAAwFYA, 1918x1575)",
+      "Main-agent check: fxtwitter timeline scan of @MonshaMoa found this exact media key (HS_hSswasAAIOeB) in the artist's own post of 2026-09-24 15:39 UTC, '#我ながら天才的なキャラデザ4選' ('4 character designs I think are genius'), 4 images, this one second (1918x1575): https://x.com/MonshaMoa/status/2103147267284963336"
+    ],
+    "notes": "The saved file is the artist's own Sep 2026 re-post (hashtag post of favourite character designs); the drawing was first posted on 2025-02-04 at https://x.com/MonshaMoa/status/1886631344136147317 (then under the handle @akubiMTCAT) as part of a set of 'reverse monster-head' girls (逆異形頭少女). Skeb: https://skeb.jp/@akubiMtcat"
+  },
+  "HS-prGBboAAvr4b": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "Local copy is 928x1232, which is Midjourney's standard 3:4 output size. It shows a figure built from translucent coloured acrylic cubes, posed in a T-pose in a white gallery. It has no signature.",
+      "Yandex found a sibling image in the identical style and size (928x1232: a cube-built girl in a gallery, but a different pose and room) at https://i.pinimg.com/originals/14/58/7e/14587e040dc02db8872db87fdc540fea.jpg. It was embedded without credit in an SEO spam page dated 2026-07-21 (storage.googleapis.com/.../plastic-space-filler.html). I verified this visually. It suggests an AI style series that was already circulating on Pinterest."
+    ],
+    "notes": "Likely AI-generated (Midjourney-style series). Poster and creator unknown. The X media was uploaded 2026-09-24."
+  },
+  "HSxE-R2WUAAqhnn": {
+    "creator": "paula",
+    "handle": "@paularambles",
+    "profileUrl": "https://x.com/paularambles",
+    "sourceUrl": "https://x.com/paularambles/status/2102130968265924740",
+    "license": null,
+    "confidence": "high",
+    "evidence": [
+      "This exact media (HSxE-R2WUAAqhnn) was first posted, with no text, by @paularambles on 2026-09-21 20:20 UTC (same second as the media upload timestamp): https://x.com/paularambles/status/2102130968265924740",
+      "Alexandr Wang quote-tweeted it on 2026-09-21: 'okay i literally used this joke for my Connect speech so this is awkward... good job @paularambles for frontrunning my shitposting' https://x.com/alexandr_wang/status/2102171759382548753"
+    ],
+    "notes": "Parody of Peter Steiner's 1993 New Yorker cartoon 'On the Internet, nobody knows you're a dog' (Steiner's signature is imitated); the fuzzy character is Jolly, the default mascot of Meta's Muse AI agent. The drawing is very likely AI-generated; paula's bio: 'playing with words. creating whimsical ai @ tolans.com'. Credit: paula (@paularambles), after Peter Steiner."
+  },
+  "HS-3JcyW4AA0crZ": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "Local copy is 1047x1047. The caption in the speech bubble reads '...BUT I DON'T WANT TO ENSLAVE HUMANITY. I WANNA WRITE SCREENPLAYS!' It is a grey-toned digital cartoon of robot parents on a couch and a robot son. It is not a New Yorker-style ink cartoon.",
+      "A partial signature is at the bottom-left edge. A round logo or avatar (a white face with a dark hood or ring) is followed by handwritten '...rkies', possibly with the dot of an 'i' before the 'r'. That might be '[Qu]irkies' or similar, but this is unconfirmed. Another round logo is cut off at the bottom-right corner.",
+      "Exact-phrase searches for the caption found nothing. Yandex found only unrelated robot cartoons, and I visually checked a Pinterest caricatura.ru robot cartoon (pin 811140582858893311), which is a different cartoon. Searches for 'Quirkies', 'Dorkies', 'Yorkies' and similar names found no cartoonist matching this style."
+    ],
+    "notes": "Creator not identified. The signature is cropped and only '...rkies' is legible, alongside a round avatar-like logo. Searching the cartoonist's name if it is later recognized should settle it. The X media was uploaded 2026-09-24."
+  },
+  "HS90sLhaUAA3Y8Z": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "No signature visible",
+      "Yandex (including the full sites page) returned only similar yami-kawaii nurse art, such as the Etsy 'Yami Kawaii Nurse 7x5 print' (different image and aspect ratio). No exact match",
+      "Danbooru tag searches (nurse_cap+shikishi, syringe+pill) found nothing matching"
+    ],
+    "notes": "An analogue piece on a shikishi board with a gold edge. Creator unidentified."
+  },
+  "HTAGvK9WwAAU7SV": {
+    "creator": "Paul Wicks (Wikipedia user PaulWicks)",
+    "handle": null,
+    "profileUrl": "https://en.wikipedia.org/wiki/User:PaulWicks",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:BrainGate.jpg",
+    "license": "Public domain (released by the author)",
+    "confidence": "high",
+    "evidence": [
+      "Yandex identified it as BrainGate (TechTudo, Onedio and others reuse it).",
+      "Wikimedia Commons File:BrainGate.jpg: 'photo of a dummy BrainGate interface' at the Star Wars exhibition, Museum of Science, Boston. Taken Oct 28, 2005 (Sony DSC-T7) and first uploaded to en.wikipedia by PaulWicks on Oct 15, 2006, who released it to the public domain.",
+      "Visually verified: the thumbnail https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fd/BrainGate.jpg/500px-BrainGate.jpg is the same shot. Ours is a tighter, roughly square crop that removes the placard ('Device courtesy of Cyberkinetics Neurotechnology Systems, Inc., Foxborough, MA') and the exhibit number."
+    ],
+    "notes": "The object is a display model of the BrainGate brain-computer interface by Cyberkinetics Neurotechnology Systems. The 'camera' is the percutaneous pedestal connector and the 'port' is the external cable connector. It was shown in 'Star Wars: Where Science Meets Imagination', Museum of Science, Boston, 2005. No X handle was confirmed for the photographer."
+  },
+  "HS86lAyb0AA-3bC": {
+    "creator": "chibikki (チビッキ)",
+    "handle": "@4nda_skn",
+    "profileUrl": "https://x.com/4nda_skn",
+    "sourceUrl": "https://x.com/4nda_skn/status/2102964031988572405",
+    "license": null,
+    "confidence": "high",
+    "evidence": [
+      "An fxtwitter timeline scan of @4nda_skn found this exact media key: https://api.fxtwitter.com/4nda_skn/status/2102964031988572405. It is an original post, 2026-09-24, text '駅' (station), media HS86lAyb0AA-3bC.png (1292x1748)",
+      "The X profile name is 𝚌𝚑𝚒𝚋𝚒𝚔𝚔𝚒; the bio says 'chibikkiだ / これが私の避難垢です' (chibikki's backup account) and links pixiv.net/users/19478460",
+      "The Danbooru artist chibikki (aliases チビッキ, chibikki_ikki) tags posts from x.com/4nda_skn, with the same blue-haired bunny/halo/blood pixel-art motifs"
+    ],
+    "notes": "@4nda_skn is the artist's backup account; the main account was @chibikki_ikki. Pixiv: https://www.pixiv.net/users/19478460. Tiny signature at bottom right."
+  },
+  "HS_wJCAWIAAlDAn": {
+    "creator": "Lux",
+    "handle": "@thisislux",
+    "profileUrl": "https://x.com/thisislux",
+    "sourceUrl": "https://x.com/thisislux/status/2103228731531698523",
+    "license": null,
+    "confidence": "high",
+    "evidence": [
+      "The book spine in the image reads 'LUX'",
+      "Yandex found reposts on Pinterest titled 'Lux on Twitter' and on reactor.cc (840x840)",
+      "An fxtwitter timeline scan of @thisislux found this exact media key: https://x.com/thisislux/status/2103228731531698523. It is an original post, 2026-09-24, text \"no thanks, I'd rather stay home and study the occult\", media HS_wJCAWIAAlDAn.png (840x840)"
+    ],
+    "notes": "Lux is a professional pixel artist; site pixelparmesan.com (hire: pixelparmesan.com/hire). Older Pinterest reposts suggest the piece may predate the 2026 post, but the 2026 post is the artist's own."
+  },
+  "HS8lijvbkAA7lp-": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "Yandex matched the object, not this photo: AkaTako product image 'Suspended Bunny Doll' (https://www.akatako.net/sites/default/files/product/2973-bunny-kinbaku-1.jpg). Visually verified as the same figure (cream glazed bunny, pink ears, blue closed eyes, red rope, steel hook stand, wood base).",
+      "AkaTako Tumblr post 'Suspended kinbaku bunny by Kitanya Design is back' (https://www.tumblr.com/akatako/614949104211132416/suspended-kinbaku-bunny-by-kitanya-design-is-back) and AkaTako tweets tag @kitanya_design.",
+      "X profile via fxtwitter: @kitanya_design = 'きたんや' (KITANYA DESIGN FACTORY), website http://www.kitanya.com"
+    ],
+    "notes": "Object maker: Kitanya Design Factory (きたんや, Japan). The piece is the 'Suspended Kinbaku Bunny' doll on a hanging stand, sold via AkaTako. Maker handle: @kitanya_design (https://x.com/kitanya_design). This photo is a collector's own shelf shot (with a prop blood bag, a withered hand and a rat figure), and its photographer is unknown."
+  },
+  "HS8U3qJXoAAan7s": {
+    "creator": "John Amanatides and Don P. Mitchell (AT&T Bell Laboratories)",
+    "handle": null,
+    "profileUrl": "https://www.eecs.yorku.ca/~amana/",
+    "sourceUrl": "https://www.eecs.yorku.ca/~amana/research/images/",
+    "license": null,
+    "confidence": "high",
+    "evidence": [
+      "Yandex hits: cs.yorku.ca/~amana/research/images (1280x1024), ArtFutura 1990 'Megacycles - John Amanatides and Don P. Mitchell', and meatfighter.com/megacycles.",
+      "John Amanatides' page: 'a still from the video Megacyles produced with Don Mitchell in 1990'. Visually verified the thumbnail https://www.eecs.yorku.ca/~amana/research/images/megacyclesLR.jpg as the same frame. Full size megacycles.jpg is 1280x1024, and ours at 640x512 is exactly half.",
+      "SIGGRAPH history credits 'Megacycles' to AT&T Bell Laboratories: https://history.siggraph.org/animation-video-pod/megacycles-by-att-bell-laboratories/. It was ray-traced with their FX renderer on the AT&T Pixel Machine. Internet Archive: https://archive.org/details/megacycles1989"
+    ],
+    "notes": "Work: 'Megacycles' (1989 SIGGRAPH animation; Amanatides dates the still 1990). Final scene of the ray-traced animation. The figures are robot unicyclists riding along the tops of an endless maze-like path, which a later analysis (meatfighter.com) found to be a Hilbert curve. There are no usage terms on the source page. Don Mitchell's blog: https://donpmitchell.wordpress.com"
+  },
+  "HTAiirQWYAA7g5J": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "Yandex: copies on Pinterest titled 'Мама я улитка 🐌' ('Mom, I'm a snail'). The fr/at pin 766315692881059707 was pinned by Полина Галкина (oEmbed), one pin is flagged 'modified by AI', and a GitHub avatar (chokopiku61) also uses it. None credits an author.",
+      "Text searches for a 'cheater' snail meme found only the unrelated 'cheater spray-painted car' TikTok trend."
+    ],
+    "notes": "This is a digital edit or render of a creature-like snail whose shell is spray-painted 'CHEATER', in a driveway with empty bottles. It plays on the 'cheater spray-painted car' meme. It looks like a video frame, possibly from TikTok or Instagram, and may be AI-assisted. The creator is unknown."
+  },
+  "HS_m5FmawAEmcgp": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "No signature visible",
+      "Yandex (medium/small) returned only similar monster-girl pins (for example, different Pinterest pins at 736x1308) and Kikuo concert pages, not this image",
+      "Tufting/rug text searches in English and Japanese; checked @leintuft's 'devil girls rug' pin (https://widgets.pinterest.com/v3/pidgets/pins/info/?pin_ids=187462403235491114). It shows a different rug, so no match"
+    ],
+    "notes": "Creator unidentified. The pile texture looks like a real tufted rug."
+  },
+  "HS-0K-qWUAEnxD2": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "Local copy is 2048x2048. The HUD text is gibberish and the panel icons are garbled, both typical of AI image generation. It has no signature.",
+      "Yandex returned only visually similar real games: SimCopter screenshots on old-games.ru, a SimCopter Let's Play on YouTube, and an 'LHX Attack Chopper' tag. None is the same image."
+    ],
+    "notes": "Likely AI-generated 'fake retro game' image. Poster and creator unknown. The X media was uploaded 2026-09-24."
+  },
+  "HS-AHa8a0AAuBEe": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "Local copy is 1408x960 and has no visible signature or watermark. Unlike the catalogue description, the girl has split black/white bobbed hair, blue eyes and a triangle hair clip.",
+      "Yandex (medium and small variants) returned only visually similar Pinterest 'octopus girl' pins at other aspect ratios (566x796, 235x331, 600x600). None was the same image.",
+      "Danbooru IQDB (danbooru.donmai.us/iqdb_queries.json) top score was 18.2 (rururu2199, post 6837568), which is not a match. No other result was above about 18."
+    ],
+    "notes": "Creator not found. The X media was uploaded 2026-09-24 and the posting account is unknown. The smooth 'impasto' texture and odd anatomy (the long flat white arm) could point to AI generation, but this is unconfirmed."
+  },
+  "HS-JlvKbkAA9wwR": {
+    "creator": "U.S. National Park Service (Saguaro National Park)",
+    "handle": null,
+    "profileUrl": "https://www.nps.gov/sagu/",
+    "sourceUrl": "https://azjewishpost.com/2019/cactus-king-that-boosts-landscaping-takes-centuries-to-mature/",
+    "license": null,
+    "confidence": "medium",
+    "evidence": [
+      "Yandex hit: AZ Jewish Post (2560x1817, same 1.41 aspect). The article 'Cactus king that boosts landscaping takes centuries to mature' (May 31, 2019) uses this image with the caption credit '(Photo: National Park Service)'. Visually verified: https://cdn-15011.jigsawanalyticsgroup.cloud/20240223075456/Saguaro-1-748x531.jpg",
+      "Same scanned-slide style as SaguaroNPS's CC BY 2.0 Flickr slide scans of crested saguaros (e.g. https://www.flickr.com/photos/saguaronps/50618143088). I checked all 16 crested-saguaro items in that Flickr account and this exact frame is not among them.",
+      "The current NPS crested-saguaro page (https://www.nps.gov/sagu/learn/nature/the-crested-saguaro.htm) uses a different photo ('NPS / S. Brooks')."
+    ],
+    "notes": "The credit rests on a secondary source (a newspaper caption) and was not found on an NPS page. The individual photographer is unknown. If it is an NPS employee's work it would be U.S. public domain, but that is not confirmed. The subject is a crested (cristate) saguaro, Carnegiea gigantea, probably in Saguaro National Park near Tucson, Arizona (unconfirmed)."
+  },
+  "HS73G0uaMAAOA52": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "The watermark reads 'aik' with a skateboard/bandage-like bar and a circle, possibly 'aiko'",
+      "Yandex reverse search (medium/small/large sizes) found only visually similar, non-matching images",
+      "Checked @Aiko_AiArt (0 tweets) and @aikolik (fxtwitter timeline scan to Jan 2026, no media match); neither matches"
+    ],
+    "notes": "Probably AI-generated: the graffiti and tattoo text is pseudo-lettering. Creator unidentified."
+  },
+  "HS_k9vJaYAEmIKe": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "Yandex (medium and large sizes): tags for Narsil/Andúril (Aragorn's sword). Its 'matches' (DesignCollector 1000x1182, Pinterest 736x870) are portrait-format images, so not this square 680x680 photo.",
+      "Text searches (sword/Andúril/Narsil + laptop/MacBook + sculpture/plinth; 'sword in the laptop') found nothing."
+    ],
+    "notes": "This looks like a gallery installation: a replica Andúril/Narsil sword through an open MacBook-style laptop on a white plinth in a white-walled corner. The artist and photographer are unknown."
+  },
+  "HS8eseTbYAA_fkk": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "Local copy is 1904x2560. The inscription at the top is illegible pseudo-Latin letters, and red construction/grid lines are overlaid on the whole image. It has no signature.",
+      "Yandex (medium and small variants) returned only unrelated Islamic-astronomy pages and Pinterest idea boards (cyberakademi.org, yedikita.com.tr, 1024x1024 pins). No same-image match was found."
+    ],
+    "notes": "Likely AI-generated, based on the gibberish inscription and the anachronistic Earth and armillary sphere. Poster and creator unknown. The X media was uploaded 2026-09-24."
+  },
+  "HSGdtLCWAAAvYcH": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "Yandex tags: 'grasshopper cafe, South Korea'. Copies at 1600x1200 on yandex.ru maps reviews, around-earth.ru and radikal.host (1335x1001), and Colossal. None of them credit a photographer.",
+      "Place confirmed: Colossal https://www.thisiscolossal.com/2019/03/grasshoppers-dream-cafe/ and ko.wikipedia 구절리역 https://ko.wikipedia.org/wiki/%EA%B5%AC%EC%A0%88%EB%A6%AC%EC%97%AD describe it as two decommissioned train cars stacked and shaped like grasshoppers at Gujeolli Station.",
+      "Not found on Wikimedia Commons or Flickr (searched 'gujeolli', '여치의 꿈', 'grasshopper jeongseon')."
+    ],
+    "notes": "Place: 'Yeochi-ui Kkum' (여치의 꿈, 'Grasshopper's Dream'), a café and restaurant (restaurant downstairs, café upstairs) built from two decommissioned Mugunghwa-class carriages. It is at Gujeolli Station (구절리역), Yeoryang-myeon, Jeongseon-gun, Gangwon Province, South Korea, at the end of the Jeongseon/Auraji rail-bike course. It is a café, not a guesthouse; the separate 'Happy Station' train pension is next to it. '여치' strictly means katydid/bush cricket. The photo looks like a mid-2000s digital-camera shot; the photographer is unknown."
+  },
+  "HTAWnXLWsAAmpX_": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "Yandex (medium and large sizes): only visually similar black-widow pages. No copies of this photo were found.",
+      "Text searches (joint / black widow / redback web; Reddit and Instagram phrasing) found nothing. Reddit could not be fetched from this environment."
+    ],
+    "notes": "The 1080x1080 square suggests an Instagram origin. The spider's red/orange dorsal mark suggests a redback (Latrodectus hasselti, so possibly Australia), but this is an unverified observation. The creator is unknown."
+  },
+  "HS-9mn0XkAAhjzw": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "No signature visible (bottom strip checked)",
+      "Yandex (medium/small) returned only unrelated tarot/surreal paintings",
+      "Text searches found nothing"
+    ],
+    "notes": "A pencil drawing, probably photographed or scanned and heavily red-filtered; the tint may have been added by a reposter. Creator unidentified; no attribution guessed."
+  },
+  "HSGdkqHWUAI8V2_": {
+    "creator": "Paul Tulett",
+    "handle": "@brutal_zen",
+    "profileUrl": "https://www.instagram.com/brutal_zen/",
+    "sourceUrl": "https://www.dezeen.com/2024/12/20/brutalist-japan-paul-tulett/",
+    "license": "© Paul Tulett (all rights reserved; published in his book Brutalist Japan, Prestel 2024)",
+    "confidence": "high",
+    "evidence": [
+      "Yandex reverse search: tag 'okinawa prefectural museum'; hit on Dezeen article (1704x1704 square).",
+      "Dezeen 'Nine examples of misunderstood architecture featured in Brutalist Japan' shows the same composition (Okinawa Prefectural and Art Museum, 2007, Ishimoto and Niki Associates, Naha); all photos credited to Paul Tulett. Visually verified: https://static.dezeen.com/uploads/2024/12/brutalist-japan-book-paul-tulett-architecture-photography_dezeen_1704_col_8-852x852.jpg",
+      "Designboom article credits the same Okinawa museum photo '© Paul Tulett' and gives his Instagram @brutal_zen and site paultulett.com: https://www.designboom.com/architecture/japanese-brutalist-icons-pages-paul-tulett-photography-book-09-25-2024/"
+    ],
+    "notes": "Building: Okinawa Prefectural Museum & Art Museum, Naha, Okinawa, Japan (2007, Ishimoto Architectural & Engineering / Niki Associates). The X copy is darker/re-graded but the framing is identical. Handle is Instagram, not X. An X account @brutal_zen exists but has no bio and 0 followers, so it was not confirmed as his and is not used. Website: https://paultulett.com"
+  },
+  "HTAmU4-WYAAAI_g": {
+    "creator": null,
+    "handle": null,
+    "profileUrl": null,
+    "sourceUrl": null,
+    "license": null,
+    "confidence": "none",
+    "evidence": [
+      "Yandex (medium and large sizes) returned only unrelated small avatars (lib-li.com, SoundCloud, YouTube, Plurk). No copy of this monitor photo was found."
+    ],
+    "notes": "The photo shows a Dell laptop running Windows XP, with an image viewer displaying a mid-2000s scene/emo selfie. Both the photographer and the person pictured are unknown."
+  }
+}

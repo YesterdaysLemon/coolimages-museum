@@ -2,3 +2,5 @@
 content/
 
 __pycache__/
+logs/
+tools/pipeline.env

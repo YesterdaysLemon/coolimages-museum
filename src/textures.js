@@ -432,6 +432,50 @@ function heart(ctx, x, y, s, color) {
   ctx.fill();
 }
 
+// Plain painted wall with a skirting board, for generated rooms.
+export function plainWall(H, base = '#f1ede5', trim = '#d8d0c2') {
+  const W = 1024;
+  const ppm = 256;
+  const Hp = Math.round(H * ppm);
+  const c = makeCanvas(W, Hp);
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, W, Hp);
+  ctx.fillStyle = trim;
+  ctx.fillRect(0, Hp - 0.18 * ppm, W, 0.18 * ppm);
+  ctx.fillRect(0, 0, W, 0.08 * ppm);
+  grain(ctx, W, Hp, 6, rng(Math.round(H * 100)));
+  return c;
+}
+
+// Pale marble tiles with grout lines; one canvas covers 4 x 4 m.
+export function tileFloor() {
+  const S = 1024;
+  const c = makeCanvas(S, S);
+  const ctx = c.getContext('2d');
+  const r = rng(29);
+  const tile = S / 4;
+  for (let y = 0; y < 4; y++) {
+    for (let x = 0; x < 4; x++) {
+      const v = 232 + Math.floor(r() * 12);
+      ctx.fillStyle = `rgb(${v},${v - 3},${v - 9})`;
+      ctx.fillRect(x * tile, y * tile, tile, tile);
+    }
+  }
+  ctx.strokeStyle = 'rgba(150,138,120,0.45)';
+  ctx.lineWidth = 3;
+  for (let i = 0; i <= 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * tile, 0);
+    ctx.lineTo(i * tile, S);
+    ctx.moveTo(0, i * tile);
+    ctx.lineTo(S, i * tile);
+    ctx.stroke();
+  }
+  grain(ctx, S, S, 8, r);
+  return c;
+}
+
 export function coffers() {
   const S = 512;
   const c = makeCanvas(S, S);

@@ -3,7 +3,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { WINGS, WORKS } from './catalog.js';
 import { CREDITS, REMOVAL_URL } from './credits.js';
 import * as TX from './textures.js';
-import { buildWorld, walkable, EYE_HEIGHT, formatSaved } from './world.js';
+import { buildWorld, walkable, EYE_HEIGHT, formatSaved, TEMPLATES } from './world.js';
 import { MuseumAudio } from './audio.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -13,7 +13,10 @@ const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const touchFirst = matchMedia('(pointer: coarse)').matches;
 const BASE_FOV = 72;
 const SENSITIVITY = 0.0022;
-const ACCENT = { lobby: '#8a6d3b', gallery: '#9a2f2f', eyes: '#6c5ce7', familiars: '#1f7a8c', bedroom: '#d4679a' };
+const ACCENT = { lobby: '#8a6d3b', gallery: '#9a2f2f', eyes: '#6c5ce7', familiars: '#1f7a8c', bedroom: '#d4679a', annex: '#8a6d3b' };
+const accentFor = (id) => WINGS[id]?.accent || ACCENT[id] || ACCENT.lobby;
+// Generated wings borrow the score of the hand-built wing their template imitates.
+const moodFor = (id) => (WINGS[id]?.template ? TEMPLATES[WINGS[id].template]?.mood || 'gallery' : id === 'annex' ? 'lobby' : id);
 
 // ---------------------------------------------------------------- renderer
 const canvas = $('#scene');
@@ -153,19 +156,36 @@ async function boot() {
   // Entries written by the curation pipeline never override hand-written ones.
   const generated = await fetchJson('content/catalog.json');
   for (const [id, work] of Object.entries(generated || {})) if (!WORKS[id]) WORKS[id] = { ...work, generated: true };
-  for (const [id, credit] of Object.entries(CREDITS)) if (WORKS[id]) WORKS[id].credit = credit;
+  const layout = await fetchJson('content/layout.json');
+  for (const [key, wing] of Object.entries(layout?.wings || {})) {
+    WINGS[key] = { name: wing.name, subtitle: wing.subtitle, statement: wing.statement, accent: wing.accent, template: wing.template, generated: true };
+  }
+  if (Object.keys(layout?.wings || {}).length) {
+    WINGS.annex = {
+      name: 'The Annex',
+      subtitle: 'Wings added as the folder grows',
+      statement:
+        'Every couple of days a curator looks at whatever new images arrived in the folder, writes their plaques, and hangs them in new wings off this corridor. The rooms are generated; the taste is still the collector\u2019s.',
+    };
+  }
+  const extra = await fetchJson('content/credits.json');
+  for (const [id, credit] of Object.entries({ ...(extra || {}), ...CREDITS })) if (WORKS[id]) WORKS[id].credit = credit;
   collection = manifest;
   await loadFonts();
   const art = await loadArt(manifest.items);
   setStatus('Lighting the rooms…');
   await new Promise((r) => setTimeout(r, 30));
-  const acquisitions = manifest.items.filter((i) => !WORKS[i.id]).map((i) => i.id).reverse();
+  // Anything no room has claimed goes on the Rotunda's acquisition easels.
+  const placed = new Set(Object.keys(WORKS).filter((id) => !WORKS[id].generated));
+  for (const wing of Object.values(layout?.wings || {})) for (const id of wing.works || []) placed.add(id);
+  const acquisitions = manifest.items.filter((i) => !placed.has(i.id)).map((i) => i.id).reverse();
   const withheld = new Set(manifest.withheld || []);
   world = buildWorld({
     scene,
     art,
     acquisitions,
     withheld,
+    layout,
     summary: { count: manifest.items.length + withheld.size, range: dateRange(manifest.items) },
   });
   renderCredits();
@@ -193,9 +213,9 @@ function applyRoom(id) {
 function enterRoom(id) {
   player.room = id;
   applyRoom(id);
-  document.documentElement.style.setProperty('--accent', ACCENT[id]);
+  document.documentElement.style.setProperty('--accent', accentFor(id));
   $('#room-name').textContent = WINGS[id].name;
-  audio.setMood(id);
+  audio.setMood(moodFor(id));
 }
 
 function arrivalFor(portal) {
@@ -650,7 +670,7 @@ function begin() {
   if (state !== 'ready') return;
   $('#intro').classList.add('gone');
   setTimeout(() => $('#intro').setAttribute('hidden', ''), 900);
-  audio.start(player.room);
+  audio.start(moodFor(player.room));
   $('#mute').textContent = audio.muted ? 'Music off' : 'Music on';
   $('#mute').setAttribute('aria-pressed', String(!audio.muted));
   $('#pause-mute').textContent = audio.muted ? 'Turn music on' : 'Turn music off';
@@ -855,7 +875,7 @@ function drawMinimap() {
     else if (o.type === 'rect') mctx.rect(X(o.x0), Z(o.z0), (o.x1 - o.x0) * scale, (o.z1 - o.z0) * scale);
     mctx.fill();
   }
-  const accent = ACCENT[player.room];
+  const accent = accentFor(player.room);
   mctx.fillStyle = accent;
   for (const m of room.artworks) {
     m.getWorldPosition(tmpV);

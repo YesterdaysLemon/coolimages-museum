@@ -41,7 +41,17 @@ export function formatSaved(iso) {
   return `Saved ${month} ${d.getDate()}, ${d.getFullYear()}, ${hours % 12 || 12}:${minutes} ${hours >= 12 ? 'pm' : 'am'}`;
 }
 
-export function buildWorld({ scene, art, acquisitions, withheld = new Set(), summary }) {
+// Generated wings (content/layout.json) are built from these templates.
+export const TEMPLATES = {
+  salon: { mood: 'gallery', surface: 'wood', frame: 'gilded', plaque: 'brass', ink: 'dark', height: 5 },
+  white: { mood: 'familiars', surface: 'void', frame: 'bare', plaque: 'card', ink: 'dark', height: 6, float: true },
+  night: { mood: 'eyes', surface: 'stone', frame: 'lightbox', plaque: 'glass', ink: 'light', height: 5.5 },
+  pastel: { mood: 'bedroom', surface: 'carpet', frame: 'polaroid', plaque: 'note', ink: 'dark', height: 4.2 },
+};
+const MAX_WORKS_PER_WING = 7;
+
+export function buildWorld({ scene, art, acquisitions, withheld = new Set(), layout = null, summary }) {
+  const generatedWings = Object.entries(layout?.wings || {}).filter(([, w]) => (w.works || []).some((id) => art.has(id)));
   const world = { rooms: {}, portals: [], artworks: [], animators: [] };
   const glowTex = TX.glowTexture();
   const beamTex = TX.beamTexture();
@@ -474,7 +484,8 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), sum
       se.at(-1.45, 2.35),
       se.n,
     );
-    addWork(room, 'HSGdkqHWUAI8V2_', { pos: se.at(1.75, 2.55), dir: se.n, h: 2.0, frame: 'museum', plaqueSide: 'below' });
+    if (generatedWings.length) addPortal(room, { pos: se.at(1.75, 0), dir: se.n, dest: 'annex', w: 2.2, h: 3.2, signW: 2.6 });
+    else addWork(room, 'HSGdkqHWUAI8V2_', { pos: se.at(1.75, 2.55), dir: se.n, h: 2.0, frame: 'museum', plaqueSide: 'below' });
 
     // Vitrine with the reconstructed hat from Fig. 4.1.
     const plinth = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.0, 1.3), M.slab);
@@ -1048,13 +1059,158 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), sum
     return room;
   }
 
+  // ----------------------------------------------------- The Annex
+  // A corridor that grows with the number of generated wings; one portal each.
+  function buildAnnex() {
+    const cx = -200;
+    const z0 = -220;
+    const rows = Math.ceil(generatedWings.length / 2);
+    const W = 10;
+    const L = 12 + rows * 6;
+    const H = 5;
+    const x0 = cx - W / 2;
+    const x1 = cx + W / 2;
+    const z1 = z0 + L;
+    const room = makeRoom('annex', { type: 'rect', x0, x1, z0, z1 }, 'marble', {
+      bg: '#f2efe9',
+      fog: { type: 'linear', color: '#f2efe9', near: 30, far: 90 },
+      envI: 0.5,
+    });
+    rectRoom(room, {
+      x0, x1, z0, z1, H,
+      wallCanvas: TX.plainWall(H),
+      floorMat: new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.tileFloor(), { repeat: [W / 4, L / 4] }), roughness: 0.35 }),
+      ceilingMat: new THREE.MeshStandardMaterial({ color: 0xf6f3ec, roughness: 1 }),
+    });
+    const sky = new THREE.Mesh(new THREE.PlaneGeometry(1.6, L - 2), new THREE.MeshBasicMaterial({ color: 0xfff8ea, toneMapped: false }));
+    sky.rotation.x = Math.PI / 2;
+    sky.position.set(cx, H - 0.02, z0 + L / 2);
+    room.group.add(sky);
+    addLights(room, [0xfffaf2, 0xb9ad99, 1.05], [
+      [cx, 4.2, z0 + L * 0.3, 0xfff1d8, 30, 24],
+      [cx, 4.2, z0 + L * 0.75, 0xfff1d8, 30, 24],
+    ]);
+    addPortal(room, { pos: V3(cx, 0, z0 + 0.06), dir: V3(0, 0, 1), dest: 'lobby', w: 2.6, h: 3.4, signW: 3.2 });
+    generatedWings.forEach(([key], k) => {
+      const z = z0 + 8 + Math.floor(k / 2) * 6;
+      const west = k % 2 === 0;
+      addPortal(room, {
+        pos: V3(west ? x0 + 0.06 : x1 - 0.06, 0, z),
+        dir: V3(west ? 1 : -1, 0, 0),
+        dest: key,
+        w: 2.4,
+        h: 3.2,
+        signW: 3.0,
+      });
+    });
+    addText(
+      room,
+      { kicker: 'The Annex', title: WINGS.annex.name, subtitle: WINGS.annex.subtitle, body: WINGS.annex.statement, width: 3.4 },
+      V3(cx - 2.6, 2.6, z1 - 0.03),
+      V3(0, 0, -1),
+    );
+    addWork(room, 'HSGdkqHWUAI8V2_', { pos: V3(cx + 2.4, 2.4, z1 - 0.04), dir: V3(0, 0, -1), h: 2.0, frame: 'museum', plaqueSide: 'below' });
+  }
+
+  function buildGeneratedWing(key, spec, index) {
+    const t = TEMPLATES[spec.template] || TEMPLATES.salon;
+    const kind = TEMPLATES[spec.template] ? spec.template : 'salon';
+    const accent = new THREE.Color(spec.accent || '#8a6d3b');
+    const ids = (spec.works || []).filter((id) => art.has(id) || withheld.has(id)).slice(0, MAX_WORKS_PER_WING);
+    const cx = -400 + (index % 5) * 200;
+    const z0 = 400 + Math.floor(index / 5) * 200;
+    const rows = Math.max(1, Math.ceil(Math.min(ids.length, 6) / 2));
+    const W = 12;
+    const L = 8 + rows * 5;
+    const H = t.height;
+    const x0 = cx - W / 2;
+    const x1 = cx + W / 2;
+    const z1 = z0 + L;
+    const dark = kind === 'night';
+    const white = kind === 'white';
+    const pastel = kind === 'pastel';
+    const bg = dark ? '#0d0c20' : pastel ? '#2a2340' : '#f3f0ea';
+    const room = makeRoom(key, { type: 'rect', x0, x1, z0, z1 }, t.surface, {
+      bg,
+      fog: dark ? { type: 'exp2', color: bg, density: 0.022 } : { type: 'linear', color: bg, near: white ? 14 : 30, far: white ? 46 : 80 },
+      envI: dark ? 0.22 : white ? 1.0 : 0.45,
+    });
+    if (white) {
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), new THREE.MeshStandardMaterial({ color: 0xf7f5f1, roughness: 0.95 }));
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.set(cx, 0, z0 + L / 2);
+      room.group.add(floor);
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(11, 4.8, 0.3), M.slab);
+      wall.position.set(cx, 2.4, z0 - 0.17);
+      room.group.add(wall);
+    } else {
+      const wallCanvas = dark ? TX.eyesWall(H) : pastel ? TX.bedroomWall(H) : TX.galleryWall(H);
+      const floorMat = dark
+        ? new THREE.MeshStandardMaterial({ color: 0x17152e, roughness: 0.6, metalness: 0.1 })
+        : pastel
+          ? new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.carpet(), { repeat: [W / 1.5, L / 1.5] }), roughness: 1 })
+          : new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.parquet(), { repeat: [W / 2, L / 2] }), roughness: 0.5 });
+      rectRoom(room, {
+        x0, x1, z0, z1, H,
+        wallCanvas,
+        floorMat,
+        ceilingMat: new THREE.MeshStandardMaterial({ color: dark ? 0x0b0a1a : pastel ? 0x3a3166 : 0xf4efe5, roughness: 1 }),
+      });
+    }
+    const hemi = dark ? [0x6b5fd6, 0x0a0915, 0.6] : pastel ? [0xffe0f0, 0x5a4a7e, 0.85] : white ? [0xffffff, 0xe8e2d6, 1.6] : [0xfff1dc, 0x6e5a44, 0.9];
+    addLights(room, hemi, [
+      [cx, H - 1.2, z0 + L * 0.3, dark ? accent.getHex() : 0xfff1d8, dark ? 28 : 22, 20],
+      [cx, H - 1.2, z0 + L * 0.75, dark ? accent.getHex() : 0xfff1d8, dark ? 22 : 26, 20],
+    ]);
+    const tall = H >= 5;
+    const ink = dark ? 'light' : pastel ? 'hand' : 'dark';
+    addPortal(room, { pos: V3(cx, 0, z0 + 0.06), dir: V3(0, 0, 1), dest: 'annex', w: tall ? 2.6 : 2.4, h: tall ? 3.4 : 3.0, signW: 3.0, style: ink });
+    addText(
+      room,
+      { kicker: 'Generated wing', title: spec.name, subtitle: spec.subtitle, body: spec.statement, width: 3.0, style: ink },
+      V3(cx - 3.9, 2.4, z0 + 0.03),
+      V3(0, 0, 1),
+    );
+
+    const common = {
+      frame: t.frame,
+      plaque: t.plaque,
+      ink: t.ink,
+      margin: 1.0,
+      maxW: 3.0,
+      glow: accent.getHex(),
+      float: !!t.float,
+      shadow: !!t.float,
+      obstacle: !!t.float,
+    };
+    ids.forEach((id, k) => {
+      const y = pastel ? 2.1 : 2.2;
+      const tilt = pastel ? (TX.hash(id) - 0.5) * 0.12 : 0;
+      let placed;
+      if (k < 6) {
+        const z = z0 + 6 + Math.floor(k / 2) * 5;
+        const west = k % 2 === 0;
+        const inset = t.float ? 2.2 : 0.04;
+        placed = addWork(room, id, { ...common, tilt, pos: V3(west ? x0 + inset : x1 - inset, y, z), dir: V3(west ? 1 : -1, 0, 0), h: 1.9 });
+      } else {
+        placed = addWork(room, id, { ...common, tilt, pos: V3(cx, y + 0.2, z1 - (t.float ? 2.2 : 0.04)), dir: V3(0, 0, -1), h: 2.3 });
+      }
+      if (kind === 'salon') pictureLight(placed);
+    });
+  }
+
   buildLobby();
   buildGallery();
   buildEyes();
   buildFamiliars();
   buildBedroom();
+  if (generatedWings.length) {
+    buildAnnex();
+    generatedWings.forEach(([key, spec], i) => buildGeneratedWing(key, spec, i));
+  }
   return world;
 }
+
 
 // Movement collision: a room's walkable area minus its obstacles.
 export function walkable(room, x, z, pad = 0.38) {
