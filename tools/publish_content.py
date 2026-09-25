@@ -4,10 +4,10 @@ Usage:
     python tools/publish_content.py [--skip-build] [--dry-run]
 
 Rebuilds textures (unless --skip-build), drops works listed in
-content-policy.json, uploads everything over SSH as a new release directory
-and atomically repoints /srv/coolimages/content at it. Caddy serves that
-directory at https://coolimages.alirezaafshan.com/content/. Content updates
-never need an app redeploy.
+content-policy.json, uploads the images and manifest over SSH as a new release
+directory and atomically repoints /srv/coolimages/content at it. Caddy serves
+that directory at https://coolimages.alirezaafshan.com/content/. Curated text
+lives in the repo (data/) and ships with the app, not here.
 
 Environment: COOLIMAGES_SSH (default "vps-admin"), COOLIMAGES_REMOTE_BASE
 (default "/srv/coolimages").
@@ -29,8 +29,6 @@ POLICY = ROOT / "content-policy.json"
 REMOTE = os.environ.get("COOLIMAGES_SSH", "vps-admin")
 REMOTE_BASE = os.environ.get("COOLIMAGES_REMOTE_BASE", "/srv/coolimages")
 KEEP_RELEASES = 3
-# Generated curatorial data that travels with the images when present.
-DATA_FILES = ("catalog.json", "layout.json", "credits.json")
 
 
 def main():
@@ -53,12 +51,6 @@ def main():
         (stage / "art").mkdir(parents=True)
         for item in items:
             shutil.copy2(ROOT / item["file"], stage / "art" / Path(item["file"]).name)
-        for name in DATA_FILES:
-            if (CONTENT / name).exists():
-                data = json.loads((CONTENT / name).read_text(encoding="utf-8"))
-                if isinstance(data, dict) and name != "layout.json":
-                    data = {k: v for k, v in data.items() if k not in excluded}
-                (stage / name).write_text(json.dumps(data, indent=2), encoding="utf-8")
         public = {"built": manifest.get("built"), "count": len(items), "items": items, "withheld": withheld}
         # Written last so a reader never sees a manifest pointing at missing files.
         (stage / "manifest.json").write_text(json.dumps(public, indent=2), encoding="utf-8")

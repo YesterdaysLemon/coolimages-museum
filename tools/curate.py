@@ -1,22 +1,29 @@
 """Curate new images with Claude and grow the museum's generated wings.
 
 Usage:
-    python tools/curate.py [--dry-run] [--limit N]
+    python tools/curate.py [--source site|local] [--dry-run] [--limit N]
 
-Finds images in content/manifest.json that nothing covers yet: not in the
-hand-written catalogue (src/catalog.js), the generated catalogue
-(content/catalog.json) or the exclusion list (content-policy.json). Works that
+Runs in GitHub Actions (.github/workflows/curate.yml), authenticated with
+Workload Identity Federation: no API key exists anywhere. With --source site
+(the default) it reads the *published* manifest and images from the live site,
+so works withheld at an artist's request are never sent to the API.
+
+Finds images that nothing covers yet: not in the hand-written catalogue
+(src/catalog.js), the generated catalogue (data/catalog.json) or the exclusion
+list (content-policy.json). Works that
 are "on hold" (catalogued, but waiting on the Rotunda easels for enough company
 to form a wing) are reconsidered each run.
 
 Claude writes each work's plaque and callouts and decides where it hangs: a new
 generated wing (3-7 works sharing a mood), an existing generated wing with
-space, or "hold". Results go to content/catalog.json and content/layout.json,
-which tools/publish_content.py uploads alongside the images.
+space, or "hold". Results go to data/catalog.json and data/layout.json, which
+the workflow commits; the resulting deploy puts them live.
 
-Credentials come from the environment (ANTHROPIC_API_KEY, injected by the
-scheduled task from the credential vault). Without them the script exits 0 and
-new images simply stay on the acquisition easels.
+Credentials: the federation variables (ANTHROPIC_FEDERATION_RULE_ID,
+ANTHROPIC_ORGANIZATION_ID, ANTHROPIC_SERVICE_ACCOUNT_ID,
+ANTHROPIC_IDENTITY_TOKEN_FILE), or ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN for
+a local run. Without any, the script exits 0 and new images stay on the
+acquisition easels.
 """
 import argparse
 import base64
@@ -25,6 +32,7 @@ import json
 import os
 import re
 import sys
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 
@@ -32,6 +40,8 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 CONTENT = ROOT / "content"
+DATA = ROOT / "data"
+SITE = os.environ.get("COOLIMAGES_SITE", "https://coolimages.alirezaafshan.com")
 MODEL = "claude-opus-5"
 MIN_WING = 3
 MAX_WING = 7
@@ -115,6 +125,10 @@ def load_json(path, default):
         return default
 
 
+def write_json(path, data):
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
+
+
 def handwritten_ids():
     """Keys of the WORKS object in src/catalog.js (two-space indented keys)."""
     text = (ROOT / "src" / "catalog.js").read_text(encoding="utf-8")
@@ -122,8 +136,31 @@ def handwritten_ids():
     return set(re.findall(r"^  '?([A-Za-z0-9_-]{8,})'?: \{", works, flags=re.M))
 
 
-def encode_image(path, edge=1024):
-    with Image.open(path) as im:
+def read_bytes(source):
+    """Image bytes from a local path or a URL on the live site."""
+    if isinstance(source, Path):
+        return source.read_bytes()
+    req = urllib.request.Request(source, headers={"User-Agent": "coolimages-curator"})
+    with urllib.request.urlopen(req, timeout=60) as res:
+        return res.read()
+
+
+def fetch_json(url):
+    req = urllib.request.Request(url, headers={"User-Agent": "coolimages-curator", "Cache-Control": "no-cache"})
+    with urllib.request.urlopen(req, timeout=60) as res:
+        return json.loads(res.read())
+
+
+def has_credentials():
+    federation = ("ANTHROPIC_FEDERATION_RULE_ID", "ANTHROPIC_ORGANIZATION_ID", "ANTHROPIC_SERVICE_ACCOUNT_ID")
+    token = os.environ.get("ANTHROPIC_IDENTITY_TOKEN_FILE") or os.environ.get("ANTHROPIC_IDENTITY_TOKEN")
+    if all(os.environ.get(k) for k in federation) and token:
+        return True
+    return bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
+
+
+def encode_image(source, edge=1024):
+    with Image.open(io.BytesIO(read_bytes(source))) as im:
         im = im.convert("RGB")
         im.thumbnail((edge, edge))
         buf = io.BytesIO()
@@ -151,10 +188,7 @@ def clean_work(raw):
     }
 
 
-def ask_claude(batch, held, catalog, layout):
-    import anthropic
-
-    client = anthropic.Anthropic()
+def ask_claude(client, batch, held, catalog, layout):
     open_wings = [
         f'- key "{key}": {w["name"]} ({w["subtitle"]}), template {w["template"]}, {MAX_WING - len(w.get("works", []))} spaces left. {w["statement"]}'
         for key, w in layout["wings"].items()
@@ -254,17 +288,22 @@ def apply_result(result, batch_ids, held, catalog, layout, now):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--source", choices=("site", "local"), default="site", help="published site (default) or local content/")
     parser.add_argument("--dry-run", action="store_true", help="list what would be curated; no API call")
     parser.add_argument("--limit", type=int, default=MAX_BATCH, help=f"images per request (default {MAX_BATCH})")
     args = parser.parse_args()
 
-    manifest = load_json(CONTENT / "manifest.json", {"items": []})
-    catalog = load_json(CONTENT / "catalog.json", {})
-    layout = load_json(CONTENT / "layout.json", {"version": 1, "wings": {}})
+    if args.source == "site":
+        manifest = fetch_json(f"{SITE}/content/manifest.json")
+        items = {item["id"]: f"{SITE}/{item['file']}" for item in manifest["items"]}
+    else:
+        manifest = load_json(CONTENT / "manifest.json", {"items": []})
+        items = {item["id"]: ROOT / item["file"] for item in manifest["items"]}
+    catalog = load_json(DATA / "catalog.json", {})
+    layout = load_json(DATA / "layout.json", {"version": 1, "wings": {}})
     layout.setdefault("wings", {})
     excluded = set(load_json(ROOT / "content-policy.json", {}).get("exclude", {}))
     known = handwritten_ids()
-    items = {item["id"]: ROOT / item["file"] for item in manifest["items"]}
 
     new_ids = [i for i in items if i not in known and i not in catalog and i not in excluded]
     held = {i for i, w in catalog.items() if w.get("hold") and i in items and i not in excluded}
@@ -275,18 +314,25 @@ def main():
     if args.dry_run:
         print("Would curate:", ", ".join(queue))
         return
-    if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
+    if not has_credentials():
         print("No Anthropic credentials in the environment; new images stay on the acquisition easels.")
         return
 
+    import anthropic
+
+    # One client for the whole run: under federation it exchanges the identity
+    # token once and refreshes from the token file before expiry (GitHub's
+    # tokens are single-use, so a client per batch would be rejected).
+    client = anthropic.Anthropic()
     now = datetime.now().isoformat(timespec="minutes")
+    DATA.mkdir(exist_ok=True)
     for start in range(0, len(queue), args.limit):
         batch = [(i, items[i]) for i in queue[start:start + args.limit]]
-        result = ask_claude(batch, held, catalog, layout)
+        result = ask_claude(client, batch, held, catalog, layout)
         apply_result(result, {i for i, _ in batch}, held, catalog, layout, now)
         # Save after every batch so a later failure keeps earlier work.
-        (CONTENT / "catalog.json").write_text(json.dumps(catalog, indent=2, ensure_ascii=False), encoding="utf-8")
-        (CONTENT / "layout.json").write_text(json.dumps(layout, indent=2, ensure_ascii=False), encoding="utf-8")
+        write_json(DATA / "catalog.json", catalog)
+        write_json(DATA / "layout.json", layout)
     placed = sum(len(w["works"]) for w in layout["wings"].values())
     holding = sum(1 for w in catalog.values() if w.get("hold"))
     print(f"Catalogue: {len(catalog)} generated entries; {placed} hung in {len(layout['wings'])} wings; {holding} on hold")

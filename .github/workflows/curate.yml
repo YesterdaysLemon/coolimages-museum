@@ -1,0 +1,94 @@
+name: "Curate new images"
+
+# Claude writes plaques and hangs new wings for works the PC has published.
+# Authenticates with Workload Identity Federation: GitHub's OIDC token for
+# this repository's main branch is exchanged for a short-lived Anthropic
+# token. No API key exists anywhere. The PC dispatches this after publishing;
+# the schedule is the fallback.
+
+on:
+  schedule:
+    - cron: "17 21 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: curate-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  curate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write # commit data/
+      actions: write # dispatch the deploy workflow
+      id-token: write # GitHub OIDC token for the Anthropic federation rule
+    env:
+      ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+      ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+      ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+      WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
+      ANTHROPIC_IDENTITY_TOKEN_FILE: /tmp/gha-jwt
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Install curator dependencies
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --quiet -r tools/requirements.txt
+
+      - name: Check for new works
+        id: queue
+        run: |
+          set -euo pipefail
+          out="$(.venv/bin/python tools/curate.py --dry-run)"
+          echo "$out"
+          if grep -q '^Would curate:' <<<"$out"; then echo "work=true" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Curate with Claude
+        if: steps.queue.outputs.work == 'true'
+        run: |
+          set -euo pipefail
+          if [ -z "$ANTHROPIC_FEDERATION_RULE_ID" ] || [ -z "$ANTHROPIC_ORGANIZATION_ID" ] || [ -z "$ANTHROPIC_SERVICE_ACCOUNT_ID" ]; then
+            echo "::error::Federation variables are not configured (repository variables ANTHROPIC_*)."
+            exit 1
+          fi
+          # Only needed when the rule is enabled in more than one workspace.
+          if [ -n "$WORKSPACE_ID" ]; then export ANTHROPIC_WORKSPACE_ID="$WORKSPACE_ID"; fi
+          fetch_token() {
+            curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+              "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" \
+              | python3 -c 'import json, sys; print(json.load(sys.stdin)["value"])' > "$ANTHROPIC_IDENTITY_TOKEN_FILE.tmp"
+            mv "$ANTHROPIC_IDENTITY_TOKEN_FILE.tmp" "$ANTHROPIC_IDENTITY_TOKEN_FILE"
+          }
+          fetch_token
+          # GitHub identity tokens last about five minutes and are single-use;
+          # keep a fresh one on disk for the SDK's refresh exchanges.
+          ( while sleep 120; do fetch_token || true; done ) &
+          refresher=$!
+          trap 'kill "$refresher" 2>/dev/null || true' EXIT
+          .venv/bin/python tools/curate.py
+
+      - name: Commit curated data
+        id: commit
+        if: steps.queue.outputs.work == 'true'
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data/; then echo "Nothing new to commit"; exit 0; fi
+          git config user.name "coolimages-curator[bot]"
+          git config user.email "coolimages-curator@users.noreply.github.com"
+          git add data/
+          git commit -m "Curate new works ($(date -u +%Y-%m-%d))"
+          git pull --rebase origin main
+          git push origin HEAD:main
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main -R "$GITHUB_REPOSITORY"

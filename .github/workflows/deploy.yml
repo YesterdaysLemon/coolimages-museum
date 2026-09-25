@@ -27,7 +27,7 @@ jobs:
           set -euo pipefail
           for f in src/*.js server.mjs; do node --check "$f"; done
           python3 -m py_compile tools/*.py
-          python3 -c "import json; json.load(open('content-policy.json'))"
+          for f in content-policy.json data/*.json; do python3 -c "import json, sys; json.load(open(sys.argv[1]))" "$f"; done
       - name: Smoke-test the server
         run: |
           set -euo pipefail

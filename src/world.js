@@ -41,7 +41,7 @@ export function formatSaved(iso) {
   return `Saved ${month} ${d.getDate()}, ${d.getFullYear()}, ${hours % 12 || 12}:${minutes} ${hours >= 12 ? 'pm' : 'am'}`;
 }
 
-// Generated wings (content/layout.json) are built from these templates.
+// Generated wings (data/layout.json) are built from these templates.
 export const TEMPLATES = {
   salon: { mood: 'gallery', surface: 'wood', frame: 'gilded', plaque: 'brass', ink: 'dark', height: 5 },
   white: { mood: 'familiars', surface: 'void', frame: 'bare', plaque: 'card', ink: 'dark', height: 6, float: true },

@@ -36,7 +36,7 @@ const types = {
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
 };
-const allowed = [/^\/src\/[\w-]+\.js$/, /^\/content\/[\w-]+\.json$/, /^\/content\/art\/[\w-]+\.(jpg|png)$/, /^\/robots\.txt$/];
+const allowed = [/^\/src\/[\w-]+\.js$/, /^\/data\/[\w-]+\.json$/, /^\/content\/[\w-]+\.json$/, /^\/content\/art\/[\w-]+\.(jpg|png)$/, /^\/robots\.txt$/];
 
 http
   .createServer(async (req, res) => {

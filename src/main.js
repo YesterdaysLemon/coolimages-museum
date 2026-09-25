@@ -154,9 +154,9 @@ async function boot() {
   const manifest = await fetchJson('content/manifest.json');
   if (!manifest) throw new Error('The collection is missing (content/manifest.json). Run: python tools/build_assets.py');
   // Entries written by the curation pipeline never override hand-written ones.
-  const generated = await fetchJson('content/catalog.json');
+  const generated = await fetchJson('data/catalog.json');
   for (const [id, work] of Object.entries(generated || {})) if (!WORKS[id]) WORKS[id] = { ...work, generated: true };
-  const layout = await fetchJson('content/layout.json');
+  const layout = await fetchJson('data/layout.json');
   for (const [key, wing] of Object.entries(layout?.wings || {})) {
     WINGS[key] = { name: wing.name, subtitle: wing.subtitle, statement: wing.statement, accent: wing.accent, template: wing.template, generated: true };
   }
@@ -168,8 +168,7 @@ async function boot() {
         'Every couple of days a curator looks at whatever new images arrived in the folder, writes their plaques, and hangs them in new wings off this corridor. The rooms are generated; the taste is still the collector\u2019s.',
     };
   }
-  const extra = await fetchJson('content/credits.json');
-  for (const [id, credit] of Object.entries({ ...(extra || {}), ...CREDITS })) if (WORKS[id]) WORKS[id].credit = credit;
+  for (const [id, credit] of Object.entries(CREDITS)) if (WORKS[id]) WORKS[id].credit = credit;
   collection = manifest;
   await loadFonts();
   const art = await loadArt(manifest.items);
