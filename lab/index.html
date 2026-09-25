@@ -1,0 +1,747 @@
+<title>Coolimages Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Instrument+Sans:wght@400;500;600&family=Patrick+Hand&display=swap" />
+<style>
+  :root {
+    --bench: #f1f2ee;
+    --paper: #fcfcfa;
+    --ink: #1b2130;
+    --muted: #616a77;
+    --faint: #8b929c;
+    --rule: #d8dbd3;
+    --pen: #2941b0;
+    --pen-soft: #e6e9f8;
+    --draft: #9c5d14;
+    --draft-soft: #f6ead8;
+    --ok: #2c7552;
+    --ok-soft: #dcefe4;
+    --danger: #a3322a;
+    --shade: rgba(27, 33, 48, 0.06);
+    --serif: "EB Garamond", "Iowan Old Style", Georgia, serif;
+    --hand: "Patrick Hand", "Segoe Print", "Comic Sans MS", cursive;
+    --sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bench: #121418;
+      --paper: #1a1d23;
+      --ink: #e6e8e3;
+      --muted: #a0a7b2;
+      --faint: #7b828d;
+      --rule: #2d313a;
+      --pen: #a3b1ff;
+      --pen-soft: #22284a;
+      --draft: #e3a75d;
+      --draft-soft: #3a2c1a;
+      --ok: #74c89d;
+      --ok-soft: #1d3a2c;
+      --danger: #f08a80;
+      --shade: rgba(0, 0, 0, 0.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bench: #121418;
+    --paper: #1a1d23;
+    --ink: #e6e8e3;
+    --muted: #a0a7b2;
+    --faint: #7b828d;
+    --rule: #2d313a;
+    --pen: #a3b1ff;
+    --pen-soft: #22284a;
+    --draft: #e3a75d;
+    --draft-soft: #3a2c1a;
+    --ok: #74c89d;
+    --ok-soft: #1d3a2c;
+    --danger: #f08a80;
+    --shade: rgba(0, 0, 0, 0.25);
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bench); color: var(--ink); }
+  body { font: 15px/1.55 var(--sans); padding-inline: 16px; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; }
+  .wrap { max-width: 1320px; margin: 0 auto; padding-block: 18px 40px; }
+
+  header.top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; padding-bottom: 14px; border-bottom: 1px solid var(--rule); }
+  .brand h1 { font: 500 30px/1.1 var(--serif); margin: 0; letter-spacing: 0.01em; }
+  .brand p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+  .tally { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tally span { display: inline-flex; align-items: center; gap: 6px; }
+
+  .mark { width: 11px; height: 11px; flex: none; display: inline-block; border-radius: 50%; border: 1.5px solid var(--faint); }
+  .mark.notes { border-color: var(--pen); background: linear-gradient(90deg, var(--pen) 50%, transparent 50%); }
+  .mark.draft { border: none; border-radius: 1px; background: var(--draft); transform: rotate(45deg) scale(0.82); }
+  .mark.approved { border-color: var(--ok); background: var(--ok); }
+  .mark.live { border-color: var(--ok); background: var(--paper); box-shadow: inset 0 0 0 2px var(--ok); }
+
+  .notice { margin: 12px 0 0; padding: 10px 14px; border: 1px solid var(--rule); background: var(--paper); border-radius: 6px; font-size: 14px; color: var(--muted); }
+  .notice[hidden] { display: none; }
+
+  main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; margin-top: 18px; }
+  @media (min-width: 900px) { main { grid-template-columns: minmax(260px, 330px) minmax(0, 1fr); align-items: start; } }
+
+  /* Drawer: the index of works */
+  .drawer { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  @media (min-width: 900px) { .drawer { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); max-height: calc(100vh - 36px); } }
+  .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .filters input { grid-column: 1 / -1; }
+  .filters input, .filters select { width: 100%; min-width: 0; height: 36px; padding: 0 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); }
+  .count { font-size: 12px; color: var(--faint); letter-spacing: 0.04em; text-transform: uppercase; }
+  .list { list-style: none; margin: 0; padding: 0; overflow-y: auto; max-height: 340px; border-top: 1px solid var(--rule); }
+  @media (min-width: 900px) { .list { max-height: none; flex: 1; } }
+  .list li + li { border-top: 1px solid var(--rule); }
+  .row { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; padding: 7px 6px; border: 0; background: none; text-align: left; cursor: pointer; border-radius: 4px; }
+  .row:hover { background: var(--shade); }
+  .row[aria-current="true"] { background: var(--pen-soft); }
+  .row .thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 3px; background: var(--rule); display: block; }
+  .row .withheld-thumb { width: 48px; height: 48px; border-radius: 3px; background: repeating-linear-gradient(135deg, var(--rule) 0 4px, transparent 4px 8px); }
+  .row .t { font: 500 16px/1.2 var(--serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .t.untitled { color: var(--faint); font-style: italic; font-weight: 400; }
+  .row .w { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Bench: one work at a time */
+  .bench { min-width: 0; display: flex; flex-direction: column; gap: 18px; }
+  .stage { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .frame { position: relative; background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; padding: 14px; display: grid; place-items: center; min-height: 220px; }
+  .frame img { max-height: min(58vh, 620px); width: auto; max-width: 100%; object-fit: contain; display: block; }
+  .frame .veil { color: var(--muted); font: italic 18px/1.4 var(--serif); text-align: center; max-width: 36ch; padding: 40px 10px; }
+  .badge { position: absolute; top: 22px; left: 22px; font-size: 12px; font-weight: 500; padding: 3px 9px; border-radius: 999px; background: var(--ink); color: var(--paper); }
+  .stagebar { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); }
+  .stagebar code { font: 12px ui-monospace, "Cascadia Mono", Consolas, monospace; color: var(--faint); }
+  .nav { display: flex; gap: 6px; }
+
+  .btn { height: 36px; padding: 0 14px; border-radius: 6px; border: 1px solid var(--rule); background: var(--paper); cursor: pointer; font-weight: 500; white-space: nowrap; }
+  .btn:hover:not(:disabled) { border-color: var(--faint); }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+  .btn.primary { background: var(--pen); border-color: var(--pen); color: var(--paper); }
+  .btn.approve { background: var(--ok); border-color: var(--ok); color: var(--paper); }
+  .btn.quiet { border-color: transparent; background: none; color: var(--muted); }
+
+  .pair { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  @media (min-width: 1150px) { .pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+  .label { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+
+  .plaque { background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 16px 18px 18px; }
+  .plaque .kicker { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+  .plaque h2 { font: italic 500 25px/1.15 var(--serif); margin: 4px 0 6px; text-wrap: balance; }
+  .plaque .meta { font-size: 13px; color: var(--muted); }
+  .plaque .note { font: 18px/1.5 var(--serif); margin: 12px 0 0; max-width: 62ch; }
+  .plaque .credit { font-size: 12px; color: var(--faint); margin-top: 10px; }
+  .empty { color: var(--faint); font-style: italic; }
+
+  .notes textarea { width: 100%; min-height: 230px; resize: vertical; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 4px; color: var(--pen); font: 21px/1.45 var(--hand);
+    background: var(--paper) repeating-linear-gradient(to bottom, transparent 0 29.5px, var(--rule) 29.5px 30.5px); background-attachment: local; }
+  .notes textarea::placeholder { color: var(--faint); }
+  .prompts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .prompts button { font-size: 13px; padding: 4px 10px; border-radius: 999px; border: 1px dashed var(--faint); background: none; cursor: pointer; color: var(--muted); }
+  .prompts button:hover { color: var(--pen); border-color: var(--pen); }
+  .saved { font-size: 12px; color: var(--faint); margin-top: 6px; min-height: 18px; }
+
+  .lab { border-top: 1px solid var(--rule); padding-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+  .voices { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+  .voices label { position: relative; }
+  .voices input { position: absolute; opacity: 0; pointer-events: none; }
+  .voices span { display: block; padding: 7px 12px; font-size: 13px; cursor: pointer; background: var(--paper); color: var(--muted); }
+  .voices label + label span { border-left: 1px solid var(--rule); }
+  .voices input:checked + span { background: var(--ink); color: var(--paper); }
+  .voices input:focus-visible + span { outline: 2px solid var(--pen); outline-offset: -2px; }
+  .status { font-size: 14px; color: var(--muted); min-height: 21px; }
+  .status.error { color: var(--danger); }
+
+  .draft { border: 1px solid var(--draft); background: var(--draft-soft); border-radius: 6px; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .draft .label { color: var(--draft); margin: 0; }
+  .draft input, .draft textarea { width: 100%; border: 1px solid transparent; border-radius: 4px; background: var(--paper); padding: 8px 10px; }
+  .draft input { font: italic 500 22px/1.2 var(--serif); }
+  .draft textarea { font: 18px/1.5 var(--serif); min-height: 140px; resize: vertical; }
+  .draft input:hover, .draft textarea:hover { border-color: var(--rule); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips span { font-size: 13px; padding: 2px 10px; border-radius: 999px; background: var(--paper); color: var(--draft); border: 1px solid var(--draft); }
+  .why { font: italic 15px/1.4 var(--serif); color: var(--muted); margin: 0; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .approved { border: 1px solid var(--ok); background: var(--ok-soft); border-radius: 6px; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; }
+  .approved .label { color: var(--ok); margin: 0; }
+  .approved h3 { font: italic 500 20px/1.2 var(--serif); margin: 0; }
+  .approved p { font: 17px/1.45 var(--serif); margin: 0; max-width: 62ch; }
+  .approved small { font-size: 13px; color: var(--muted); }
+
+  footer { margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 22px; }
+  footer .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  footer .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  @media (prefers-reduced-motion: no-preference) { .row, .btn { transition: background-color 0.15s, border-color 0.15s; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Coolimages Lab</h1>
+      <p>Write what each piece stirs up. Claude turns it into plaque text; nothing reaches the museum until you approve it.</p>
+    </div>
+    <div class="tally" aria-live="polite">
+      <span><i class="mark notes" aria-hidden="true"></i><b id="n-notes">0</b> with notes</span>
+      <span><i class="mark draft" aria-hidden="true"></i><b id="n-draft">0</b> drafts</span>
+      <span><i class="mark approved" aria-hidden="true"></i><b id="n-approved">0</b> approved, waiting</span>
+      <span><i class="mark live" aria-hidden="true"></i><b id="n-live">0</b> live</span>
+    </div>
+  </header>
+  <p class="notice" id="store-notice" hidden></p>
+
+  <main>
+    <aside class="drawer" aria-label="Works">
+      <div class="filters">
+        <input id="q" type="search" placeholder="Search titles, notes, plaques" aria-label="Search" />
+        <select id="wing" aria-label="Wing"><option value="">Every wing</option></select>
+        <select id="state" aria-label="Status">
+          <option value="">Any status</option>
+          <option value="none">No notes yet</option>
+          <option value="notes">Has notes</option>
+          <option value="draft">Draft waiting</option>
+          <option value="approved">Approved, waiting</option>
+          <option value="live">Live</option>
+        </select>
+      </div>
+      <div class="count" id="count">Loading the collection…</div>
+      <ul class="list" id="list"></ul>
+    </aside>
+
+    <section class="bench" id="bench" aria-live="off">
+      <div class="stage">
+        <div class="frame" id="frame"><div class="veil">Loading…</div></div>
+        <div class="stagebar">
+          <span id="where"></span>
+          <div class="nav">
+            <button class="btn" id="prev" type="button" aria-label="Previous work">← Previous</button>
+            <button class="btn" id="next" type="button" aria-label="Next work">Next →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pair">
+        <div>
+          <p class="label">On the wall now</p>
+          <article class="plaque" id="plaque"></article>
+        </div>
+        <div class="notes">
+          <p class="label"><label for="notes">Your notes</label></p>
+          <textarea id="notes" spellcheck="true" placeholder="Why did you save it? What does it remind you of? A song, a smell, a place, a person, a feeling…"></textarea>
+          <div class="prompts" id="prompts">
+            <button type="button" data-line="Why it stayed with me: ">Why it stayed</button>
+            <button type="button" data-line="It reminds me of ">Reminds me of</button>
+            <button type="button" data-line="The feeling: ">The feeling</button>
+            <button type="button" data-line="It should hang next to ">Hang it next to</button>
+            <button type="button" data-line="What I notice every time: ">What I notice</button>
+          </div>
+          <div class="saved" id="saved"></div>
+        </div>
+      </div>
+
+      <div class="lab" id="lab">
+        <div class="controls">
+          <div class="voices" role="radiogroup" aria-label="Voice">
+            <label><input type="radio" name="voice" value="museum" checked /><span>Museum voice</span></label>
+            <label><input type="radio" name="voice" value="mine" /><span>Closer to mine</span></label>
+            <label><input type="radio" name="voice" value="esoteric" /><span>Esoteric</span></label>
+          </div>
+          <button class="btn primary" id="draft-btn" type="button">Draft a plaque from my notes</button>
+          <button class="btn quiet" id="stop-btn" type="button" hidden>Stop drafting</button>
+        </div>
+        <div class="status" id="status" role="status"></div>
+        <div id="draft-slot"></div>
+        <div id="approved-slot"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Your notes stay in this lab. Only text you approve goes to the museum, the next time you tell Claude “sync my lab”.</span>
+    <span class="legend">
+      <span><i class="mark" aria-hidden="true"></i>untouched</span>
+      <span><i class="mark notes" aria-hidden="true"></i>notes</span>
+      <span><i class="mark draft" aria-hidden="true"></i>draft</span>
+      <span><i class="mark approved" aria-hidden="true"></i>approved</span>
+      <span><i class="mark live" aria-hidden="true"></i>live</span>
+    </span>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const el = (tag, props = {}, ...kids) => {
+    const n = Object.assign(document.createElement(tag), props);
+    for (const k of kids) if (k != null) n.append(k);
+    return n;
+  };
+  const VOICES = {
+    museum: "The museum's house voice: observant, specific, dry, warm, a little funny. Let the collector's associations steer what the note notices and why it matters.",
+    mine: "Stay close to the collector's own words and rhythm: borrow their images and turns of phrase where they work as plaque text, while keeping it readable for strangers.",
+    esoteric: "Lean into an esoteric, occult register: correspondences, sigils, the Kabbalah and alchemy as lenses, the sense that the image is a diagram of something hidden. Still specific and still a little wry; never mystical filler.",
+  };
+  const ERRORS = {
+    not_granted: "Drafting needs your OK to use Claude from this page. Reload to be asked again.",
+    sampling_disabled: "Claude isn't available to this page on your account.",
+    rate_limited: "Too many drafts at once or usage is at its limit. Give it a minute and try again.",
+    session_expired: "Your session expired. Sign in again, then try once more.",
+    refused: "Claude declined to draft from these notes. Rephrase them and try again.",
+    invalid_json: "The draft came back malformed. Try again.",
+    prompt_too_large: "The notes are too long to send. Trim them a little.",
+    empty_completion: "Nothing came back. Add a little more to your notes and try again.",
+    image_rejected: "The picture couldn't be sent; drafting from text only next time.",
+  };
+
+  const state = { items: [], byId: new Map(), wings: [], notes: {}, current: null, db: null, sample: null, canSeeImages: false, ctl: null, pending: null };
+  const writes = new Map();
+  let saveTimer = null;
+  let dirty = false;
+
+  // ---------------------------------------------------------------- status
+  function statusOf(item) {
+    const n = state.notes[item.id];
+    if (n?.draft) return "draft";
+    if (n?.approved) return n.approved.title === item.title && n.approved.note === item.note ? "live" : "approved";
+    if (n?.text?.trim()) return "notes";
+    return "none";
+  }
+
+  function tally() {
+    const c = { notes: 0, draft: 0, approved: 0, live: 0 };
+    for (const it of state.items) {
+      const s = statusOf(it);
+      if (s !== "none") c.notes += state.notes[it.id]?.text?.trim() ? 1 : 0;
+      if (s in c && s !== "notes") c[s]++;
+    }
+    for (const k of Object.keys(c)) $("#n-" + k).textContent = c[k];
+  }
+
+  // ------------------------------------------------------------------ list
+  function matches(item) {
+    const q = $("#q").value.trim().toLowerCase();
+    const wing = $("#wing").value;
+    const st = $("#state").value;
+    if (wing && item.wing !== wing) return false;
+    if (st && statusOf(item) !== st) return false;
+    if (!q) return true;
+    const hay = [item.title, item.note, item.artist, item.wingName, item.id, state.notes[item.id]?.text].join(" ").toLowerCase();
+    return hay.includes(q);
+  }
+
+  function renderList() {
+    const list = $("#list");
+    const shown = state.items.filter(matches);
+    list.replaceChildren(
+      ...shown.map((item) => {
+        const st = statusOf(item);
+        const pic = item.thumb
+          ? el("img", { className: "thumb", src: item.thumb, alt: "", loading: "lazy", decoding: "async" })
+          : el("div", { className: "withheld-thumb", title: "Image withheld" });
+        const title = el("div", { className: "t" + (item.title ? "" : " untitled"), textContent: item.title || "Untitled acquisition" });
+        const wing = el("div", { className: "w", textContent: item.wingName + (item.kind === "video" ? " · video" : "") });
+        const mark = el("i", { className: "mark " + (st === "none" ? "" : st), title: st });
+        const row = el("button", { className: "row", type: "button" }, pic, el("div", {}, title, wing), mark);
+        row.setAttribute("aria-current", String(item.id === state.current));
+        row.dataset.id = item.id;
+        row.addEventListener("click", () => select(item.id));
+        return el("li", {}, row);
+      }),
+    );
+    $("#count").textContent = shown.length === state.items.length ? `${shown.length} works` : `${shown.length} of ${state.items.length} works`;
+    tally();
+  }
+
+  function markRows() {
+    for (const row of document.querySelectorAll(".row")) {
+      const item = state.byId.get(row.dataset.id);
+      row.setAttribute("aria-current", String(row.dataset.id === state.current));
+      const st = statusOf(item);
+      row.lastElementChild.className = "mark " + (st === "none" ? "" : st);
+    }
+    tally();
+  }
+
+  // ----------------------------------------------------------------- bench
+  function clock(s) {
+    s = Math.round(s || 0);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  }
+  function savedOn(iso) {
+    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  function renderStage(item) {
+    const frame = $("#frame");
+    if (item.thumb) {
+      const img = el("img", { src: item.thumb, alt: item.title || "Untitled acquisition" });
+      frame.replaceChildren(img, item.kind === "video" ? el("span", { className: "badge", textContent: `Moving image · ${clock(item.duration)}` }) : null);
+    } else {
+      frame.replaceChildren(el("div", { className: "veil", textContent: "Not in the lab: the artist asks that this image not be reposted. Your notes still work." }));
+    }
+    const i = visibleIds().indexOf(item.id);
+    $("#where").replaceChildren(el("span", { textContent: `${item.wingName} · saved ${savedOn(item.saved)} · ` }), el("code", { textContent: item.id }));
+    $("#prev").disabled = i <= 0;
+    $("#next").disabled = i < 0 || i >= visibleIds().length - 1;
+  }
+
+  function renderPlaque(item) {
+    const p = $("#plaque");
+    if (!item.title && !item.note) {
+      p.replaceChildren(
+        el("div", { className: "kicker", textContent: item.wingName }),
+        el("h2", { className: "empty", textContent: "Not catalogued yet" }),
+        el("p", { className: "note empty", textContent: "The curator hasn't written this one up. Your notes can give it its first plaque." }),
+      );
+      return;
+    }
+    p.replaceChildren(
+      el("div", { className: "kicker", textContent: item.wingName + (item.handWritten ? " · hand-written" : "") }),
+      el("h2", { textContent: item.title || "Untitled" }),
+      el("div", { className: "meta", textContent: [item.artist, item.medium].filter(Boolean).join(" · ") }),
+      el("p", { className: "note", textContent: item.note }),
+      item.credit ? el("div", { className: "credit", textContent: "Credit: " + item.credit }) : null,
+    );
+  }
+
+  function renderNotes(item, force) {
+    const ta = $("#notes");
+    if (force || !(document.activeElement === ta && dirty)) {
+      ta.value = state.notes[item.id]?.text || "";
+      dirty = false;
+    }
+    const n = state.notes[item.id];
+    $("#saved").textContent = n?.updatedAt ? `Saved ${new Date(n.updatedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : "";
+  }
+
+  function renderDraft(item) {
+    const slot = $("#draft-slot");
+    const d = state.notes[item.id]?.draft;
+    if (!d) return slot.replaceChildren();
+    const title = el("input", { id: "draft-title", value: d.title, ariaLabel: "Draft title" });
+    const note = el("textarea", { id: "draft-note", ariaLabel: "Draft note" });
+    note.value = d.note;
+    const chips = el("div", { className: "chips" }, ...(d.associations || []).map((a) => el("span", { textContent: a })));
+    const approve = el("button", { className: "btn approve", type: "button", textContent: "Approve for the museum" });
+    const again = el("button", { className: "btn", type: "button", textContent: "Draft again" });
+    const discard = el("button", { className: "btn quiet", type: "button", textContent: "Discard draft" });
+    approve.addEventListener("click", () => approveDraft(item, title.value.trim(), note.value.trim()));
+    again.addEventListener("click", () => draft(item, true));
+    discard.addEventListener("click", () => writeNote(item.id, (n) => { delete n.draft; }));
+    for (const input of [title, note]) {
+      input.addEventListener("change", () => writeNote(item.id, (n) => { n.draft = { ...n.draft, title: title.value.trim(), note: note.value.trim() }; }));
+    }
+    slot.replaceChildren(
+      el(
+        "div",
+        { className: "draft" },
+        el("p", { className: "label", textContent: `Draft · ${d.voice === "mine" ? "closer to yours" : d.voice === "esoteric" ? "esoteric" : "museum voice"}` }),
+        title,
+        note,
+        d.associations?.length ? chips : null,
+        d.why ? el("p", { className: "why", textContent: d.why }) : null,
+        el("div", { className: "actions" }, approve, again, discard),
+      ),
+    );
+  }
+
+  function renderApproved(item) {
+    const slot = $("#approved-slot");
+    const a = state.notes[item.id]?.approved;
+    if (!a) return slot.replaceChildren();
+    const live = a.title === item.title && a.note === item.note;
+    const undo = el("button", { className: "btn quiet", type: "button", textContent: "Withdraw approval" });
+    undo.addEventListener("click", () => writeNote(item.id, (n) => { delete n.approved; }));
+    slot.replaceChildren(
+      el(
+        "div",
+        { className: "approved" },
+        el("p", { className: "label", textContent: live ? "Live in the museum" : "Approved · waiting for the next sync" }),
+        el("h3", { textContent: a.title }),
+        el("p", { textContent: a.note }),
+        el("small", { textContent: `Approved ${savedOn(a.at)}` }),
+        live ? null : el("div", { className: "actions" }, undo),
+      ),
+    );
+  }
+
+  function renderBench(force = false) {
+    const item = state.byId.get(state.current);
+    if (!item) return;
+    renderStage(item);
+    renderPlaque(item);
+    renderNotes(item, force);
+    renderDraft(item);
+    renderApproved(item);
+    $("#draft-btn").disabled = !state.sample || !!state.pending || !($("#notes").value.trim());
+  }
+
+  function visibleIds() {
+    return state.items.filter(matches).map((i) => i.id);
+  }
+
+  function select(id) {
+    if (!state.byId.has(id)) return;
+    flushSave();
+    state.current = id;
+    $("#status").classList.remove("error");
+    $("#status").textContent = state.pending && state.pending !== id ? `Still drafting “${state.byId.get(state.pending).title || "Untitled"}” in the background…` : state.pending ? "Thinking…" : "";
+    try { history.replaceState(null, "", "#" + id); } catch {}
+    renderBench(true);
+    markRows();
+    document.querySelector(`.row[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest" });
+  }
+
+  function step(dir) {
+    const ids = visibleIds();
+    const i = ids.indexOf(state.current);
+    if (i >= 0 && ids[i + dir]) select(ids[i + dir]);
+  }
+
+  // ------------------------------------------------------------------ store
+  function writeNote(id, mutate) {
+    if (!state.db) return Promise.resolve();
+    const run = async () => {
+      const body = structuredClone(state.notes[id] || {});
+      mutate(body);
+      state.notes[id] = body;
+      if (id === state.current) renderBench(false);
+      markRows();
+      await state.db.doc("notes/" + id).set(body);
+    };
+    const prev = writes.get(id) || Promise.resolve();
+    const next = prev.then(run, run).catch((e) => {
+      const msg = e?.code === "quota_exceeded" ? "The lab's storage is full." : "Couldn't save just now. Your text is still here; keep typing to try again.";
+      if (id === state.current) $("#saved").textContent = msg;
+    });
+    writes.set(id, next);
+    return next;
+  }
+
+  function flushSave() {
+    if (!saveTimer) return;
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    saveNotes();
+  }
+
+  function saveNotes() {
+    const id = state.current;
+    const text = $("#notes").value;
+    if ((state.notes[id]?.text || "") === text) {
+      dirty = false;
+      return;
+    }
+    $("#saved").textContent = "Saving…";
+    writeNote(id, (n) => { n.text = text; n.updatedAt = new Date().toISOString(); }).then(() => { dirty = false; });
+  }
+
+  // ------------------------------------------------------------------ draft
+  function prompt(item, notes, voice, previous) {
+    const kind = item.kind === "video"
+      ? `a ${Math.round(item.duration || 0)}-second video (the image attached is a contact sheet of six frames in playback order)`
+      : "an image";
+    const lines = [
+      'You are writing a museum plaque for one work in "coolimages", a walkable 3D museum built from one person\'s folder of images saved from X. It is modelled on the 1990s Eyewitness museum: pictures in white space with small italic labels.',
+      "The collector wrote private notes about what this piece means to them. Write a new plaque that carries their feelings and associations into the museum.",
+      "",
+      "Voice for this draft: " + VOICES[voice],
+      "",
+      "Rules:",
+      "- title: 2 to 6 words, a museum title. Witty is fine; never a pun for its own sake.",
+      "- note: 2 to 4 sentences, at most 90 words. Say what is actually in the work, then why it matters, drawing on the collector's associations. Write about the work, not about the collector (mention \"the collector\" at most once). Leave out anything private (names, places, health, relationships); keep only the feeling it points at. No filler, no \"this piece invites us to\".",
+      "- associations: 3 to 5 short phrases (1 to 4 words) naming the associations you drew on.",
+      "- why: one sentence to the collector saying which of their notes shaped the draft.",
+      "Don't change the facts of the current plaque (artist, medium); you are rewriting only the title and the note.",
+      "",
+      `The work: ${kind}. Hangs in: ${item.wingName}.`,
+      item.title ? `Current title: ${item.title}` : "It has no plaque yet.",
+      item.artist ? `Artist: ${item.artist}. Medium: ${item.medium}.` : "",
+      item.note ? `Current note: ${item.note}` : "",
+      item.thumb ? "" : "(The image itself is not available; work from the plaque and the notes.)",
+      "",
+      "The collector's notes:",
+      '"""',
+      notes.slice(0, 6000),
+      '"""',
+    ];
+    if (previous) lines.push("", `Their previous draft was titled "${previous.title}": ${previous.note}`, "Write a genuinely different take.");
+    lines.push("", 'Reply with only JSON: {"title": "…", "note": "…", "associations": ["…"], "why": "…"}');
+    return lines.filter((l) => l !== null).join("\n");
+  }
+
+  async function imageFor(item) {
+    if (!state.canSeeImages) return undefined;
+    const src = item.sheet || item.thumb;
+    if (!src) return undefined;
+    try {
+      const res = await fetch(src);
+      return res.ok ? await res.blob() : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  async function draft(item, again = false) {
+    if (!state.sample) return;
+    flushSave();
+    const notes = $("#notes").value.trim();
+    if (!notes) {
+      $("#status").textContent = "Write a few notes first; the draft is built from them.";
+      return;
+    }
+    if (state.pending) return;
+    const voice = document.querySelector('input[name="voice"]:checked').value;
+    const ctl = new AbortController();
+    state.ctl = ctl;
+    state.pending = item.id;
+    const here = () => state.current === item.id;
+    const status = {
+      set textContent(t) { if (here()) $("#status").textContent = t; },
+      classList: { add: (c) => here() && $("#status").classList.add(c), remove: (c) => here() && $("#status").classList.remove(c) },
+    };
+    status.classList.remove("error");
+    status.textContent = "Thinking…";
+    $("#draft-btn").disabled = true;
+    $("#stop-btn").hidden = false;
+    try {
+      const images = await imageFor(item);
+      const out = await state.sample.json(prompt(item, notes, voice, again ? state.notes[item.id]?.draft : null), {
+        signal: ctl.signal,
+        images,
+        cache: again ? false : undefined,
+        onText: () => { status.textContent = "Writing…"; },
+      });
+      if (!out || typeof out.title !== "string" || typeof out.note !== "string") throw { code: "invalid_json" };
+      const d = {
+        title: out.title.trim().slice(0, 80),
+        note: out.note.trim().slice(0, 900),
+        associations: Array.isArray(out.associations) ? out.associations.map(String).slice(0, 5) : [],
+        why: typeof out.why === "string" ? out.why.trim().slice(0, 300) : "",
+        voice,
+        at: new Date().toISOString(),
+      };
+      status.textContent = "";
+      await writeNote(item.id, (n) => { n.draft = d; });
+    } catch (e) {
+      if (e?.code === "cancelled") status.textContent = "";
+      else {
+        status.classList.add("error");
+        status.textContent = ERRORS[e?.code] || "Something went wrong reaching Claude. Try again in a moment.";
+        if (e?.code === "not_granted" || e?.code === "sampling_disabled") disableDrafting(status.textContent);
+        if (e?.code === "image_rejected") state.canSeeImages = false;
+      }
+    } finally {
+      if (state.ctl === ctl) state.ctl = null;
+      state.pending = null;
+      if (!here()) $("#status").textContent = "";
+      $("#stop-btn").hidden = true;
+      $("#draft-btn").disabled = !state.sample || !$("#notes").value.trim();
+    }
+  }
+
+  function approveDraft(item, title, note) {
+    if (!title || !note) {
+      $("#status").classList.add("error");
+      $("#status").textContent = "The draft needs a title and a note before it can be approved.";
+      return;
+    }
+    $("#status").classList.remove("error");
+    $("#status").textContent = "";
+    writeNote(item.id, (n) => {
+      n.approved = { title, note, at: new Date().toISOString() };
+      delete n.draft;
+    });
+  }
+
+  function disableDrafting(message) {
+    state.sample = null;
+    $("#draft-btn").disabled = true;
+    $("#draft-btn").title = message;
+  }
+
+  // ------------------------------------------------------------------ wiring
+  $("#notes").addEventListener("input", () => {
+    dirty = true;
+    $("#saved").textContent = "Editing…";
+    $("#draft-btn").disabled = !state.sample || !$("#notes").value.trim();
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => { saveTimer = null; saveNotes(); }, 700);
+  });
+  $("#notes").addEventListener("blur", flushSave);
+  $("#prompts").addEventListener("click", (e) => {
+    const line = e.target.closest("button")?.dataset.line;
+    if (!line) return;
+    const ta = $("#notes");
+    ta.value = ta.value.replace(/\s*$/, "") + (ta.value.trim() ? "\n" : "") + line;
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+    ta.dispatchEvent(new Event("input"));
+  });
+  $("#draft-btn").addEventListener("click", () => draft(state.byId.get(state.current)));
+  $("#stop-btn").addEventListener("click", () => state.ctl?.abort());
+  $("#prev").addEventListener("click", () => step(-1));
+  $("#next").addEventListener("click", () => step(1));
+  for (const id of ["#q", "#wing", "#state"]) $(id).addEventListener("input", renderList);
+  $("#list").addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    step(e.key === "ArrowDown" ? 1 : -1);
+    document.querySelector(`.row[data-id="${CSS.escape(state.current)}"]`)?.focus();
+  });
+  addEventListener("pagehide", flushSave);
+
+  // ------------------------------------------------------------------ boot
+  async function boot() {
+    const data = await fetch("works.json").then((r) => r.json());
+    state.items = data.items;
+    state.wings = data.wings;
+    for (const it of state.items) state.byId.set(it.id, it);
+    $("#wing").append(...state.wings.map((w) => el("option", { value: w.key, textContent: w.name })));
+    const fromHash = decodeURIComponent(location.hash.slice(1));
+    state.current = state.byId.has(fromHash) ? fromHash : state.items[0]?.id;
+    renderList();
+    renderBench(true);
+    $("#draft-btn").disabled = true;
+
+    const claude = window.claude;
+    const [db, sample] = await Promise.all([
+      claude?.use ? claude.use("db").catch(() => null) : null,
+      claude?.use ? claude.use("sample").catch(() => null) : null,
+    ]);
+    if (!db) {
+      $("#store-notice").hidden = false;
+      $("#store-notice").textContent = "Notes can't be saved in this view. Open the lab on claude.ai to keep them.";
+    } else {
+      state.db = db;
+      db.collection("notes").onSnapshot(
+        (snap) => {
+          for (const change of snap.docChanges()) {
+            if (change.type === "removed") delete state.notes[change.doc.id];
+            else if (!writes.has(change.doc.id) || !snap.metadata.hasPendingWrites) state.notes[change.doc.id] = structuredClone(change.doc.data());
+          }
+          renderBench(false);
+          markRows();
+          if ($("#state").value || $("#q").value) renderList();
+        },
+        () => {
+          $("#store-notice").hidden = false;
+          $("#store-notice").textContent = "Lost the connection to your saved notes. Reload the page to reconnect.";
+        },
+      );
+    }
+    if (sample) {
+      state.sample = sample;
+      const caps = await sample.limits().catch(() => null);
+      state.canSeeImages = !!caps?.images;
+      $("#draft-btn").disabled = !$("#notes").value.trim();
+    } else {
+      disableDrafting("Drafting isn't available in this view.");
+    }
+  }
+
+  boot().catch(() => {
+    $("#count").textContent = "The collection didn't load. Reload the page.";
+  });
+})();
+</script>

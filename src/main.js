@@ -160,6 +160,11 @@ async function boot() {
   for (const [key, wing] of Object.entries(layout?.wings || {})) {
     WINGS[key] = { name: wing.name, subtitle: wing.subtitle, statement: wing.statement, accent: wing.accent, template: wing.template, generated: true };
   }
+  // Plaque text the collector approved in the private lab wins over both catalogues.
+  const overrides = await fetchJson('data/overrides.json');
+  for (const [id, text] of Object.entries(overrides || {})) {
+    WORKS[id] = { ...(WORKS[id] || { wing: 'lobby', artist: 'Unknown artist', generated: true }), ...text };
+  }
   for (const [id, credit] of Object.entries(CREDITS)) if (WORKS[id]) WORKS[id].credit = credit;
   collection = manifest;
   await loadFonts();
@@ -578,7 +583,7 @@ function endInspect(immediate = false, relock = true) {
 function showCaption(ud) {
   const work = ud.work;
   const panel = $('#caption');
-  panel.querySelector('.kicker').textContent = work ? WINGS[work.wing].name : 'New acquisition';
+  panel.querySelector('.kicker').textContent = WINGS[work?.wing]?.name || 'New acquisition';
   panel.querySelector('h2').textContent = work?.title || 'Untitled acquisition';
   panel.querySelector('.artist').textContent = work?.artist || 'Curatorial notes pending';
   panel.querySelector('.medium').textContent = work?.medium || '';

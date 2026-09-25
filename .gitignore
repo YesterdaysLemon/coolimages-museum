@@ -3,3 +3,7 @@ content/
 
 __pycache__/
 logs/
+
+# Private lab build output (thumbnails of third-party art); the page source lab/index.html is tracked
+lab/works.json
+lab/thumbs/

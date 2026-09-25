@@ -55,6 +55,11 @@ enters Git or the Docker image.
 - Generated wings hang off **generated rotundas** (`rotunda-2`, `rotunda-3`, …; `buildHub` in `src/world.js`), three wings per rotunda on its north, east and west doors. Its south door leads back and its north-east slab carries an "Onward" door to the next rotunda. Rotunda II opens from the entrance hall's welcome slab. Each original wing has a far door into Rotunda II. Each generated wing's far door leads to the next rotunda; after the last one it leads back to the entrance hall. With no generated wings, the original wings' far doors chain gallery → eyes → familiars → bedroom → gallery. Wing keys starting with `rotunda` are reserved.
 - Local runs: `python tools/curate.py --dry-run` lists the queue. `--source local` reads `content/` instead of the site; it needs `ANTHROPIC_API_KEY` or an `ant auth login` profile. Python deps: `pip install -r tools/requirements.txt`.
 
+### Notes lab (private)
+- `lab/index.html` is a private claude.ai artifact where the collector writes notes per work and drafts plaque text with Claude (`sample` capability). Notes live in the artifact's `db` store (`notes/<id>`: `text`, `updatedAt`, `draft`, `approved`), read-locked to the owner and editors by db rules. Raw notes must never be committed: this repo is public.
+- Build its data with `python tools/lab_export.py` (writes the gitignored `lab/works.json` and `lab/thumbs/`), then republish the artifact with those files. Withheld works get an entry but no image.
+- "Sync my lab" means: read `notes` with ArtifactData, copy each `approved` `{title, note}` into `data/overrides.json`, commit and deploy, then re-export and republish the lab so those works show as live. `src/main.js` applies overrides over both the hand-written and the generated catalogue.
+
 ### Layout
 - `src/catalog.js` holds the hand-written curatorial data: wings, titles, notes and callouts (`{u, v, t}` in image space), keyed by filename stem.
 - `src/credits.js` holds verified attributions (`creator`, `handle`, `profileUrl`, `sourceUrl`, `license`, `confidence`) plus the removal-request URL. Research with evidence is in `research/attributions.json`: high and medium confidence are credited, low is not. Key claims were re-checked against the creators' own posts.
