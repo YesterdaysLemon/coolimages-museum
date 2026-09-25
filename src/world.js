@@ -544,8 +544,14 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
       se.at(-1.45, 2.35),
       se.n,
     );
-    if (firstHub) addPortal(room, { pos: se.at(1.75, 0), dir: se.n, dest: firstHub, w: 2.2, h: 3.2, signW: 2.6, subtitle: 'The new wings' });
-    else addWork(room, 'HSGdkqHWUAI8V2_', { pos: se.at(1.75, 2.55), dir: se.n, h: 2.0, frame: 'museum', plaqueSide: 'below' });
+    if (firstHub) {
+      // The door to the new wings takes the slab; the exterior moves to the
+      // wall beside the entrance, between the pilaster and the door.
+      addPortal(room, { pos: se.at(1.75, 0), dir: se.n, dest: firstHub, w: 2.2, h: 3.2, signW: 2.6, subtitle: 'The new wings' });
+      const a = Math.PI - 0.255;
+      const d = V3(Math.sin(a), 0, -Math.cos(a));
+      addWork(room, 'HSGdkqHWUAI8V2_', { pos: V3(d.x * 8.86, 2.35, d.z * 8.86), dir: d.clone().negate(), h: 1.3, frame: 'museum', plaqueSide: 'below' });
+    } else addWork(room, 'HSGdkqHWUAI8V2_', { pos: se.at(1.75, 2.55), dir: se.n, h: 2.0, frame: 'museum', plaqueSide: 'below' });
 
     // Vitrine with the reconstructed hat from Fig. 4.1.
     const plinth = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.0, 1.3), M.slab);

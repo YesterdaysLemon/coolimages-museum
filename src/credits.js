@@ -116,6 +116,14 @@ export const CREDITS = {
     profileUrl: 'https://x.com/kitanya_design',
     confidence: 'medium',
   },
+  '4AzNhblWcUyL7tsq': {
+    creator: 'Pleometric',
+    handle: '@pleometric',
+    profileUrl: 'https://x.com/pleometric',
+    sourceUrl: 'https://x.com/pleometric/status/2011896976959553814',
+    license: 'All rights reserved; "The Swarm" (2026)',
+    confidence: 'high',
+  },
 };
 
 export const REMOVAL_URL = 'https://github.com/YesterdaysLemon/coolimages-museum/issues/new?title=Credit%20or%20removal%20request';
