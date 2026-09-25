@@ -4,7 +4,7 @@
 ["project"]
 "id" = "8da0cd00-e9da-466f-b80e-4fbf4dd253c7"
 "name" = "coolimages-museum"
-"status" = "experimental"
+"status" = "active"
 "profile" = "web"
 "purpose" = "Walkable Three.js museum of Alireza's coolimages folder: Eyewitness-style white museum with themed wings, plaques, DK-style callouts, portal paintings and generative music."
 
@@ -17,3 +17,6 @@
 "serve" = "python -m http.server 8173"
 "start" = "start-museum.cmd"
 "check" = "node --check src/main.js && node --check src/world.js && node --check src/textures.js && node --check src/audio.js && node --check src/catalog.js"
+"publish" = "python tools/publish_content.py"
+"pipeline" = "python tools/pipeline.py"
+"curate-dry-run" = "python tools/curate.py --dry-run"

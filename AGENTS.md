@@ -1,7 +1,7 @@
 <!-- al-stack:project:start -->
 ## Al-stack project
 
-Project: coolimages-museum. Profile: web. Status: experimental.
+Project: coolimages-museum. Profile: web. Status: active.
 
 Walkable Three.js museum of Alireza's coolimages folder: Eyewitness-style white museum with themed wings, plaques, DK-style callouts, portal paintings and generative music.
 
@@ -12,6 +12,9 @@ Project commands:
 - serve: `python -m http.server 8173`
 - start: `start-museum.cmd`
 - check: `node --check src/main.js && node --check src/world.js && node --check src/textures.js && node --check src/audio.js && node --check src/catalog.js`
+- publish: `python tools/publish_content.py`
+- pipeline: `python tools/pipeline.py`
+- curate-dry-run: `python tools/curate.py --dry-run`
 
 Edit project guidance outside this managed section. Use `al-stack configure` for its fields and `al-stack check .` for setup checks. Run the actual project checks for behavioral validation.
 <!-- al-stack:project:end -->
