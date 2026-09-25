@@ -727,8 +727,7 @@
       }
     ],
     "curatedAt": "2026-09-25T06:12",
-    "wing": "lobby",
-    "hold": true
+    "wing": "wing-devotional-diagrams"
   },
   "HSRG4LHWMAARhob": {
     "title": "Bottle, Grinning",
@@ -978,8 +977,7 @@
       }
     ],
     "curatedAt": "2026-09-25T06:12",
-    "wing": "lobby",
-    "hold": true
+    "wing": "wing-devotional-diagrams"
   },
   "HQaO2CXXoAEjm6E": {
     "title": "Three Stages Of Resolution",
@@ -1130,7 +1128,75 @@
       }
     ],
     "curatedAt": "2026-09-25T06:12",
-    "wing": "lobby",
-    "hold": true
+    "wing": "wing-devotional-diagrams"
+  },
+  "2LdDj-0F47hPX7yX": {
+    "title": "Too Many Necks, One Tree",
+    "artist": "Unknown photographer",
+    "medium": "Video, 12 seconds, wildlife footage",
+    "note": "A herd of giraffes stands shoulder to shoulder around a flowering jacaranda, necks fanning out in every direction to strip the branches, and over twelve seconds the heads swing, cross and reposition while blossom rains down. It never resolves into individual animals; it reads as one enormous many-headed body that has grown a tree out of its middle. A small bird crossing the lower frame is the only thing giving away the actual scale.",
+    "callouts": [
+      {
+        "u": 0.5,
+        "v": 0.09,
+        "t": "Jacaranda (being eaten)"
+      },
+      {
+        "u": 0.12,
+        "v": 0.88,
+        "t": "Dry grass, unbothered"
+      }
+    ],
+    "curatedAt": "2026-09-25T08:12",
+    "wing": "wing-escalation"
+  },
+  "-ONBNTxZyM0QjSsb": {
+    "title": "Endoskeleton Enters The Cage",
+    "artist": "Almost certainly a model",
+    "medium": "AI-generated video, 11 seconds",
+    "note": "A chrome endoskeleton with magenta eyes trades kicks with a muay thai fighter inside a championship cage, then walks him down, catches a body kick and folds him into the fence. The crowd, the sponsor banners and the mat logos all keep behaving like ordinary broadcast footage throughout, which is most of the trick. What actually sells it is the footwork: somebody gave the robot a stance and it holds that stance for the whole eleven seconds.",
+    "callouts": [],
+    "curatedAt": "2026-09-25T08:12",
+    "wing": "wing-escalation"
+  },
+  "4AzNhblWcUyL7tsq": {
+    "title": "The Word Survives The Picture",
+    "artist": "Almost certainly a model",
+    "medium": "AI-generated video, 65 seconds",
+    "note": "CGI versions of a cartoon family deliver a monologue one caption at a time — \"instances?\", \"don't\", \"as\", \"matters\", \"dissolves\", \"behind\" — while the image steadily comes apart around them: scanlines, a total white-out, then compression grids and blooming acid colour. By the last frames the speaker is a smear of magenta and green and only the subtitle is still crisp. The picture degrades precisely on the word \"dissolves\", which is either very good editing or the machine agreeing with its own script.",
+    "callouts": [
+      {
+        "u": 0.5,
+        "v": 0.82,
+        "t": "Caption (still legible)"
+      }
+    ],
+    "curatedAt": "2026-09-25T08:12",
+    "wing": "wing-escalation"
+  },
+  "HS_NJrfa0AI_SwH": {
+    "title": "Ethernet Plug Learns To Stand",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, office desk",
+    "note": "A clear RJ45 connector sits at the top of a grey cable stump, and the stripped copper pairs have been bent outward into three splayed legs and a curling tail so the whole thing balances upright on a lined notepad. The eight pins read unavoidably as a row of teeth, and the green and brown wires read as knees. Somebody on a slow afternoon built a small animal out of a failed crimp and then photographed it with real care.",
+    "callouts": [
+      {
+        "u": 0.49,
+        "v": 0.15,
+        "t": "Eight pins (teeth)"
+      },
+      {
+        "u": 0.27,
+        "v": 0.76,
+        "t": "Green leg, braced"
+      },
+      {
+        "u": 0.5,
+        "v": 0.93,
+        "t": "Tail (twisted pair)"
+      }
+    ],
+    "curatedAt": "2026-09-25T08:12",
+    "wing": "wing-spare-parts"
   }
 }

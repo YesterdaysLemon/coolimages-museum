@@ -29,7 +29,8 @@
         "HTAoOQCXUAAkWXb",
         "HS-TjYFXcAA9uUy",
         "HRicbHmXUAE6l0D",
-        "HQPFbRMXQAA_rIP"
+        "HQPFbRMXQAA_rIP",
+        "HS_NJrfa0AI_SwH"
       ]
     },
     "wing-wrong-size": {
@@ -114,6 +115,32 @@
         "HRcQqCnacAAPjFs",
         "HQaO2CXXoAEjm6E",
         "HO9lc7YWEAA4lAa"
+      ]
+    },
+    "wing-escalation": {
+      "name": "The Escalation Room",
+      "subtitle": "Loops That Worsen",
+      "statement": "Three clips that begin merely odd and then commit: a tree disappearing into a wall of giraffe necks, a chrome skeleton walking a fighter into the fence, a cartoon face compressing itself out of existence one caption at a time. None of them resolves; each just gets more of whatever it already was. Benches provided, because they are all on a loop.",
+      "template": "screening",
+      "accent": "#d2452f",
+      "created": "2026-09-25T08:12",
+      "works": [
+        "2LdDj-0F47hPX7yX",
+        "-ONBNTxZyM0QjSsb",
+        "4AzNhblWcUyL7tsq"
+      ]
+    },
+    "wing-devotional-diagrams": {
+      "name": "Devotional Diagrams",
+      "subtitle": "Reverence, Technically Drawn",
+      "statement": "Three pictures wearing the clothes of holy images: a votive candle print watched by an enormous eye, a rose window assembled from bullet holes, an annunciation woodcut annotated with codes that key to nothing. Each borrows a layout designed for awe and fills it with statistics, labels or static. The gilt frames are not a joke at their expense; they are what the pictures were already asking for.",
+      "template": "salon",
+      "accent": "#c08a2e",
+      "created": "2026-09-25T08:12",
+      "works": [
+        "HQKM3TwWAAADdcT",
+        "HRdS7DDbIAAKc57",
+        "HSmTvYSXgAAGE61"
       ]
     }
   }
