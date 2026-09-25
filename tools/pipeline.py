@@ -37,7 +37,11 @@ def step(name, *args):
 
 def live_ids():
     try:
-        req = urllib.request.Request(f"{SITE}/content/manifest.json", headers={"Cache-Control": "no-cache"})
+        # Cloudflare rejects Python's default user agent with a 403.
+        req = urllib.request.Request(
+            f"{SITE}/content/manifest.json",
+            headers={"Cache-Control": "no-cache", "User-Agent": "coolimages-pipeline"},
+        )
         with urllib.request.urlopen(req, timeout=30) as res:
             return {item["id"] for item in json.loads(res.read())["items"]}
     except Exception as exc:  # noqa: BLE001 - treat an unreachable site as "everything is new"
