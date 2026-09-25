@@ -1,4 +1,120 @@
 {
   "version": 1,
-  "wings": {}
+  "wings": {
+    "wing-commitment": {
+      "name": "Committed to the Bit",
+      "subtitle": "Seeing It Through",
+      "statement": "A saint in a foil hat, a magpie matching a parade kick for kick, an artist emptying themselves onto the paper, a wrestler carrying a crate of rubber monsters to its logical conclusion. Nobody here is doing the thing halfway. That's the whole exhibition.",
+      "template": "white",
+      "accent": "#c94f2c",
+      "created": "2026-09-25T06:12",
+      "works": [
+        "HS-XnloasAEcoEh",
+        "HS-hXbrWUAAGQu9",
+        "HTAzoptW4AA-OMJ",
+        "HS6P2bkWMAAdPOr",
+        "HSrvWjAaMAAdMDu"
+      ]
+    },
+    "wing-spare-parts": {
+      "name": "Spare Parts",
+      "subtitle": "Bodies, Assembled Wrongly",
+      "statement": "Everything here has been put together out of more parts than a body usually needs, or fewer. A shop's worth of blank figures, a winged thing hung up and catalogued, a hydra grown from one cylinder, a man with a third arm wired to his ribs. The dark background is doing them all a favour.",
+      "template": "night",
+      "accent": "#7c9a6d",
+      "created": "2026-09-25T06:12",
+      "works": [
+        "HS_wo0VbIAA-16C",
+        "HTAgD3jaIAA3URe",
+        "HTAoOQCXUAAkWXb",
+        "HS-TjYFXcAA9uUy",
+        "HRicbHmXUAE6l0D",
+        "HQPFbRMXQAA_rIP"
+      ]
+    },
+    "wing-wrong-size": {
+      "name": "The Wrong Size",
+      "subtitle": "Scale as Punchline",
+      "statement": "A balloon creature jammed into a hallway, a two-storey eyeball parked on grass, and a party balloon chained to the floor. Each one is a cheerful object that has been given either far too much mass or far too much room. The banal setting is what makes it land.",
+      "template": "pastel",
+      "accent": "#e58fb8",
+      "created": "2026-09-25T06:12",
+      "works": [
+        "HTCHlVQWIAEgceS",
+        "HTBRNcmaIAAo-SS",
+        "HS-uZdDb0AA7RWf"
+      ]
+    },
+    "wing-long-pose": {
+      "name": "The Long Pose",
+      "subtitle": "Skin, Held Still",
+      "statement": "Five bodies arranged by somebody: a lover, an illustrator, a photographer with a very hard flash. Some are drawn in three confident lines and some are lit until they turn into sculpture, but all of them are holding a position for the length of time it takes to make a picture. The strain is part of the subject.",
+      "template": "salon",
+      "accent": "#9b2b3a",
+      "created": "2026-09-25T06:12",
+      "works": [
+        "HS_9CwtXEAAZ1rk",
+        "HTAcvmeXwAAfHa9",
+        "HS-4vKvWcAAVccn",
+        "HS4CdIyXgAA-TFS",
+        "HS9rhvxXMAAtkfg",
+        "HO09CQHbIAAPDF4",
+        "HRqWCKcWEAEKWhR"
+      ]
+    },
+    "wing-anachronism": {
+      "name": "The Anachronism Department",
+      "subtitle": "Eras, Improperly Mixed",
+      "statement": "A pharaoh with a Kalashnikov, a wrestler and a vocaloid sharing a logo, a tomb wall worn as a collar, a crane whose head has been replaced by pixels. Each of these takes two periods that should never meet and renders both with total conviction. Nobody in here is winking.",
+      "template": "white",
+      "accent": "#c9a227",
+      "created": "2026-09-25T06:12",
+      "works": [
+        "HTCIQ_LW8AA3FyE",
+        "HSn10KgaoAAt_da",
+        "HTAOkRCW0AArXJi",
+        "HRkwmJAbAAE048c"
+      ]
+    },
+    "wing-plain-evidence": {
+      "name": "Plain Evidence",
+      "subtitle": "Objects, Photographed Flatly",
+      "statement": "Four photographs that do nothing clever: a hand held up to a marble hand, a Soviet orbit computer opened to show its gears, a road losing an argument with a dune, a rifle alone in an empty flat. The framing is estate-agent neutral in every case. The object is left to carry the entire story, and each one does.",
+      "template": "white",
+      "accent": "#7d8a99",
+      "created": "2026-09-25T06:12",
+      "works": [
+        "HTAao31WcAAofvn",
+        "HSB8KRpX0AsxGry",
+        "HRq4SQlXQAAYMFM",
+        "HRrpvM-bYAAIMe9"
+      ]
+    },
+    "wing-polite-monsters": {
+      "name": "Polite Monsters",
+      "subtitle": "Menace, Well Behaved",
+      "statement": "A horned man resting his hands on someone's shoulders for the portrait, a black cloud grinning inside a bottle, an elder god sitting in lotus with a smiley mask strapped over its face. All three are alarming and all three are being very good about it. The dark room lets the eyes and teeth do the work.",
+      "template": "night",
+      "accent": "#6f9c6a",
+      "created": "2026-09-25T06:12",
+      "works": [
+        "HS-NaM8W8AAGAkl",
+        "HSRG4LHWMAARhob",
+        "HRozTIJa0AACaVv"
+      ]
+    },
+    "wing-signal-loss": {
+      "name": "Signal Loss",
+      "subtitle": "Images, Coming Apart",
+      "statement": "Three pictures that were perfectly fine until part of them stopped rendering. A train smeared into horizontal stripes, a fashion portrait with one rectangle slid out of place, a woman downsampled panel by panel until she's a sprite. In each case the undamaged part stays calm, which is the only reason the damage reads as a decision.",
+      "template": "white",
+      "accent": "#d94f3d",
+      "created": "2026-09-25T06:12",
+      "works": [
+        "HRcQqCnacAAPjFs",
+        "HQaO2CXXoAEjm6E",
+        "HO9lc7YWEAA4lAa"
+      ]
+    }
+  }
 }

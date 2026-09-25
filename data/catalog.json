@@ -1,1 +1,1136 @@
-{}
+{
+  "HS-XnloasAEcoEh": {
+    "title": "Our Lady of the Foil",
+    "artist": "Le Canard (@micmohk)",
+    "medium": "Digital painting",
+    "note": "A figure in deep red robes and a purple pinafore stands against near-black, arms crossed over a green rosary, wearing a crumpled tinfoil cap shaped like a bishop's mitre. The brushwork is fast and slashing, but the face is painted slowly and carefully: tired eyes behind oval glasses, mouth set. The joke is the hat; the painting is the expression under it, which is entirely sincere.",
+    "callouts": [
+      {
+        "u": 0.46,
+        "v": 0.13,
+        "t": "Mitre (household grade)"
+      },
+      {
+        "u": 0.48,
+        "v": 0.27,
+        "t": "Eyes: unamused, patient"
+      },
+      {
+        "u": 0.5,
+        "v": 0.7,
+        "t": "Rosary, green, working"
+      },
+      {
+        "u": 0.5,
+        "v": 0.56,
+        "t": "Doodled face on bib"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-commitment"
+  },
+  "HS_wo0VbIAA-16C": {
+    "title": "Shop Floor, After Hours",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, low light",
+    "note": "A dozen pale mannequins stand clustered at the back of an unlit clothing shop, most of them faceless, all of them angled loosely toward the camera. The foreground is a vast empty expanse of grey floor, which does most of the work. One holds a basketball at hip height and one on the right is wearing a bra, and both details somehow make it worse.",
+    "callouts": [
+      {
+        "u": 0.37,
+        "v": 0.47,
+        "t": "Basketball (unexplained)"
+      },
+      {
+        "u": 0.84,
+        "v": 0.41,
+        "t": "The only one dressed"
+      },
+      {
+        "u": 0.45,
+        "v": 0.57,
+        "t": "Feet on glass plinths"
+      },
+      {
+        "u": 0.35,
+        "v": 0.78,
+        "t": "Floor: generously empty"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-spare-parts"
+  },
+  "HTAgD3jaIAA3URe": {
+    "title": "Angel, Filed Under Evidence",
+    "artist": "Unknown artist",
+    "medium": "Photograph of a sculpture, overlaid manuscript",
+    "note": "A waxy, flayed-looking winged body hangs from an iron hook, hunched forward so that the head reads as a smooth bald egg with a triangle sigil burned into it. Behind it, ruled red lines and columns of invented script turn the whole thing into a page from someone's ledger. The horror is less the body than the bookkeeping: somebody measured this, recorded it, and moved on to the next row.",
+    "callouts": [
+      {
+        "u": 0.5,
+        "v": 0.42,
+        "t": "Sigil where a face goes"
+      },
+      {
+        "u": 0.47,
+        "v": 0.07,
+        "t": "Hook (load-bearing, ominous)"
+      },
+      {
+        "u": 0.14,
+        "v": 0.22,
+        "t": "Wing, badly preserved"
+      },
+      {
+        "u": 0.86,
+        "v": 0.72,
+        "t": "Red rules, ruled twice"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-spare-parts"
+  },
+  "HTCHlVQWIAEgceS": {
+    "title": "Guest Wedged in the Alcove",
+    "artist": "Unknown artist",
+    "medium": "Twisted balloons, fake fur, patched vinyl",
+    "note": "A pale blue creature built from balloon-animal segments is crammed into a narrow white alcove, head pressed to the ceiling, long snout drooping over a patchwork body of green, orange and pink vinyl. Yellow fuzz erupts from its wings and pools around its feet like shed pollen. It is made entirely of party supplies and it looks profoundly stuck.",
+    "callouts": [
+      {
+        "u": 0.5,
+        "v": 0.33,
+        "t": "Two eyes, two opinions"
+      },
+      {
+        "u": 0.27,
+        "v": 0.13,
+        "t": "Wing fuzz (festive)"
+      },
+      {
+        "u": 0.45,
+        "v": 0.1,
+        "t": "Head meets ceiling"
+      },
+      {
+        "u": 0.37,
+        "v": 0.93,
+        "t": "Toe, unreasonably long"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-wrong-size"
+  },
+  "HTAoOQCXUAAkWXb": {
+    "title": "Hydra, Rendered at Home",
+    "artist": "Unknown artist",
+    "medium": "3D render",
+    "note": "Eight or so green serpent necks braid out of a single pale trunk, tongues flicking, against a gradient sky and a fringe of grass that repeats one blade left to right. The scale texture is lovingly tiled and the lighting is straight out of a demo scene. It has the specific charm of a mythological monster built by someone who was mainly excited about learning to bend a cylinder.",
+    "callouts": [
+      {
+        "u": 0.55,
+        "v": 0.11,
+        "t": "Tongue (red, default)"
+      },
+      {
+        "u": 0.87,
+        "v": 0.56,
+        "t": "Grass: one blade, repeated"
+      },
+      {
+        "u": 0.45,
+        "v": 0.5,
+        "t": "Knot of necks, unresolved"
+      },
+      {
+        "u": 0.47,
+        "v": 0.96,
+        "t": "Reflection on wet ground"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-spare-parts"
+  },
+  "HTBRNcmaIAAo-SS": {
+    "title": "Balloon, Adequately Secured",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, film",
+    "note": "A pink balloon rests against a pale corner, tied not to ribbon but to several feet of galvanised steel chain that snakes off across the floor. The film grain and the soft two-tone background keep everything calm, which is the trick. One object weighs nothing, the other weighs a great deal, and the knot between them is doing all the comedy.",
+    "callouts": [
+      {
+        "u": 0.41,
+        "v": 0.62,
+        "t": "Knot (load-bearing)"
+      },
+      {
+        "u": 0.85,
+        "v": 0.88,
+        "t": "Chain, generous length"
+      },
+      {
+        "u": 0.46,
+        "v": 0.45,
+        "t": "Highlight: still cheerful"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-wrong-size"
+  },
+  "HS-hXbrWUAAGQu9": {
+    "title": "The Magpie Keeps Step",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, black and white",
+    "note": "Ceremonial guards cross a wet plaza in high-kick formation, rifles shouldered, snow flecking the air; below them, alone on the empty stone, a magpie lifts one leg at precisely the same angle. The photographer waited for that leg. Everything above the horizon is discipline and everything below it is a bird doing discipline by accident.",
+    "callouts": [
+      {
+        "u": 0.54,
+        "v": 0.69,
+        "t": "Leg (regulation height)"
+      },
+      {
+        "u": 0.5,
+        "v": 0.25,
+        "t": "Formation, uninterrupted"
+      },
+      {
+        "u": 0.3,
+        "v": 0.55,
+        "t": "Wet stone, mirror-adjacent"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-commitment"
+  },
+  "HS_9CwtXEAAZ1rk": {
+    "title": "Four Points of Contact",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, black and white",
+    "note": "A woman kneels on a sheet of glass in black lingerie, head tipped back out of the light, while beneath her two pairs of stiletto points — hers and their reflections — meet on the dusty surface. The lighting rounds every form into pure tone, so the picture reads almost as sculpture. The scratches and dust on the glass are the only honest texture in it.",
+    "callouts": [
+      {
+        "u": 0.33,
+        "v": 0.83,
+        "t": "Points of contact (four)"
+      },
+      {
+        "u": 0.45,
+        "v": 0.06,
+        "t": "Head, tilted out of frame"
+      },
+      {
+        "u": 0.75,
+        "v": 0.72,
+        "t": "Dust on the glass"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-long-pose"
+  },
+  "HTAcvmeXwAAfHa9": {
+    "title": "Two Nobles, One Volcano",
+    "artist": "Unknown artist (signed, illegible)",
+    "medium": "Gouache and ink on board",
+    "note": "Two figures in embroidered white and turquoise sit close on a terrace, foreheads almost touching, with a lake city and a snowcapped volcano laid out behind them like a travel poster. The border of glyph panels and the yellowed edges say this was a book cover or a magazine plate, printed for a general audience. The costume detail is fussed over; the tenderness is drawn in about four confident lines.",
+    "callouts": [
+      {
+        "u": 0.58,
+        "v": 0.24,
+        "t": "Foreheads, nearly touching"
+      },
+      {
+        "u": 0.83,
+        "v": 0.2,
+        "t": "Volcano (obligatory)"
+      },
+      {
+        "u": 0.33,
+        "v": 0.69,
+        "t": "Marigolds, dropped"
+      },
+      {
+        "u": 0.47,
+        "v": 0.79,
+        "t": "Glyph panel, decorative"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-long-pose"
+  },
+  "HTAzoptW4AA-OMJ": {
+    "title": "Output",
+    "artist": "Unknown artist (handle illegible)",
+    "medium": "Ink and digital drawing",
+    "note": "A figure kneels on a drift of loose paper, pen still in hand, pouring a thick black rope of ink from their mouth onto the sheet below. The drifts are made of the same scribble: half-formed faces, spirals, scratched-out heads. It's a very funny drawing about a very unfunny feeling, and the pen held steady in the left hand is what sells it.",
+    "callouts": [
+      {
+        "u": 0.42,
+        "v": 0.5,
+        "t": "Ink, leaving by mouth"
+      },
+      {
+        "u": 0.21,
+        "v": 0.55,
+        "t": "Pen (still working)"
+      },
+      {
+        "u": 0.52,
+        "v": 0.87,
+        "t": "Previous attempts, many"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-commitment"
+  },
+  "HS-4vKvWcAAVccn": {
+    "title": "Reclining on Weather",
+    "artist": "Unknown artist",
+    "medium": "Pen and ink, engraving style",
+    "note": "A nude figure lies back across a bank of cloud, one arm dangling into open air, hair streaming, drawn entirely in clean outline with the sky supplied by ruled horizontal hatching. Nothing is shaded; the clouds are just closed contours, and they hold her weight anyway. The restraint is the craft — one wobble in that line and the whole sky falls.",
+    "callouts": [
+      {
+        "u": 0.76,
+        "v": 0.06,
+        "t": "Sky: ruled, not shaded"
+      },
+      {
+        "u": 0.22,
+        "v": 0.49,
+        "t": "Hand, off the edge"
+      },
+      {
+        "u": 0.88,
+        "v": 0.41,
+        "t": "Foot, casually placed"
+      },
+      {
+        "u": 0.45,
+        "v": 0.63,
+        "t": "Cloud (structural)"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-long-pose"
+  },
+  "HS-TjYFXcAA9uUy": {
+    "title": "Third Arm, Fully Wired",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, performance documentation",
+    "note": "Against black, a man stands in profile with a mechanical arm bolted to his right side, its small metal hand raised in a gesture that echoes his own two. Electrode pads and ribbon cable run down his chest and thigh to battery packs strapped at the hip. The studio lighting is straight portraiture, which makes the hardware look less like science fiction and more like an occupation.",
+    "callouts": [
+      {
+        "u": 0.79,
+        "v": 0.23,
+        "t": "Third hand (obedient)"
+      },
+      {
+        "u": 0.45,
+        "v": 0.78,
+        "t": "Electrodes, taped on"
+      },
+      {
+        "u": 0.5,
+        "v": 0.42,
+        "t": "Cable bundle, load-bearing"
+      },
+      {
+        "u": 0.66,
+        "v": 0.06,
+        "t": "Two original hands"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-spare-parts"
+  },
+  "HS-uZdDb0AA7RWf": {
+    "title": "Eyeball, Field, Child",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, roadside",
+    "note": "A two-storey fibreglass eyeball sits on timber blocking in a patch of grass, blue iris airbrushed with real care, red veins crawling up the sclera. A child in a turquoise dress stands at the bottom with both arms flung up, roughly the height of the pupil's shadow. Behind it, a shed and some other retired giants wait their turn.",
+    "callouts": [
+      {
+        "u": 0.46,
+        "v": 0.83,
+        "t": "Scale figure (delighted)"
+      },
+      {
+        "u": 0.24,
+        "v": 0.52,
+        "t": "Veins, hand-painted"
+      },
+      {
+        "u": 0.45,
+        "v": 0.9,
+        "t": "Blocking (casual, structural)"
+      },
+      {
+        "u": 0.11,
+        "v": 0.71,
+        "t": "Other giants, resting"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-wrong-size"
+  },
+  "HS4CdIyXgAA-TFS": {
+    "title": "Embrace, One Arm Raised",
+    "artist": "Unknown artist (signed, illegible)",
+    "medium": "Charcoal and sanguine on paper",
+    "note": "Two figures kneel into each other, faces buried, while one arm shoots straight up out of the top of the composition and carries the whole drawing with it. The background is swept charcoal, smeared with the side of the hand into something between a wave and a curtain. Red chalk is used only on the warm bodies, which makes the grey around them feel colder than it is.",
+    "callouts": [
+      {
+        "u": 0.88,
+        "v": 0.08,
+        "t": "Arm, raised (unexplained)"
+      },
+      {
+        "u": 0.71,
+        "v": 0.41,
+        "t": "Hand on shoulder"
+      },
+      {
+        "u": 0.25,
+        "v": 0.45,
+        "t": "Charcoal swept by palm"
+      },
+      {
+        "u": 0.89,
+        "v": 0.97,
+        "t": "Signature, illegible"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-long-pose"
+  },
+  "HS9rhvxXMAAtkfg": {
+    "title": "Newsprint, Chrome, Heels",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, fashion editorial",
+    "note": "Two models lie stacked on spread newspaper beside a car bumper on a green garage floor, in black leather cuffs and strappy sandals, arms thrown back. The flash is hard, the green is unnatural, and the styling detail everyone actually looks at is the pricing sticker still on one sole. Fashion pretending to be a crime scene, with the shoes billed by the hour.",
+    "callouts": [
+      {
+        "u": 0.11,
+        "v": 0.41,
+        "t": "Price sticker, still on"
+      },
+      {
+        "u": 0.07,
+        "v": 0.13,
+        "t": "Wheel (unmoved)"
+      },
+      {
+        "u": 0.88,
+        "v": 0.55,
+        "t": "Newspaper, legible"
+      },
+      {
+        "u": 0.66,
+        "v": 0.53,
+        "t": "Ankle cuff, buckled"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-long-pose"
+  },
+  "HS6P2bkWMAAdPOr": {
+    "title": "Crate of Kaiju, Delivered",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, ringside",
+    "note": "A wrestler in fringed brown trunks hoists a green plastic crate heaped with rubber monster figures above her shoulder, mouth open mid-yell, stage lights and rigging filling the ceiling behind her. The crate is heavy enough that she's braced on both hands. Somewhere in the next second, several dozen small dinosaurs are going to be on the mat, and everybody in the building knows it.",
+    "callouts": [
+      {
+        "u": 0.44,
+        "v": 0.29,
+        "t": "Payload: kaiju, assorted"
+      },
+      {
+        "u": 0.73,
+        "v": 0.5,
+        "t": "Expression: full commitment"
+      },
+      {
+        "u": 0.27,
+        "v": 0.09,
+        "t": "Lighting rig, ample"
+      },
+      {
+        "u": 0.88,
+        "v": 0.72,
+        "t": "Ropes (soon relevant)"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-commitment"
+  },
+  "HTCIQ_LW8AA3FyE": {
+    "title": "Tomb Wall As Lapel",
+    "artist": "Unknown photographer",
+    "medium": "Fashion photograph, collaged",
+    "note": "A model with lacquered centre-parted hair, white shirt and black tie leans into darkness while two triangular panels of Egyptian tomb painting flare out from her collar like an enormous inverted V. The panels are carefully squared off — enthroned gods, sun rays, Eyes of Horus, all cropped to a dressmaker's angle. A small scarab sits on the tie where a tie clip should be. It's a menswear silhouette rebuilt out of funerary decoration, and it stays elegant instead of tipping into costume.",
+    "callouts": [
+      {
+        "u": 0.5,
+        "v": 0.57,
+        "t": "Scarab, instead of tiepin"
+      },
+      {
+        "u": 0.3,
+        "v": 0.68,
+        "t": "Eye of Horus (left panel)"
+      },
+      {
+        "u": 0.14,
+        "v": 0.33,
+        "t": "Sun rays, tidily cropped"
+      },
+      {
+        "u": 0.47,
+        "v": 0.12,
+        "t": "Hair: structural"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-anachronism"
+  },
+  "HTAao31WcAAofvn": {
+    "title": "Comparison With The Victory",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, museum vitrine",
+    "note": "A visitor holds an open hand up to a glass case containing a marble right hand mounted on a rod, matching pose and scale as closely as the case allows. Behind the glass, other visitors in audio-guide headsets drift past without noticing the experiment. The label below reads \"Main droite de la Vic—\", cropped just before the good part. The joke and the tenderness are the same gesture: a person checking, physically, whether they are the same size as antiquity.",
+    "callouts": [
+      {
+        "u": 0.36,
+        "v": 0.38,
+        "t": "Marble hand (on a stick)"
+      },
+      {
+        "u": 0.35,
+        "v": 0.66,
+        "t": "Living hand (approximately matched)"
+      },
+      {
+        "u": 0.26,
+        "v": 0.81,
+        "t": "Label, cropped mid-word"
+      },
+      {
+        "u": 0.73,
+        "v": 0.33,
+        "t": "Visitors, unaware"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-plain-evidence"
+  },
+  "HS-NaM8W8AAGAkl": {
+    "title": "Introductions In The Ruins",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, silver gelatin, scratched",
+    "note": "In a roofless stone arcade, a tall figure in dark body paint and enormous curved horns stands behind a woman in a pale gown, resting both hands on her shoulders like a portrait photographer's assistant. She is smiling — genuinely, at the camera — while he remains a silhouette with no visible face. The emulsion is scratched and rain-streaked, which does more for the atmosphere than any of the staging. What should be a diabolical tableau reads instead as two people at the end of a long, cold shoot.",
+    "callouts": [
+      {
+        "u": 0.53,
+        "v": 0.14,
+        "t": "Horns (considerable)"
+      },
+      {
+        "u": 0.42,
+        "v": 0.47,
+        "t": "A real smile"
+      },
+      {
+        "u": 0.32,
+        "v": 0.51,
+        "t": "Hands: politely placed"
+      },
+      {
+        "u": 0.45,
+        "v": 0.05,
+        "t": "Ruined arch, obliging"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-polite-monsters"
+  },
+  "HO09CQHbIAAPDF4": {
+    "title": "The Saucepan Of Dried Flowers",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, staged kitchen",
+    "note": "A woman in a green floral sundress crouches along a kitchen island, mouth open mid-note, brandishing a wooden slotted spoon over a saucepan filled entirely with dried strawflowers. The kitchen behind her is spotless, cream, and completely uninvolved. It's a pin-up built on one good sight gag — nothing in that pan will ever cook — and she is committing to the performance with real comic timing.",
+    "callouts": [
+      {
+        "u": 0.18,
+        "v": 0.53,
+        "t": "Slotted spoon (decorative)"
+      },
+      {
+        "u": 0.16,
+        "v": 0.89,
+        "t": "Dinner: pot-pourri"
+      },
+      {
+        "u": 0.32,
+        "v": 0.25,
+        "t": "Expression: mid-note"
+      },
+      {
+        "u": 0.38,
+        "v": 0.93,
+        "t": "Hand braced on counter"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-long-pose"
+  },
+  "HSB8KRpX0AsxGry": {
+    "title": "Globus, Front And Insides",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, two panels",
+    "note": "Top: a grey Soviet cockpit instrument with a small painted Earth turning behind a porthole, Cyrillic labels for orbital period, orbit count and landing angle, and counters reading 0048 and 074. Bottom: the same device with its case off, revealing a clockwork thicket of brass gear trains, capacitors and coloured wiring wrapped around the globe. It is a mechanical computer whose entire output is knowing where you are above the planet. The bottom photo is the one that hurts: all that watchmaking, just to keep a little world pointed correctly.",
+    "callouts": [
+      {
+        "u": 0.33,
+        "v": 0.23,
+        "t": "Earth, behind glass"
+      },
+      {
+        "u": 0.77,
+        "v": 0.32,
+        "t": "Orbits counted: 0048"
+      },
+      {
+        "u": 0.68,
+        "v": 0.75,
+        "t": "Gear train (dense)"
+      },
+      {
+        "u": 0.06,
+        "v": 0.24,
+        "t": "Latitude scale, blue"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-plain-evidence"
+  },
+  "HSn10KgaoAAt_da": {
+    "title": "For The Pharaoh",
+    "artist": "Unknown artist",
+    "medium": "Digital painting",
+    "note": "A nemes-headdressed strongman advances out of a trench with an AK-47 while a T-34 stencilled \"ЗА ФАРАОНА\" burns through the background, biplanes cross a yellow sky and a colossal sphinx head watches from the left. Behind him a bronze-age spearman with a shield jogs past soldiers in conical helmets. Every era of warfare the artist could think of has been invited and none of them were told about the others. The technique is airbrushed video-game box art, which is exactly the right amount of sincerity.",
+    "callouts": [
+      {
+        "u": 0.17,
+        "v": 0.34,
+        "t": "Tank slogan: \"For the Pharaoh\""
+      },
+      {
+        "u": 0.72,
+        "v": 0.68,
+        "t": "AK-47 (unfortunately loaded)"
+      },
+      {
+        "u": 0.35,
+        "v": 0.1,
+        "t": "Biplanes, several millennia late"
+      },
+      {
+        "u": 0.12,
+        "v": 0.13,
+        "t": "Sphinx, eyes closed"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-anachronism"
+  },
+  "HSrvWjAaMAAdMDu": {
+    "title": "The Fruit Problem",
+    "artist": "Unknown artist",
+    "medium": "Ballpoint drawing and typeset text",
+    "note": "A stick-figure merchant labelled KANKER MAN grins over a crate marked \"FRUIT\" in defensive quotation marks, while a customer strokes his chin beside a wall of escalating text. The prose builds an airtight ethical trap out of bolded and underlined conspiracy nouns — EU, immigrants, Global Dutchification — and ends by asking, quite seriously, whether you buy the fruit. The drawing is deliberately terrible and the typography is immaculate, which is the whole engine of the joke. It is a satire of the kind of argument that can only be escaped by walking away from the stall.",
+    "callouts": [
+      {
+        "u": 0.16,
+        "v": 0.29,
+        "t": "KANKER MAN (labelled)"
+      },
+      {
+        "u": 0.12,
+        "v": 0.86,
+        "t": "\"FRUIT\", scare-quoted"
+      },
+      {
+        "u": 0.47,
+        "v": 0.2,
+        "t": "Chin-stroke of deliberation"
+      },
+      {
+        "u": 0.83,
+        "v": 0.94,
+        "t": "Question, posed sincerely"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-commitment"
+  },
+  "HTAOkRCW0AArXJi": {
+    "title": "Jeff Hardy × Hatsune Miku",
+    "artist": "Unknown artist",
+    "medium": "Digital illustration",
+    "note": "A long-haired wrestler with face paint and a studded belt stands back-to-back with a turquoise-pigtailed vocaloid, both throwing the same split-finger hand sign and wearing matching perforated arm warmers — his yellow, hers pink. The logo at the bottom is rendered as a proper crossover lockup, complete with graffiti spikes and a Japanese subtitle. Everything about the drawing treats this as an announced, licensed event. The craft in the arm warmers alone suggests hours of reference gathering nobody asked for.",
+    "callouts": [
+      {
+        "u": 0.6,
+        "v": 0.16,
+        "t": "Headphones, standard issue"
+      },
+      {
+        "u": 0.19,
+        "v": 0.4,
+        "t": "Arm warmers (matched pair)"
+      },
+      {
+        "u": 0.51,
+        "v": 0.88,
+        "t": "Official-looking lockup"
+      },
+      {
+        "u": 0.71,
+        "v": 0.66,
+        "t": "Hip tattoo, borrowed"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-anachronism"
+  },
+  "HSmTvYSXgAAGE61": {
+    "title": "Figure With Unhelpful Keys",
+    "artist": "Unknown artist",
+    "medium": "Scanned diagram, line engraving",
+    "note": "A kneeling winged figure reads from a book beside a wooden printing press surrounded by spilled volumes, and everything is tagged with labels — AAB, ABA, ABB, ABC — that repeat across unrelated objects and explain nothing. A small grid of black squares floats at the angel's shoulder like a QR code four centuries early. Underneath, a pale strip shows three mysterious perforated shapes, unlabelled and unexplained. It has the authority of a textbook plate and the content of a dream about one.",
+    "callouts": [
+      {
+        "u": 0.2,
+        "v": 0.28,
+        "t": "ABB (a wing, apparently)"
+      },
+      {
+        "u": 0.71,
+        "v": 0.15,
+        "t": "AAB (the press)"
+      },
+      {
+        "u": 0.33,
+        "v": 0.29,
+        "t": "Grid of black squares"
+      },
+      {
+        "u": 0.49,
+        "v": 0.82,
+        "t": "Three shapes, uncredited"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "lobby",
+    "hold": true
+  },
+  "HSRG4LHWMAARhob": {
+    "title": "Bottle, Grinning",
+    "artist": "Unknown artist",
+    "medium": "Animation cel, screen capture",
+    "note": "A hand holds up a round-bellied glass flask; inside, a black cloud has arranged itself into a single red eye and an enormous set of teeth. A second, smaller bottle is corked with a yellow smiley face, which somehow makes it worse. The background is a sunlit brick wall painted in flat desert colours, entirely at ease. The grin is drawn with cel-animation confidence — thick outline, no shading — and it is having a much better day than whoever is holding it.",
+    "callouts": [
+      {
+        "u": 0.48,
+        "v": 0.52,
+        "t": "Grin (full set)"
+      },
+      {
+        "u": 0.73,
+        "v": 0.18,
+        "t": "Smiley cork, unhelpful"
+      },
+      {
+        "u": 0.44,
+        "v": 0.4,
+        "t": "One red eye"
+      },
+      {
+        "u": 0.72,
+        "v": 0.72,
+        "t": "Fingers, still holding on"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-polite-monsters"
+  },
+  "HRicbHmXUAE6l0D": {
+    "title": "Five Stages Of Pump",
+    "artist": "Unknown artist",
+    "medium": "Backlit panels, installation photograph",
+    "note": "Five glowing blue lightboxes in a dark room show a torso with a pistol at its temple, progressively losing detail: ribs go, then the head's features, then the shoulders square off, until the final panel is simply a petrol pump with its hose looped exactly where the arm used to be. The morph is done in five steps and needs no caption. The colour is cold cyan, the room is black, and the sequence reads left to right like a diagram in a manual nobody wants.",
+    "callouts": [
+      {
+        "u": 0.1,
+        "v": 0.22,
+        "t": "Panel one (ribs visible)"
+      },
+      {
+        "u": 0.47,
+        "v": 0.22,
+        "t": "Halfway (head going)"
+      },
+      {
+        "u": 0.88,
+        "v": 0.22,
+        "t": "Nozzle, formerly hand"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-spare-parts"
+  },
+  "HRkwmJAbAAE048c": {
+    "title": "Crane With Corrupted Head",
+    "artist": "Unknown artist",
+    "medium": "Painting, mineral pigment on gold ground",
+    "note": "A crested ibis is painted with full traditional care — layered white and blush feathers, scarlet scaled legs, ghost-line underdrawing on a gold leaf ground — except the red skin of its head has been rendered as chunky pixel blocks around one yellow eye. A second block of grey pixels bleeds in at the left edge like a damaged file. The bird is otherwise perfectly serene, pine needles and all. The glitch isn't a joke on the tradition; it's painted with the same brush discipline as the feathers, which is what makes it land.",
+    "callouts": [
+      {
+        "u": 0.68,
+        "v": 0.28,
+        "t": "Head, pixelated (deliberate)"
+      },
+      {
+        "u": 0.66,
+        "v": 0.27,
+        "t": "One unbothered eye"
+      },
+      {
+        "u": 0.04,
+        "v": 0.33,
+        "t": "Grey blocks, bleeding in"
+      },
+      {
+        "u": 0.46,
+        "v": 0.87,
+        "t": "Scarlet foot, fully rendered"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-anachronism"
+  },
+  "HRozTIJa0AACaVv": {
+    "title": "Elder God, Achieving Calm",
+    "artist": "Almost certainly a model",
+    "medium": "Digital line drawing",
+    "note": "A sage-green tentacled mass sits in lotus position, tentacles folded in its lap, dripping slightly, studded with open eyes that have all been left on. Over the front of it hangs a round yellow smiley mask on a strap, eyes shut in contentment. Two stacked stone cairns and a pink lotus complete the wellness setup. The drawing is clean and friendly and the eyes are still watching from everywhere else.",
+    "callouts": [
+      {
+        "u": 0.35,
+        "v": 0.36,
+        "t": "Serenity mask (strapped on)"
+      },
+      {
+        "u": 0.5,
+        "v": 0.45,
+        "t": "Eyes, unclosed"
+      },
+      {
+        "u": 0.46,
+        "v": 0.95,
+        "t": "Lotus, obligatory"
+      },
+      {
+        "u": 0.15,
+        "v": 0.89,
+        "t": "Balanced stones"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-polite-monsters"
+  },
+  "HRq4SQlXQAAYMFM": {
+    "title": "Road, Two-Thirds Reclaimed",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, large format",
+    "note": "A two-lane asphalt road runs straight through pale dunes and a tongue of sand has flowed across it, swallowing the near half and leaving the dashed white centre line to emerge briefly before vanishing again at the horizon. A single black-and-white marker post stands in the sand at the left, still marking. The light is flat and the sky is empty, so the only event in the frame is a slow one, caught mid-way. Whoever maintains this road has already lost and hasn't been told.",
+    "callouts": [
+      {
+        "u": 0.42,
+        "v": 0.42,
+        "t": "Sand, advancing"
+      },
+      {
+        "u": 0.26,
+        "v": 0.34,
+        "t": "Marker post, still working"
+      },
+      {
+        "u": 0.45,
+        "v": 0.24,
+        "t": "Centre line, reappearing"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-plain-evidence"
+  },
+  "HRqWCKcWEAEKWhR": {
+    "title": "Back, Scribbled Over",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, tattoo documentation",
+    "note": "Photographed from above on grey concrete, a person crouches with their back bare, covered in fine black single-line tattoos that loop and tangle like handwriting abandoned halfway — scribbles at the shoulder blades, long trailing curves down the spine, a few isolated marks drifting out toward the ribs. A small insect design sits separately on the upper arm. The lines follow the muscles rather than the page, so the whole composition shifts with the pose. It looks less like a design than a pen test done at enormous scale, and it is beautifully placed.",
+    "callouts": [
+      {
+        "u": 0.45,
+        "v": 0.34,
+        "t": "Shoulder scribble (densest)"
+      },
+      {
+        "u": 0.6,
+        "v": 0.6,
+        "t": "Loops following the spine"
+      },
+      {
+        "u": 0.18,
+        "v": 0.62,
+        "t": "Small insect, separate"
+      },
+      {
+        "u": 0.44,
+        "v": 0.2,
+        "t": "Fine chain, catching light"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-long-pose"
+  },
+  "HRrpvM-bYAAIMe9": {
+    "title": "Unfurnished, One Item",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, empty apartment",
+    "note": "An empty Japanese rental room shot from the doorway: pale laminate floor, one grey accent wall, a wall-mounted air conditioner, a frosted balcony door. On the floor, alone, lies a bolt-action rifle with a scope and folded bipod, almost certainly an airsoft replica, placed as though it were furniture. The composition is exactly how a letting agent photographs a room, which is what makes the single object so loud. Move-in day, priorities established.",
+    "callouts": [
+      {
+        "u": 0.43,
+        "v": 0.7,
+        "t": "Sole furnishing"
+      },
+      {
+        "u": 0.28,
+        "v": 0.12,
+        "t": "Air conditioner (included)"
+      },
+      {
+        "u": 0.25,
+        "v": 0.4,
+        "t": "Balcony, frosted"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-plain-evidence"
+  },
+  "HRcQqCnacAAPjFs": {
+    "title": "Express Service, Partially Corrupted",
+    "artist": "Unknown artist",
+    "medium": "Digital collage, datamosh",
+    "note": "A long passenger train curves down a snowy embankment, printed in the flat colour of an old rail enthusiast's annual, while the bottom-right third of the picture dissolves into horizontal smears of the same reds and blues. Ghost paragraphs of illegible text float in the grey sky like a caption that lost its nerve. What makes it work is how orderly the corruption is: the glitch runs parallel to the track, as if the failure were also on rails.",
+    "callouts": [
+      {
+        "u": 0.2,
+        "v": 0.73,
+        "t": "Locomotive (still committed)"
+      },
+      {
+        "u": 0.76,
+        "v": 0.7,
+        "t": "Landscape, smeared sideways"
+      },
+      {
+        "u": 0.15,
+        "v": 0.32,
+        "t": "Caption text (unreadable)"
+      },
+      {
+        "u": 0.55,
+        "v": 0.9,
+        "t": "Snow becomes scanline"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-signal-loss"
+  },
+  "HRdS7DDbIAAKc57": {
+    "title": "Survivorship Bias, Rotated",
+    "artist": "Unknown artist",
+    "medium": "Vector diagram, radial repeat",
+    "note": "The famous returning-bomber diagram, with its red clusters of bullet holes on wings and fuselage, has been spun into a mandala that recedes to a dense speck at the centre. The planes get smaller and more numerous toward the middle until the damage reads as decorative stippling. It's a sober piece of statistical folklore turned into wallpaper, and the effect is oddly devotional.",
+    "callouts": [
+      {
+        "u": 0.11,
+        "v": 0.38,
+        "t": "Damage (survivable, apparently)"
+      },
+      {
+        "u": 0.5,
+        "v": 0.46,
+        "t": "Centre (all aircraft, no room)"
+      },
+      {
+        "u": 0.49,
+        "v": 0.08,
+        "t": "Twelve o'clock bomber"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "lobby",
+    "hold": true
+  },
+  "HQaO2CXXoAEjm6E": {
+    "title": "Three Stages Of Resolution",
+    "artist": "Gudim",
+    "medium": "Digital comic, three panels",
+    "note": "Three panels of the same pair of legs: first bare with a Mario transfer on the thigh, then peeling off fishnets, then rendered entirely in chunky pixels with the character reduced to an 8-bit sprite. The joke walks backwards down the history of graphics until the body itself is low-res. The fishnet panel in the middle does the heavy lifting, turning a grid of stockings into the grid of a screen.",
+    "callouts": [
+      {
+        "u": 0.13,
+        "v": 0.33,
+        "t": "Plumber (full colour)"
+      },
+      {
+        "u": 0.56,
+        "v": 0.6,
+        "t": "Fishnet, doubling as grid"
+      },
+      {
+        "u": 0.86,
+        "v": 0.72,
+        "t": "Leg, downsampled"
+      },
+      {
+        "u": 0.91,
+        "v": 0.96,
+        "t": "Signature (unpixelated)"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-signal-loss"
+  },
+  "HQNGrC-XwAAJwc8": {
+    "title": "Small Blue Square, Received",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, phone camera",
+    "note": "A close crop from the nose down: septum ring, open mouth, a small blue tab resting on the tongue, a thin gold choker with a black D-ring, a red shirt with white lettering running out of frame. The camera is so near that the whole picture is texture — hair, cotton weave, the wet gloss of the tongue. It has the flat, unglamorous confidence of a photo taken to be sent to exactly one person.",
+    "callouts": [
+      {
+        "u": 0.47,
+        "v": 0.38,
+        "t": "Blue tab (centre stage)"
+      },
+      {
+        "u": 0.48,
+        "v": 0.12,
+        "t": "Septum ring, gold"
+      },
+      {
+        "u": 0.5,
+        "v": 0.57,
+        "t": "Choker hardware"
+      },
+      {
+        "u": 0.28,
+        "v": 0.88,
+        "t": "Shirt text, cropped out"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "lobby",
+    "hold": true
+  },
+  "HQPFbRMXQAA_rIP": {
+    "title": "Retirement Of A Contestant",
+    "artist": "Unknown photographer",
+    "medium": "Video still, sports hall",
+    "note": "A humanoid robot lies spread-eagled on a blue running track, limbs at four unlikely angles, with a bright spray of sparks erupting from its chest. A human in shorts and trainers walks out of frame at the top, apparently unbothered. The pose is pure athletics-injury photography, which is exactly why the sparks are funny rather than alarming.",
+    "callouts": [
+      {
+        "u": 0.42,
+        "v": 0.4,
+        "t": "Sparks (structural, probably)"
+      },
+      {
+        "u": 0.15,
+        "v": 0.08,
+        "t": "Handler, leaving"
+      },
+      {
+        "u": 0.75,
+        "v": 0.62,
+        "t": "Leg at 90 degrees"
+      },
+      {
+        "u": 0.22,
+        "v": 0.52,
+        "t": "Shoulder joint, exposed"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-spare-parts"
+  },
+  "HO9lc7YWEAA4lAa": {
+    "title": "Sitter, Displaced By One Frame",
+    "artist": "Unknown artist",
+    "medium": "Digital collage over fashion photograph",
+    "note": "A model in a pink ribboned gown sits on a gilt-and-blue sofa in a heavily decorated room, and a rectangular slab of the image has slid sideways, taking one arm, part of the dress and a border collie with it. The palette — dusty pink against lapis and gold — holds the whole thing together even as the geometry falls apart. The face is untouched and calm, which is what makes the rest feel deliberate rather than broken.",
+    "callouts": [
+      {
+        "u": 0.38,
+        "v": 0.12,
+        "t": "Face (undisturbed)"
+      },
+      {
+        "u": 0.62,
+        "v": 0.26,
+        "t": "Dog, relocated"
+      },
+      {
+        "u": 0.28,
+        "v": 0.4,
+        "t": "Seam in the picture"
+      },
+      {
+        "u": 0.88,
+        "v": 0.9,
+        "t": "Kitten heel, intact"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "wing-signal-loss"
+  },
+  "HQKM3TwWAAADdcT": {
+    "title": "Two Candles And A Witness",
+    "artist": "Unknown artist",
+    "medium": "Linocut-style print, four colours",
+    "note": "On a black ground, a pair of grey hands cups a dripping candle while a second flame burns behind them, both haloed in red and yellow rings. A white eye hangs in the upper right, trailing a blue zigzag beam down across the composition like lightning with intent. The chalky, dotted texture of the printing keeps it from being merely graphic — it feels hand-cut, and slightly anxious.",
+    "callouts": [
+      {
+        "u": 0.86,
+        "v": 0.17,
+        "t": "Eye (watching the flame)"
+      },
+      {
+        "u": 0.19,
+        "v": 0.55,
+        "t": "Candle, dripping hard"
+      },
+      {
+        "u": 0.4,
+        "v": 0.72,
+        "t": "Hands, shielding"
+      },
+      {
+        "u": 0.6,
+        "v": 0.42,
+        "t": "Beam, unmistakably aimed"
+      }
+    ],
+    "curatedAt": "2026-09-25T06:12",
+    "wing": "lobby",
+    "hold": true
+  }
+}
