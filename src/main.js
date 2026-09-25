@@ -13,10 +13,10 @@ const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const touchFirst = matchMedia('(pointer: coarse)').matches;
 const BASE_FOV = 72;
 const SENSITIVITY = 0.0022;
-const ACCENT = { lobby: '#8a6d3b', gallery: '#9a2f2f', eyes: '#6c5ce7', familiars: '#1f7a8c', bedroom: '#d4679a', annex: '#8a6d3b' };
+const ACCENT = { lobby: '#8a6d3b', gallery: '#9a2f2f', eyes: '#6c5ce7', familiars: '#1f7a8c', bedroom: '#d4679a' };
 const accentFor = (id) => WINGS[id]?.accent || ACCENT[id] || ACCENT.lobby;
 // Generated wings borrow the score of the hand-built wing their template imitates.
-const moodFor = (id) => (WINGS[id]?.template ? TEMPLATES[WINGS[id].template]?.mood || 'gallery' : id === 'annex' ? 'lobby' : id);
+const moodFor = (id) => (WINGS[id]?.template ? TEMPLATES[WINGS[id].template]?.mood || 'gallery' : WINGS[id]?.hub ? 'lobby' : id);
 
 // ---------------------------------------------------------------- renderer
 const canvas = $('#scene');
@@ -160,14 +160,6 @@ async function boot() {
   for (const [key, wing] of Object.entries(layout?.wings || {})) {
     WINGS[key] = { name: wing.name, subtitle: wing.subtitle, statement: wing.statement, accent: wing.accent, template: wing.template, generated: true };
   }
-  if (Object.keys(layout?.wings || {}).length) {
-    WINGS.annex = {
-      name: 'The Annex',
-      subtitle: 'Wings added as the folder grows',
-      statement:
-        'Every couple of days a curator looks at whatever new images arrived in the folder, writes their plaques, and hangs them in new wings off this corridor. The rooms are generated; the taste is still the collector\u2019s.',
-    };
-  }
   for (const [id, credit] of Object.entries(CREDITS)) if (WORKS[id]) WORKS[id].credit = credit;
   collection = manifest;
   await loadFonts();
@@ -217,8 +209,11 @@ function enterRoom(id) {
   audio.setMood(moodFor(id));
 }
 
+// Where a portal lets you out: the destination's door back to where you came
+// from, else its entrance (far doors are one-way into the next room).
 function arrivalFor(portal) {
-  return world.rooms[portal.dest].portals.find((p) => p.dest === portal.room);
+  const dest = world.rooms[portal.dest];
+  return dest.portals.find((p) => p.dest === portal.room) || dest.portals.find((p) => p.entrance) || dest.portals[0];
 }
 
 function spawnFrom(portal, dist = 2.4) {
@@ -949,6 +944,9 @@ window.museum = {
   },
   get hovered() {
     return hovered?.userData.id || null;
+  },
+  get portals() {
+    return world.portals.map((p) => ({ room: p.room, dest: p.dest, entrance: !!p.entrance, arrives: arrivalFor(p)?.room === p.dest }));
   },
   start: begin,
   teleport(roomId, dist = 2.4) {

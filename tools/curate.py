@@ -47,7 +47,7 @@ MIN_WING = 3
 MAX_WING = 7
 MAX_BATCH = 16
 TEMPLATES = ("salon", "white", "night", "pastel")
-HAND_BUILT_WINGS = {"lobby", "gallery", "eyes", "familiars", "bedroom", "annex"}
+HAND_BUILT_WINGS = {"lobby", "gallery", "eyes", "familiars", "bedroom"}
 DEFAULT_ACCENT = {"salon": "#9a2f2f", "white": "#1f7a8c", "night": "#6c5ce7", "pastel": "#d4679a"}
 
 STYLE_GUIDE = """You are the curator of "coolimages", a walkable 3D museum built from one person's folder of images saved from X. The museum's voice: observant, specific, dry, warm, and a little funny. It is modelled on the 1990s Eyewitness museum: pictures floating in white space with small italic labels pointing at details.
@@ -245,6 +245,8 @@ def apply_result(result, batch_ids, held, catalog, layout, now):
     taken = set(wings) | HAND_BUILT_WINGS
     for w in result.get("newWings", []):
         key = slug(w["key"] or w["name"])
+        if key.startswith("rotunda"):  # reserved for the generated hubs
+            key = f"wing-{key}"
         while key in taken:
             key += "-2"
         taken.add(key)
