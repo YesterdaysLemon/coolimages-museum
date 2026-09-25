@@ -1,0 +1,6 @@
+{
+  "comment": "Works listed here stay in the local museum only. They are never uploaded to the public site.",
+  "exclude": {
+    "HS-zGlbbEAAgsIJ": "The artist's watermark asks for no reuploading and no AI training."
+  }
+}

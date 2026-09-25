@@ -1,0 +1,19 @@
+# Managed by al-stack. Keep extended prose in AGENTS.md.
+"schema" = 1
+
+["project"]
+"id" = "8da0cd00-e9da-466f-b80e-4fbf4dd253c7"
+"name" = "coolimages-museum"
+"status" = "experimental"
+"profile" = "web"
+"purpose" = "Walkable Three.js museum of Alireza's coolimages folder: Eyewitness-style white museum with themed wings, plaques, DK-style callouts, portal paintings and generative music."
+
+["stack"]
+"version" = "0.1.0"
+"revision" = "11eac15f6a8a0dc76f06ef97c7c3a27c7f668e0a+dirty.6fb7933644af4e9c"
+
+["commands"]
+"build" = "python tools/build_assets.py"
+"serve" = "python -m http.server 8173"
+"start" = "start-museum.cmd"
+"check" = "node --check src/main.js && node --check src/world.js && node --check src/textures.js && node --check src/audio.js && node --check src/catalog.js"

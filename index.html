@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Coolimages Museum</title>
+    <meta name="description" content="A walkable 3D museum of a saved-images folder, with themed wings, plaques and generative music." />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M4 32 Q32 6 60 32 Q32 58 4 32Z' fill='%23fff' stroke='%231d1a16' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='11' fill='%233fa38f'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%23000'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Patrick+Hand&display=swap"
+      rel="stylesheet"
+    />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+      }
+    </script>
+    <style>
+      :root {
+        --paper: #f7f5f0;
+        --ink: #1d1a16;
+        --ink-soft: #5b5146;
+        --accent: #8a6d3b;
+        --panel: rgba(251, 250, 247, 0.96);
+        --shadow: 0 18px 50px rgba(30, 20, 10, 0.22);
+        color-scheme: light;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #f2efe9;
+        color: var(--ink);
+        font-family: 'EB Garamond', Garamond, 'Times New Roman', serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      #scene {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+      }
+      kbd {
+        display: inline-block;
+        min-width: 1.7em;
+        padding: 0.05em 0.45em;
+        border: 1px solid rgba(29, 26, 22, 0.35);
+        border-bottom-width: 2px;
+        border-radius: 5px;
+        background: #fff;
+        font-family: inherit;
+        font-size: 0.85em;
+        line-height: 1.35;
+        text-align: center;
+        color: var(--ink);
+      }
+      button {
+        font: inherit;
+        cursor: pointer;
+      }
+      button:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 3px;
+      }
+
+      /* atmosphere */
+      #grain,
+      #vignette,
+      #fade {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+      }
+      #grain {
+        opacity: 0.07;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+        animation: grain 0.9s steps(4) infinite;
+        z-index: 3;
+      }
+      @keyframes grain {
+        0% { background-position: 0 0; }
+        25% { background-position: -60px 40px; }
+        50% { background-position: 50px -30px; }
+        75% { background-position: -20px -70px; }
+      }
+      #vignette {
+        background: radial-gradient(ellipse at center, transparent 58%, rgba(20, 12, 4, 0.22) 100%);
+        z-index: 2;
+      }
+      #fade {
+        background: #fbfaf6;
+        opacity: 0;
+        z-index: 8;
+      }
+
+      /* HUD */
+      #crosshair {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        width: 6px;
+        height: 6px;
+        margin: -3px 0 0 -3px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.45);
+        z-index: 4;
+        pointer-events: none;
+      }
+      #hint {
+        position: fixed;
+        left: 50%;
+        bottom: 9vh;
+        transform: translate(-50%, 8px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        max-width: min(560px, calc(100vw - 32px));
+        padding: 10px 22px 12px;
+        border-radius: 999px;
+        background: rgba(251, 250, 247, 0.88);
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+        text-align: center;
+        opacity: 0;
+        transition: opacity 0.25s, transform 0.25s;
+        z-index: 5;
+        pointer-events: none;
+      }
+      #hint.show {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+      #hint b {
+        font-size: 21px;
+        font-weight: 500;
+        font-style: italic;
+      }
+      #hint span {
+        font-size: 15px;
+        color: var(--ink-soft);
+      }
+      #banner {
+        position: fixed;
+        left: 50%;
+        top: 9vh;
+        transform: translate(-50%, -10px);
+        text-align: center;
+        opacity: 0;
+        z-index: 5;
+        pointer-events: none;
+        width: calc(100vw - 32px);
+      }
+      #banner.show {
+        animation: banner 3.6s ease forwards;
+      }
+      @keyframes banner {
+        0% { opacity: 0; transform: translate(-50%, -10px); }
+        15%, 75% { opacity: 1; transform: translate(-50%, 0); }
+        100% { opacity: 0; transform: translate(-50%, 0); }
+      }
+      #banner h2 {
+        margin: 0;
+        font-weight: 500;
+        font-size: clamp(28px, 4.2vw, 50px);
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: #fff;
+        text-shadow: 0 2px 18px rgba(0, 0, 0, 0.55), 0 0 2px rgba(0, 0, 0, 0.6);
+      }
+      #banner p {
+        margin: 4px 0 0;
+        font-style: italic;
+        font-size: clamp(18px, 2vw, 24px);
+        color: #fff;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+      }
+      #mapbox {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        width: 150px;
+        z-index: 5;
+        text-align: center;
+        pointer-events: none;
+      }
+      #minimap {
+        width: 150px;
+        height: 150px;
+        display: block;
+        border-radius: 14px;
+        background: rgba(251, 250, 247, 0.55);
+        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(4px);
+      }
+      #room-name {
+        display: inline-block;
+        margin-top: 8px;
+        padding: 3px 12px;
+        border-radius: 999px;
+        background: rgba(251, 250, 247, 0.88);
+        font-size: 15px;
+        font-style: italic;
+        border-left: 3px solid var(--accent);
+      }
+      #legend {
+        position: fixed;
+        left: 16px;
+        bottom: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+        max-width: min(520px, calc(100vw - 150px));
+        padding: 10px 16px;
+        border-radius: 14px;
+        background: rgba(251, 250, 247, 0.9);
+        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.12);
+        font-size: 15px;
+        opacity: 0;
+        transition: opacity 0.8s;
+        z-index: 5;
+        pointer-events: none;
+      }
+      #legend.show {
+        opacity: 1;
+      }
+      #mute {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        min-height: 44px;
+        padding: 8px 16px;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(251, 250, 247, 0.9);
+        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.12);
+        font-size: 16px;
+        color: var(--ink);
+        z-index: 5;
+      }
+
+      /* caption panel, shown while looking closer */
+      #caption {
+        position: fixed;
+        top: 7vh;
+        right: 3vw;
+        bottom: 7vh;
+        width: min(420px, 36vw);
+        display: flex;
+        flex-direction: column;
+        padding: 34px 34px 26px;
+        border-radius: 4px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        border-top: 5px solid var(--accent);
+        transform: translateX(24px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.5s ease, transform 0.6s ease;
+        z-index: 6;
+        overflow-y: auto;
+      }
+      #caption.show {
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+      }
+      #caption .kicker {
+        margin: 0 0 10px;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      #caption h2 {
+        margin: 0 0 14px;
+        font-size: clamp(28px, 2.6vw, 38px);
+        font-weight: 500;
+        line-height: 1.08;
+      }
+      #caption .artist {
+        margin: 0;
+        font-size: 19px;
+        font-weight: 500;
+      }
+      #caption .medium {
+        margin: 2px 0 0;
+        font-size: 18px;
+        font-style: italic;
+        color: var(--ink-soft);
+      }
+      #caption .saved {
+        margin: 6px 0 0;
+        font-size: 15px;
+        color: #8a8274;
+      }
+      #caption hr {
+        width: 64px;
+        margin: 22px 0;
+        border: 0;
+        border-top: 2px solid var(--accent);
+      }
+      #caption .note {
+        margin: 0;
+        font-size: 20px;
+        line-height: 1.5;
+        flex: 1;
+      }
+      #caption .back {
+        margin: 22px 0 0;
+        font-size: 15px;
+        color: var(--ink-soft);
+      }
+
+      /* intro */
+      #intro {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 24px 16px;
+        background: radial-gradient(ellipse at 50% 38%, #ffffff 0%, var(--paper) 55%, #ebe6dc 100%);
+        text-align: center;
+        overflow-y: auto;
+        transition: opacity 0.9s ease;
+      }
+      #intro.gone {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .logo {
+        width: min(230px, 52vw);
+        height: auto;
+        filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.12));
+      }
+      .logo .iris {
+        animation: glance 7s ease-in-out infinite;
+        transform-origin: 120px 60px;
+      }
+      @keyframes glance {
+        0%, 18% { transform: translate(0, 0); }
+        26%, 44% { transform: translate(-26px, 4px); }
+        52%, 70% { transform: translate(22px, -3px); }
+        78%, 100% { transform: translate(0, 0); }
+      }
+      #intro h1 {
+        margin: 8px 0 0;
+        font-size: clamp(38px, 8vw, 92px);
+        font-weight: 500;
+        letter-spacing: 0.3em;
+        padding-left: 0.3em;
+        line-height: 1;
+      }
+      #intro .sub {
+        margin: 0;
+        font-size: clamp(19px, 2.4vw, 27px);
+        font-style: italic;
+        color: var(--ink-soft);
+      }
+      .load {
+        width: min(360px, 80vw);
+        margin: 18px 0 4px;
+      }
+      #load-status {
+        margin: 0 0 8px;
+        font-size: 16px;
+        color: var(--ink-soft);
+        min-height: 1.3em;
+      }
+      #load-bar {
+        height: 3px;
+        border-radius: 3px;
+        background: rgba(29, 26, 22, 0.12);
+        overflow: hidden;
+      }
+      #load-bar span {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: var(--accent);
+        transition: width 0.2s;
+      }
+      #intro.ready #load-bar {
+        opacity: 0;
+        transition: opacity 0.6s;
+      }
+      #intro.error #load-status {
+        color: #9a2f2f;
+      }
+      #enter {
+        margin-top: 8px;
+        min-height: 52px;
+        padding: 12px 34px;
+        border: 0;
+        border-radius: 999px;
+        background: var(--ink);
+        color: var(--paper);
+        font-size: 21px;
+        letter-spacing: 0.06em;
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.2);
+        transition: transform 0.2s, opacity 0.3s;
+      }
+      #enter:disabled {
+        opacity: 0.35;
+        cursor: progress;
+      }
+      #enter:not(:disabled):hover {
+        transform: translateY(-2px);
+      }
+      .keys {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px 22px;
+        max-width: 720px;
+        margin: 22px 0 0;
+        padding: 0;
+        list-style: none;
+        font-size: 17px;
+        color: var(--ink-soft);
+      }
+      .keys li {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .fine {
+        margin: 14px 0 0;
+        font-size: 15px;
+        color: #8a8274;
+        font-style: italic;
+      }
+      body.touch .desk-only,
+      body:not(.touch) .touch-only,
+      body.drag-look .lock-only,
+      body:not(.drag-look) .drag-only {
+        display: none !important;
+      }
+      #crosshair,
+      #mapbox,
+      #legend {
+        transition: opacity 0.4s;
+      }
+      body.inspecting #crosshair,
+      body.inspecting #mapbox,
+      body.inspecting #legend {
+        opacity: 0 !important;
+      }
+      @media (max-width: 819px) {
+        body.inspecting #mute {
+          display: none;
+        }
+      }
+      body.drag-look #scene {
+        cursor: grab;
+      }
+      body.drag-look #scene:active {
+        cursor: grabbing;
+      }
+
+      /* pause */
+      #pause {
+        position: fixed;
+        inset: 0;
+        z-index: 9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background: rgba(247, 245, 240, 0.62);
+        backdrop-filter: blur(6px);
+      }
+      #pause[hidden] {
+        display: none;
+      }
+      #pause .card {
+        width: min(460px, 100%);
+        padding: 30px 30px 26px;
+        border-radius: 6px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        border-top: 5px solid var(--accent);
+        text-align: center;
+      }
+      #pause h2 {
+        margin: 0 0 16px;
+        font-weight: 500;
+        font-size: 34px;
+        letter-spacing: 0.08em;
+      }
+      #pause .keys {
+        margin: 0 0 22px;
+        font-size: 16px;
+      }
+      #pause .actions {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      #pause button {
+        min-height: 46px;
+        padding: 8px 22px;
+        border-radius: 999px;
+        border: 1px solid rgba(29, 26, 22, 0.25);
+        background: #fff;
+        font-size: 18px;
+        color: var(--ink);
+      }
+      #pause #resume {
+        background: var(--ink);
+        color: var(--paper);
+        border-color: var(--ink);
+      }
+
+      /* credits */
+      #caption .credit {
+        margin: 8px 0 0;
+        font-size: 15px;
+        color: var(--ink-soft);
+      }
+      #caption a,
+      #credits a {
+        color: var(--accent);
+        text-underline-offset: 3px;
+      }
+      .text-button {
+        margin-top: 8px;
+        min-height: 44px;
+        border: 0;
+        background: none;
+        color: var(--ink-soft);
+        font-size: 16px;
+        text-decoration: underline;
+        text-underline-offset: 4px;
+      }
+      #credits {
+        position: fixed;
+        inset: 0;
+        z-index: 11;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background: rgba(247, 245, 240, 0.7);
+        backdrop-filter: blur(6px);
+      }
+      #credits[hidden] {
+        display: none;
+      }
+      #credits .card {
+        width: min(640px, 100%);
+        max-height: calc(100vh - 32px);
+        overflow-y: auto;
+        padding: 30px 32px 24px;
+        border-radius: 6px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        border-top: 5px solid var(--accent);
+      }
+      #credits h2 {
+        margin: 0 0 10px;
+        font-weight: 500;
+        font-size: 34px;
+      }
+      #credits .lede {
+        margin: 0 0 18px;
+        font-size: 17px;
+        line-height: 1.5;
+        color: var(--ink-soft);
+      }
+      #credits h3 {
+        margin: 18px 0 6px;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      #credits ul {
+        margin: 0;
+        padding-left: 18px;
+        font-size: 16px;
+        line-height: 1.55;
+      }
+      #credits-close {
+        margin-top: 20px;
+        min-height: 44px;
+        padding: 8px 24px;
+        border-radius: 999px;
+        border: 0;
+        background: var(--ink);
+        color: var(--paper);
+        font-size: 17px;
+      }
+
+      /* touch joystick */
+      #stick {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: rgba(251, 250, 247, 0.35);
+        border: 2px solid rgba(251, 250, 247, 0.8);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 5;
+        pointer-events: none;
+      }
+      #stick.show {
+        display: flex;
+      }
+      #stick span {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: rgba(251, 250, 247, 0.92);
+      }
+
+      @media (max-width: 819px) {
+        #caption {
+          top: auto;
+          left: 12px;
+          right: 12px;
+          bottom: 12px;
+          width: auto;
+          max-height: 46vh;
+          padding: 22px 22px 18px;
+          transform: translateY(24px);
+        }
+        #caption .note {
+          font-size: 18px;
+        }
+        #mapbox,
+        #minimap {
+          width: 104px;
+        }
+        #minimap {
+          height: 104px;
+        }
+        #room-name {
+          font-size: 13px;
+        }
+        #legend {
+          display: none;
+        }
+        #hint {
+          bottom: 22vh;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #grain,
+        .logo .iris {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="scene" aria-label="3D museum view"></canvas>
+    <div id="vignette"></div>
+    <div id="grain"></div>
+
+    <div id="crosshair" class="desk-only"></div>
+    <div id="hint" role="status" aria-live="polite"></div>
+    <div id="banner" aria-live="polite"><h2></h2><p></p></div>
+    <div id="mapbox"><canvas id="minimap" aria-hidden="true"></canvas><span id="room-name">The Rotunda</span></div>
+    <div id="legend" class="desk-only">
+      <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk</span>
+      <span class="lock-only">Mouse: look</span>
+      <span class="drag-only">Drag: look</span>
+      <span><kbd>&larr;</kbd><kbd>&rarr;</kbd> turn</span>
+      <span><kbd>Shift</kbd> stroll faster</span>
+      <span><kbd>E</kbd> look closer</span>
+      <span>Walk into a painting to travel</span>
+      <span><kbd>C</kbd> credits</span>
+      <span><kbd>Esc</kbd> pause</span>
+    </div>
+    <button id="mute" type="button" aria-pressed="true">Music on</button>
+    <div id="stick"><span></span></div>
+
+    <aside id="caption" aria-hidden="true">
+      <p class="kicker"></p>
+      <h2></h2>
+      <p class="artist"></p>
+      <p class="medium"></p>
+      <p class="saved"></p>
+      <p class="credit"></p>
+      <hr />
+      <p class="note"></p>
+      <p class="back"></p>
+    </aside>
+
+    <div id="fade"></div>
+
+    <section id="intro">
+      <svg class="logo" viewBox="0 0 240 120" aria-hidden="true">
+        <defs>
+          <radialGradient id="irisGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stop-color="#d7a64a" />
+            <stop offset="0.4" stop-color="#3fa38f" />
+            <stop offset="0.85" stop-color="#1e5f6b" />
+            <stop offset="1" stop-color="#0f2a33" />
+          </radialGradient>
+          <clipPath id="lid"><path d="M10 60 Q120 -20 230 60 Q120 140 10 60Z" /></clipPath>
+        </defs>
+        <path d="M10 60 Q120 -20 230 60 Q120 140 10 60Z" fill="#fff" />
+        <g clip-path="url(#lid)">
+          <g class="iris">
+            <circle cx="120" cy="60" r="34" fill="url(#irisGrad)" />
+            <circle cx="120" cy="60" r="14" fill="#07080a" />
+            <circle cx="112" cy="52" r="5" fill="#fff" />
+          </g>
+        </g>
+        <path d="M10 60 Q120 -20 230 60 Q120 140 10 60Z" fill="none" stroke="#1d1a16" stroke-width="3" />
+      </svg>
+      <h1>COOLIMAGES</h1>
+      <p class="sub">A museum of things that stare back</p>
+      <div class="load">
+        <p id="load-status" role="status">Opening the doors&hellip;</p>
+        <div id="load-bar"><span></span></div>
+      </div>
+      <button id="enter" type="button" disabled>Enter the museum</button>
+      <ul class="keys desk-only">
+        <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk</li>
+        <li>Mouse: look around</li>
+        <li><kbd>&larr;</kbd><kbd>&rarr;</kbd> turn</li>
+        <li><kbd>Shift</kbd> stroll faster</li>
+        <li><kbd>E</kbd> look closer</li>
+        <li>Walk into a painting to travel</li>
+        <li><kbd>M</kbd> music</li>
+      </ul>
+      <ul class="keys touch-only">
+        <li>Left thumb: walk</li>
+        <li>Right thumb: look</li>
+        <li>Tap a work to look closer</li>
+        <li>Walk into a painting to travel</li>
+      </ul>
+      <p class="fine">Best with headphones. The music is generated live, so it never repeats exactly.</p>
+      <button class="text-button" type="button" data-open-credits>Credits &amp; removal requests</button>
+    </section>
+
+    <section id="pause" hidden>
+      <div class="card">
+        <h2>Paused</h2>
+        <ul class="keys">
+          <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk</li>
+          <li><kbd>E</kbd> look closer</li>
+          <li><kbd>M</kbd> music</li>
+        </ul>
+        <div class="actions">
+          <button id="resume" type="button">Resume</button>
+          <button id="pause-mute" type="button">Turn music off</button>
+          <button type="button" data-open-credits>Credits</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="credits" hidden aria-labelledby="credits-title">
+      <div class="card">
+        <h2 id="credits-title">Credits</h2>
+        <p class="lede">
+          Every work here belongs to its maker. These are images saved from X, shown with credit and a link to the
+          original wherever the maker could be traced. Artists: if something of yours is here and you'd like it credited
+          differently or taken down, <a id="removal-link" target="_blank" rel="noopener noreferrer">open a request</a> and
+          it will be handled.
+        </p>
+        <div id="credit-list"></div>
+        <button id="credits-close" type="button">Close</button>
+      </div>
+    </section>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
