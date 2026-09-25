@@ -97,11 +97,21 @@ export class MuseumAudio {
 
   setMuted(muted) {
     this.muted = muted;
+    this.level(0.6);
+  }
+
+  // Quieter music while a video plays with sound.
+  duck(on) {
+    this.ducked = on;
+    this.level(0.5);
+  }
+
+  level(seconds) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     this.master.gain.cancelScheduledValues(t);
     this.master.gain.setValueAtTime(this.master.gain.value, t);
-    this.master.gain.linearRampToValueAtTime(muted ? 0 : 0.85, t + 0.6);
+    this.master.gain.linearRampToValueAtTime(this.muted ? 0 : this.ducked ? 0.12 : 0.85, t + seconds);
   }
 
   send(node, dry, wet) {

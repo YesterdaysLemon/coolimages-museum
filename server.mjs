@@ -34,9 +34,10 @@ const types = {
   '.txt': 'text/plain; charset=utf-8',
   '.jpg': 'image/jpeg',
   '.png': 'image/png',
+  '.mp4': 'video/mp4',
   '.svg': 'image/svg+xml',
 };
-const allowed = [/^\/src\/[\w-]+\.js$/, /^\/data\/[\w-]+\.json$/, /^\/content\/[\w-]+\.json$/, /^\/content\/art\/[\w-]+\.(jpg|png)$/, /^\/robots\.txt$/];
+const allowed = [/^\/src\/[\w-]+\.js$/, /^\/data\/[\w-]+\.json$/, /^\/content\/[\w-]+\.json$/, /^\/content\/art\/[\w-]+(\.sheet)?\.(jpg|png|mp4)$/, /^\/robots\.txt$/];
 
 http
   .createServer(async (req, res) => {
@@ -70,7 +71,24 @@ http
       res.setHeader('Content-Length', body.length);
       res.setHeader('Last-Modified', info.mtime.toUTCString());
       res.setHeader('Cache-Control', rel.startsWith('/content/art/') ? 'public, max-age=604800' : 'no-cache');
+      res.setHeader('Accept-Ranges', 'bytes');
       if (ext === '.html') res.setHeader('Content-Security-Policy', csp);
+      // Video elements fetch in byte ranges (Caddy does this in production).
+      const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+      if (range && (range[1] || range[2])) {
+        const start = range[1] ? Number(range[1]) : Math.max(0, body.length - Number(range[2]));
+        const end = range[1] && range[2] ? Math.min(Number(range[2]), body.length - 1) : body.length - 1;
+        if (start > end || start >= body.length) {
+          res.writeHead(416, { 'Content-Range': `bytes */${body.length}` });
+          res.end();
+          return;
+        }
+        res.setHeader('Content-Range', `bytes ${start}-${end}/${body.length}`);
+        res.setHeader('Content-Length', end - start + 1);
+        res.writeHead(206);
+        res.end(req.method === 'HEAD' ? undefined : body.subarray(start, end + 1));
+        return;
+      }
       res.writeHead(200);
       res.end(req.method === 'HEAD' ? undefined : body);
     } catch {

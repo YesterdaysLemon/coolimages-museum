@@ -48,12 +48,13 @@ export const TEMPLATES = {
   white: { mood: 'familiars', surface: 'void', frame: 'bare', plaque: 'card', ink: 'dark', height: 6, float: true },
   night: { mood: 'eyes', surface: 'stone', frame: 'lightbox', plaque: 'glass', ink: 'light', height: 5.5 },
   pastel: { mood: 'bedroom', surface: 'carpet', frame: 'polaroid', plaque: 'note', ink: 'dark', height: 4.2 },
+  screening: { mood: 'eyes', surface: 'carpet', frame: 'screen', plaque: 'glass', ink: 'light', height: 5 },
 };
 const MAX_WORKS_PER_WING = 7;
 const WINGS_PER_HUB = 3;
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 // Colour of a painting's back, by frame style.
-const VERSO = { gilded: 0x4a3524, museum: 0xb89b72, lightbox: 0x121116, polaroid: 0xefe9dc, bare: 0xe4dfd5, oval: 0x2a2018 };
+const VERSO = { gilded: 0x4a3524, museum: 0xb89b72, lightbox: 0x121116, screen: 0x0c0b0d, polaroid: 0xefe9dc, bare: 0xe4dfd5, oval: 0x2a2018 };
 
 export function buildWorld({ scene, art, acquisitions, withheld = new Set(), layout = null, summary }) {
   const generatedWings = Object.entries(layout?.wings || {}).filter(([, w]) => (w.works || []).some((id) => art.has(id)));
@@ -183,6 +184,14 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
       g.add(glow);
       return { w: w + 0.06, h: h + 0.06, cy: 0 };
     }
+    if (style === 'screen') {
+      const b = 0.07;
+      bars(g, w, h, b, 0.06, M.black);
+      const spill = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.8 + 1.2, h * 1.8 + 1.2), additive(opts.glow ?? 0xffe0c0, 0.22));
+      spill.position.z = -0.03;
+      g.add(spill);
+      return { w: w + 2 * b, h: h + 2 * b, cy: 0 };
+    }
     if (style === 'polaroid') {
       const card = new THREE.Mesh(new THREE.PlaneGeometry(w + 0.14, h + 0.36), M.paper);
       card.position.set(0, -0.11, 0.006);
@@ -308,7 +317,7 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
         {
           title: work?.title || 'Untitled acquisition',
           artist: work?.artist || 'Curatorial notes pending',
-          medium: work?.medium || 'New acquisition',
+          medium: work?.medium || (entry.video ? 'Moving image, new acquisition' : 'New acquisition'),
           saved: formatSaved(entry.saved),
           noteColor: NOTE_COLORS[Math.floor(TX.hash(id) * NOTE_COLORS.length)],
         },
@@ -526,7 +535,7 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
         title: 'coolimages',
         subtitle: 'A museum of things that stare back',
         body: [
-          `${summary.count} images saved from X between ${summary.range}, and one afternoon of conversation about why they resonated.`,
+          `${summary.videos ? `${summary.count - summary.videos} images and ${summary.videos} video${summary.videos > 1 ? 's' : ''}` : `${summary.count} images`} saved from X between ${summary.range}, and one afternoon of conversation about why they resonated.`,
           'The thesis: something sweet on the surface, something enormous and watchful underneath, taken completely seriously and as a joke at the same time.',
           'Walk into a painting to travel. Press E to look closer.',
         ],
@@ -1225,10 +1234,11 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     const x0 = cx - W / 2;
     const x1 = cx + W / 2;
     const z1 = z0 + L;
-    const dark = kind === 'night';
+    const cinema = kind === 'screening';
+    const dark = kind === 'night' || cinema;
     const white = kind === 'white';
     const pastel = kind === 'pastel';
-    const bg = dark ? '#0d0c20' : pastel ? '#2a2340' : '#f3f0ea';
+    const bg = cinema ? '#0b0507' : dark ? '#0d0c20' : pastel ? '#2a2340' : '#f3f0ea';
     const room = makeRoom(key, { type: 'rect', x0, x1, z0, z1 }, t.surface, {
       bg,
       fog: dark ? { type: 'exp2', color: bg, density: 0.022 } : { type: 'linear', color: bg, near: white ? 14 : 30, far: white ? 46 : 80 },
@@ -1243,8 +1253,10 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
       wall.position.set(cx, 2.4, z0 - 0.17);
       room.group.add(wall);
     } else {
-      const wallCanvas = dark ? TX.eyesWall(H) : pastel ? TX.bedroomWall(H) : TX.galleryWall(H);
-      const floorMat = dark
+      const wallCanvas = cinema ? TX.plainWall(H, '#3a0e16', '#1a0609') : dark ? TX.eyesWall(H) : pastel ? TX.bedroomWall(H) : TX.galleryWall(H);
+      const floorMat = cinema
+        ? new THREE.MeshStandardMaterial({ color: 0x2a0c12, roughness: 1 })
+        : dark
         ? new THREE.MeshStandardMaterial({ color: 0x17152e, roughness: 0.6, metalness: 0.1 })
         : pastel
           ? new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.carpet(), { repeat: [W / 1.5, L / 1.5] }), roughness: 1 })
@@ -1253,13 +1265,13 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
         x0, x1, z0, z1, H,
         wallCanvas,
         floorMat,
-        ceilingMat: new THREE.MeshStandardMaterial({ color: dark ? 0x0b0a1a : pastel ? 0x3a3166 : 0xf4efe5, roughness: 1 }),
+        ceilingMat: new THREE.MeshStandardMaterial({ color: cinema ? 0x070304 : dark ? 0x0b0a1a : pastel ? 0x3a3166 : 0xf4efe5, roughness: 1 }),
       });
     }
-    const hemi = dark ? [0x6b5fd6, 0x0a0915, 0.6] : pastel ? [0xffe0f0, 0x5a4a7e, 0.85] : white ? [0xffffff, 0xe8e2d6, 1.6] : [0xfff1dc, 0x6e5a44, 0.9];
+    const hemi = cinema ? [0x9a6a70, 0x080305, 0.5] : dark ? [0x6b5fd6, 0x0a0915, 0.6] : pastel ? [0xffe0f0, 0x5a4a7e, 0.85] : white ? [0xffffff, 0xe8e2d6, 1.6] : [0xfff1dc, 0x6e5a44, 0.9];
     addLights(room, hemi, [
-      [cx, H - 1.2, z0 + L * 0.3, dark ? accent.getHex() : 0xfff1d8, dark ? 28 : 22, 20],
-      [cx, H - 1.2, z0 + L * 0.75, dark ? accent.getHex() : 0xfff1d8, dark ? 22 : 26, 20],
+      [cx, H - 1.2, z0 + L * 0.3, cinema ? 0xffb38a : dark ? accent.getHex() : 0xfff1d8, cinema ? 14 : dark ? 28 : 22, 20],
+      [cx, H - 1.2, z0 + L * 0.75, cinema ? 0xffb38a : dark ? accent.getHex() : 0xfff1d8, cinema ? 12 : dark ? 22 : 26, 20],
     ]);
     const tall = H >= 5;
     const ink = dark ? 'light' : pastel ? 'hand' : 'dark';
@@ -1289,6 +1301,21 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
       V3(0, 0, 1),
     );
 
+    // Velvet benches down the middle, one per pair of screens.
+    if (cinema) {
+      const velvet = new THREE.MeshStandardMaterial({ color: 0x4a0e17, roughness: 0.95 });
+      for (let r = 0; r < rows; r++) {
+        const z = z0 + 6 + r * 5;
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.42, 2.6), velvet);
+        seat.position.set(cx, 0.21, z);
+        room.group.add(seat);
+        const base = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.08, 2.5), M.black);
+        base.position.set(cx, 0.04, z);
+        room.group.add(base);
+        room.obstacles.push({ type: 'rect', x0: cx - 0.55, x1: cx + 0.55, z0: z - 1.3, z1: z + 1.3 });
+      }
+    }
+
     const common = {
       frame: t.frame,
       plaque: t.plaque,
@@ -1308,7 +1335,7 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
         const z = z0 + 6 + Math.floor(k / 2) * 5;
         const west = k % 2 === 0;
         const inset = t.float ? 2.2 : 0.04;
-        placed = addWork(room, id, { ...common, tilt, pos: V3(west ? x0 + inset : x1 - inset, y, z), dir: V3(west ? 1 : -1, 0, 0), h: 1.9 });
+        placed = addWork(room, id, { ...common, tilt, pos: V3(west ? x0 + inset : x1 - inset, cinema ? 2.6 : y, z), dir: V3(west ? 1 : -1, 0, 0), h: cinema ? 2.6 : 1.9, maxW: cinema ? 3.9 : 3.0 });
       } else {
         placed = addWork(room, id, { ...common, tilt, pos: V3(cx, y + 0.2, z1 - (t.float ? 2.2 : 0.04)), dir: V3(0, 0, -1), h: 2.3 });
       }

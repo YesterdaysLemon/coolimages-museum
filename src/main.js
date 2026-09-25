@@ -177,8 +177,13 @@ async function boot() {
     acquisitions,
     withheld,
     layout,
-    summary: { count: manifest.items.length + withheld.size, range: dateRange(manifest.items) },
+    summary: {
+      count: manifest.items.length + withheld.size,
+      videos: manifest.items.filter((i) => i.video).length,
+      range: dateRange(manifest.items),
+    },
   });
+  registerVideos();
   renderCredits();
   renderPreviews();
   enterRoom('lobby');
@@ -204,10 +209,64 @@ function applyRoom(id) {
 function enterRoom(id) {
   player.room = id;
   applyRoom(id);
+  syncVideos();
   document.documentElement.style.setProperty('--accent', accentFor(id));
   $('#room-name').textContent = WINGS[id].name;
   audio.setMood(moodFor(id));
 }
+
+// ------------------------------------------------------------------ videos
+// A video shows its poster until its room is entered, then loops silently.
+// Looking closer (E) turns its sound on, unless sound is off.
+const videos = new Map(); // id -> { entry, meshes, el, texture }
+
+function registerVideos() {
+  for (const mesh of world.artworks) {
+    const { id, entry } = mesh.userData;
+    if (!entry.video) continue;
+    if (!videos.has(id)) videos.set(id, { entry, meshes: [], el: null, texture: null });
+    videos.get(id).meshes.push(mesh);
+  }
+}
+
+function videoElement(v) {
+  if (v.el) return v.el;
+  const el = document.createElement('video');
+  Object.assign(el, { muted: true, loop: true, playsInline: true, preload: 'auto', src: v.entry.video });
+  el.addEventListener(
+    'playing',
+    () => {
+      v.texture = new THREE.VideoTexture(el);
+      v.texture.colorSpace = THREE.SRGBColorSpace;
+      for (const mesh of v.meshes) {
+        mesh.material.map = v.texture;
+        mesh.material.needsUpdate = true;
+      }
+    },
+    { once: true },
+  );
+  v.el = el;
+  return el;
+}
+
+function syncVideos() {
+  for (const v of videos.values()) {
+    const here = !document.hidden && v.meshes.some((m) => m.userData.room === player.room);
+    if (here) videoElement(v).play().catch(() => {});
+    else v.el?.pause();
+  }
+}
+document.addEventListener('visibilitychange', () => world && syncVideos());
+
+function videoSound(mesh, on) {
+  const v = mesh && videos.get(mesh.userData.id);
+  if (!v?.el || !v.entry.audio) return;
+  const audible = on && !audio.muted;
+  v.el.muted = !audible;
+  audio.duck(audible);
+}
+
+const clockTime = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 
 // Where a portal lets you out: the destination's door back to where you came
 // from, else its entrance (far doors are one-way into the next room).
@@ -343,7 +402,8 @@ function updateHover() {
   let hint = '';
   if (hovered) {
     const work = hovered.userData.work;
-    hint = `<b>${escapeHtml(work?.title || 'New acquisition')}</b><span>${touchFirst ? 'Tap' : 'Press <kbd>E</kbd>'} to look closer</span>`;
+    const listen = hovered.userData.entry.audio && !audio.muted ? ' and listen' : '';
+    hint = `<b>${escapeHtml(work?.title || 'New acquisition')}</b><span>${touchFirst ? 'Tap' : 'Press <kbd>E</kbd>'} to look closer${listen}</span>`;
   } else {
     for (const p of room.portals) {
       const dx = player.x - p.pos.x;
@@ -484,6 +544,7 @@ function startInspect(mesh) {
   }
   camPose = { ...from };
   showCaption(mesh.userData);
+  videoSound(mesh, true);
   runAnim(reducedMotion ? 0.2 : 1.05, (t) => {
     camPose = lerpPose(from, to, smoother(t));
   }, () => {
@@ -494,6 +555,7 @@ function startInspect(mesh) {
 function endInspect(immediate = false, relock = true) {
   if (!inspect) return;
   hideCaption();
+  videoSound(inspect.mesh, false);
   const back = inspect.from;
   const from = camPose ? { ...camPose } : back;
   inspect = null;
@@ -520,7 +582,11 @@ function showCaption(ud) {
   panel.querySelector('h2').textContent = work?.title || 'Untitled acquisition';
   panel.querySelector('.artist').textContent = work?.artist || 'Curatorial notes pending';
   panel.querySelector('.medium').textContent = work?.medium || '';
-  panel.querySelector('.saved').textContent = formatSaved(ud.entry.saved);
+  const { entry } = ud;
+  const sound = entry.audio ? (audio.muted ? ', sound off (press M)' : ', with sound') : '';
+  panel.querySelector('.saved').textContent = entry.video
+    ? `${formatSaved(entry.saved)} · Moving image, ${clockTime(entry.duration || 0)}${sound}`
+    : formatSaved(entry.saved);
   renderCaptionCredit(panel.querySelector('.credit'), work);
   panel.querySelector('.note').textContent =
     work?.note || 'This image arrived after the catalogue was written. The curator is still deciding why it resonates.';
@@ -665,9 +731,9 @@ function begin() {
   $('#intro').classList.add('gone');
   setTimeout(() => $('#intro').setAttribute('hidden', ''), 900);
   audio.start(moodFor(player.room));
-  $('#mute').textContent = audio.muted ? 'Music off' : 'Music on';
+  $('#mute').textContent = audio.muted ? 'Sound off' : 'Sound on';
   $('#mute').setAttribute('aria-pressed', String(!audio.muted));
-  $('#pause-mute').textContent = audio.muted ? 'Turn music on' : 'Turn music off';
+  $('#pause-mute').textContent = audio.muted ? 'Turn sound on' : 'Turn sound off';
   state = 'walk';
   requestLock();
   showBanner('lobby');
@@ -690,10 +756,13 @@ function resume() {
 
 function toggleMute() {
   audio.setMuted(!audio.muted);
-  const label = audio.muted ? 'Music off' : 'Music on';
-  $('#mute').textContent = label;
+  $('#mute').textContent = audio.muted ? 'Sound off' : 'Sound on';
   $('#mute').setAttribute('aria-pressed', String(!audio.muted));
-  $('#pause-mute').textContent = audio.muted ? 'Turn music on' : 'Turn music off';
+  $('#pause-mute').textContent = audio.muted ? 'Turn sound on' : 'Turn sound off';
+  if (inspect) {
+    videoSound(inspect.mesh, true);
+    showCaption(inspect.mesh.userData);
+  }
 }
 
 $('#enter').addEventListener('click', begin);

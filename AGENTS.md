@@ -16,6 +16,10 @@ Project commands:
 - pipeline: `python tools/pipeline.py`
 - curate-dry-run: `python tools/curate.py --dry-run`
 
+Declared tools (verify availability in the intended agent):
+- ffmpeg (cli): `ffmpeg`.
+- ffprobe (cli): `ffprobe`.
+
 Edit project guidance outside this managed section. Use `al-stack configure` for its fields and `al-stack check .` for setup checks. Run the actual project checks for behavioral validation.
 <!-- al-stack:project:end -->
 
@@ -39,6 +43,7 @@ enters Git or the Docker image.
 
 ### Content vs code
 - `python tools/build_assets.py` writes `content/art/*` and `content/manifest.json`. Both are gitignored because they are third-party art.
+- Videos (`.mp4/.mov/.m4v/.webm`) need `ffmpeg`/`ffprobe` on PATH. Each becomes `<id>.mp4` (H.264, max edge 960, ≤30 fps, capped at 2 Mbit/s, faststart), `<id>.jpg` (poster, the item's `file`) and `<id>.sheet.jpg` (a 3×2 contact sheet the curator sees instead of the video). Manifest items carry `video`, `sheet`, `duration` and `audio`. Transcodes are reused until the source file changes; delete `content/art/<id>.mp4` to force one.
 - `python tools/publish_content.py` rebuilds and drops works listed in `content-policy.json`. It uploads over SSH (`vps-admin`) to `/srv/coolimages/releases/<stamp>`, then atomically repoints `/srv/coolimages/content`. Caddy serves that directory at `/content/`. No redeploy is needed.
 - Curated text is code-adjacent data in the repo: `data/catalog.json` (pipeline-written works, merged under the hand-written `WORKS`) and `data/layout.json` (generated wings). Both ship in the app image and are validated in CI.
 - Push to `main` runs `.github/workflows/deploy.yml`: syntax checks, a server smoke test, then the signed Deploy Manager webhook (app id `coolimages`, ports 3280/3281, `/opt/coolimages/app`).
@@ -66,6 +71,7 @@ enters Git or the Docker image.
 - Deploy Manager's `docker run` has no volume mounts, so content is served by Caddy from the host rather than from the container.
 - Images in the folder that aren't in `WORKS` or the generated catalog appear on the Rotunda's "New acquisitions" easels (up to 4, newest first).
 - Portal paintings show render-to-texture previews made once at load; `renderer.compile` then warms every room.
+- Videos show their poster until their room is entered, then loop muted (`syncVideos` in `src/main.js`; only the current room's videos load or play). Looking closer (E) unmutes a video with audio and ducks the music, unless sound is off (M). The `screening` template (dark velvet room, bezel screens with light spill, benches) is meant for videos, but videos can hang in any template. `server.mjs` answers byte ranges locally; Caddy does in production.
 
 ### Verify
 - `node --check` on each `src/*.js` file and `server.mjs`; `python -m py_compile tools/*.py`.

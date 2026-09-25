@@ -4,7 +4,7 @@ Usage:
     python tools/publish_content.py [--skip-build] [--dry-run]
 
 Rebuilds textures (unless --skip-build), drops works listed in
-content-policy.json, uploads the images and manifest over SSH as a new release
+content-policy.json, uploads the images, videos and manifest over SSH as a new release
 directory and atomically repoints /srv/coolimages/content at it. Caddy serves
 that directory at https://coolimages.alirezaafshan.com/content/. Curated text
 lives in the repo (data/) and ships with the app, not here.
@@ -50,7 +50,10 @@ def main():
         stage = Path(tmp) / stamp
         (stage / "art").mkdir(parents=True)
         for item in items:
-            shutil.copy2(ROOT / item["file"], stage / "art" / Path(item["file"]).name)
+            # Videos also carry an MP4 and the curator's contact sheet.
+            for key in ("file", "video", "sheet"):
+                if key in item:
+                    shutil.copy2(ROOT / item[key], stage / "art" / Path(item[key]).name)
         public = {"built": manifest.get("built"), "count": len(items), "items": items, "withheld": withheld}
         # Written last so a reader never sees a manifest pointing at missing files.
         (stage / "manifest.json").write_text(json.dumps(public, indent=2), encoding="utf-8")

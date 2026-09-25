@@ -46,9 +46,9 @@ MODEL = "claude-opus-5"
 MIN_WING = 3
 MAX_WING = 7
 MAX_BATCH = 16
-TEMPLATES = ("salon", "white", "night", "pastel")
+TEMPLATES = ("salon", "white", "night", "pastel", "screening")
 HAND_BUILT_WINGS = {"lobby", "gallery", "eyes", "familiars", "bedroom"}
-DEFAULT_ACCENT = {"salon": "#9a2f2f", "white": "#1f7a8c", "night": "#6c5ce7", "pastel": "#d4679a"}
+DEFAULT_ACCENT = {"salon": "#9a2f2f", "white": "#1f7a8c", "night": "#6c5ce7", "pastel": "#d4679a", "screening": "#c0392b"}
 
 STYLE_GUIDE = """You are the curator of "coolimages", a walkable 3D museum built from one person's folder of images saved from X. The museum's voice: observant, specific, dry, warm, and a little funny. It is modelled on the 1990s Eyewitness museum: pictures floating in white space with small italic labels pointing at details.
 
@@ -60,7 +60,9 @@ For each image you receive, write:
 - callouts: 0 to 4 labels pointing at specific visible details. u and v are the target point as fractions of the image width and height, measured from the top-left corner (0 to 1). Labels are 2 to 5 words, often with a dry parenthetical, e.g. "Chips (winning)", "Expression: remorse". Only point at things you can clearly locate.
 - placement: where the work hangs (see below).
 
-Grouping: gather works that share a mood, subject or visual language into new wings of 3 to 7 works. A wing needs a key (lowercase slug, e.g. "wing-small-gods"), a name ("The Small Gods"), a subtitle (2 to 4 words), a statement (2 or 3 sentences, in the same voice, about what connects the works), a template matching the mood (salon: gilded frames on cream walls, for anything painterly or grave; white: floating in white space, for graphic, digital or conceptual work; night: dark room with glowing lightboxes, for eerie, cosmic or occult work; pastel: taped polaroids on a lilac bedroom wall, for cute, sweet or sinister-cute work), and an accent colour as #rrggbb. A work may instead join an existing generated wing that has space. When a work doesn't fit anything yet and there aren't enough like it, set placement to "hold": it waits on the entrance easels for company. Never invent a wing for fewer than 3 works.
+Some works are videos. They play silently on a loop and with sound when a visitor steps close. You see a video as a contact sheet: six frames in playback order, left to right, top to bottom. Write about the whole video, including what happens over time; the medium can say so ("AI-generated video, 11 seconds"). For a video, give at most 2 callouts, with u and v measured within a single frame (not the whole sheet), and only on something that stays in place for most of the video; otherwise give none.
+
+Grouping: gather works that share a mood, subject or visual language into new wings of 3 to 7 works. A wing needs a key (lowercase slug, e.g. "wing-small-gods"), a name ("The Small Gods"), a subtitle (2 to 4 words), a statement (2 or 3 sentences, in the same voice, about what connects the works), a template matching the mood (salon: gilded frames on cream walls, for anything painterly or grave; white: floating in white space, for graphic, digital or conceptual work; night: dark room with glowing lightboxes, for eerie, cosmic or occult work; pastel: taped polaroids on a lilac bedroom wall, for cute, sweet or sinister-cute work; screening: a dark screening room with glowing screens and velvet benches, made for videos, though videos can hang in any template), and an accent colour as #rrggbb. A work may instead join an existing generated wing that has space. When a work doesn't fit anything yet and there aren't enough like it, set placement to "hold": it waits on the entrance easels for company. Never invent a wing for fewer than 3 works.
 
 Existing hand-built wings (closed; do not place works in them), for tone:
 - The Grand Gallery, "Serious Treatment": silly things given grave dignity.
@@ -188,7 +190,7 @@ def clean_work(raw):
     }
 
 
-def ask_claude(client, batch, held, catalog, layout):
+def ask_claude(client, batch, held, catalog, layout, videos):
     open_wings = [
         f'- key "{key}": {w["name"]} ({w["subtitle"]}), template {w["template"]}, {MAX_WING - len(w.get("works", []))} spaces left. {w["statement"]}'
         for key, w in layout["wings"].items()
@@ -197,6 +199,10 @@ def ask_claude(client, batch, held, catalog, layout):
     content = []
     for item_id, path in batch:
         label = f"Image ID: {item_id}"
+        if item_id in videos:
+            v = videos[item_id]
+            sound = "with sound" if v.get("audio") else "silent"
+            label = f"Image ID: {item_id} (a video, {v.get('duration', 0):.0f} seconds, {sound}; shown as a contact sheet)"
         if item_id in held:
             label += f' (already catalogued as "{catalog[item_id]["title"]}"; keep its text unless it is clearly wrong, and decide its placement)'
         content.append({"type": "text", "text": label})
@@ -295,12 +301,14 @@ def main():
     parser.add_argument("--limit", type=int, default=MAX_BATCH, help=f"images per request (default {MAX_BATCH})")
     args = parser.parse_args()
 
+    # Videos are shown to Claude through their contact sheet.
     if args.source == "site":
         manifest = fetch_json(f"{SITE}/content/manifest.json")
-        items = {item["id"]: f"{SITE}/{item['file']}" for item in manifest["items"]}
+        items = {item["id"]: f"{SITE}/{item.get('sheet', item['file'])}" for item in manifest["items"]}
     else:
         manifest = load_json(CONTENT / "manifest.json", {"items": []})
-        items = {item["id"]: ROOT / item["file"] for item in manifest["items"]}
+        items = {item["id"]: ROOT / item.get("sheet", item["file"]) for item in manifest["items"]}
+    videos = {item["id"]: item for item in manifest["items"] if "video" in item}
     catalog = load_json(DATA / "catalog.json", {})
     layout = load_json(DATA / "layout.json", {"version": 1, "wings": {}})
     layout.setdefault("wings", {})
@@ -330,7 +338,7 @@ def main():
     DATA.mkdir(exist_ok=True)
     for start in range(0, len(queue), args.limit):
         batch = [(i, items[i]) for i in queue[start:start + args.limit]]
-        result = ask_claude(client, batch, held, catalog, layout)
+        result = ask_claude(client, batch, held, catalog, layout, videos)
         apply_result(result, {i for i, _ in batch}, held, catalog, layout, now)
         # Save after every batch so a later failure keeps earlier work.
         write_json(DATA / "catalog.json", catalog)

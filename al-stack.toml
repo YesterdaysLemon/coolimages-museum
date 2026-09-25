@@ -20,3 +20,13 @@
 "publish" = "python tools/publish_content.py"
 "pipeline" = "python tools/pipeline.py"
 "curate-dry-run" = "python tools/curate.py --dry-run"
+
+[["tools"]]
+"name" = "ffmpeg"
+"kind" = "cli"
+"command" = "ffmpeg"
+
+[["tools"]]
+"name" = "ffprobe"
+"kind" = "cli"
+"command" = "ffprobe"
