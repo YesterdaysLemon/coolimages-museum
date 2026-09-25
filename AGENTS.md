@@ -58,6 +58,8 @@ enters Git or the Docker image.
 
 ### Decisions
 - The public site stays public but unindexed. Every work carries credit where traced plus a removal-request link (GitHub issues). Works in `content-policy.json` are never uploaded; a "Not shown online" card takes their place. `HS-zGlbbEAAgsIJ` is excluded because its watermark forbids reuploading and AI training. `HS_hSswasAAIOeB` is excluded because its artist's profile says "DON'T re-upload my art". Apply the same rule to any new work whose creator forbids reposting.
+- Caching: a Cloudflare Cache Rule for this hostname (zone `alirezaafshan.com`, phase `http_request_cache_settings`) respects origin headers. Without it Cloudflare rewrites `no-cache` to a 4-hour browser TTL and mixes old and new JS modules after a deploy. HTML, JS and JSON are `no-cache`. Existing images are `public, max-age=86400` (Caddy `@art` + `file` matcher, so 404s are not long-cached).
+- Takedowns: add the ID to `content-policy.json`, run `python tools/publish_content.py`, then purge `https://coolimages.alirezaafshan.com/content/art/<ID>.jpg` (or `.png`) in Cloudflare. Otherwise edges can serve the old copy for up to a day.
 - Deploy Manager's `docker run` has no volume mounts, so content is served by Caddy from the host rather than from the container.
 - Images in the folder that aren't in `WORKS` or the generated catalog appear on the Rotunda's "New acquisitions" easels (up to 4, newest first).
 - Portal paintings show render-to-texture previews made once at load; `renderer.compile` then warms every room.
