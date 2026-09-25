@@ -3,7 +3,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { WINGS, WORKS } from './catalog.js';
 import { CREDITS, REMOVAL_URL } from './credits.js';
 import * as TX from './textures.js';
-import { buildWorld, walkable, EYE_HEIGHT, formatSaved, TEMPLATES } from './world.js';
+import { buildWorld, walkable, ground, EYE_HEIGHT, formatSaved, TEMPLATES } from './world.js';
 import { MuseumAudio } from './audio.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -45,7 +45,7 @@ let camPose = null;
 let inspect = null;
 let rollSign = 1;
 const keys = new Set();
-const player = { x: 0, z: 6.2, yaw: 0, pitch: -0.04, roll: 0, vx: 0, vz: 0, bob: 0, stepAcc: 0, room: 'lobby' };
+const player = { x: 0, z: 6.2, y: 0, ey: 0, yaw: 0, pitch: -0.04, roll: 0, vx: 0, vz: 0, bob: 0, stepAcc: 0, room: 'lobby' };
 const touchMove = { x: 0, y: 0 };
 
 // ------------------------------------------------------------------ helpers
@@ -274,18 +274,24 @@ function videoSound(mesh, on) {
 const clockTime = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 
 // Where a portal lets you out: the destination's door back to where you came
-// from, else its entrance (far doors are one-way into the next room).
+// from, else its landing (the Stair Hall's balcony), else its entrance.
 function arrivalFor(portal) {
   const dest = world.rooms[portal.dest];
-  return dest.portals.find((p) => p.dest === portal.room) || dest.portals.find((p) => p.entrance) || dest.portals[0];
+  return dest.portals.find((p) => p.dest === portal.room) || dest.landing || dest.portals.find((p) => p.entrance) || dest.portals[0];
 }
 
 function spawnFrom(portal, dist = 2.4) {
   return {
     x: portal.pos.x + portal.normal.x * dist,
     z: portal.pos.z + portal.normal.z * dist,
+    y: portal.pos.y || 0,
     yaw: Math.atan2(-portal.normal.x, -portal.normal.z),
   };
+}
+
+function settle(roomId) {
+  const h = ground(world.rooms[roomId], player.x, player.z, player.y);
+  if (h !== null) player.y = h;
 }
 
 function runAnimators(roomId, t, dt, cam) {
@@ -294,25 +300,41 @@ function runAnimators(roomId, t, dt, cam) {
 
 function renderPreviews() {
   const cam = new THREE.PerspectiveCamera(62, 1, 0.05, 140);
+  const shared = new Map();
+  const copyMat = new THREE.MeshBasicMaterial({ toneMapped: false, depthTest: false });
+  const copyScene = new THREE.Scene();
+  copyScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), copyMat));
+  const copyCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   for (const portal of world.portals) {
     const arrival = arrivalFor(portal);
     if (!arrival) continue;
     const aspect = portal.w / portal.h;
-    const rt = new THREE.WebGLRenderTarget(Math.round(760 * aspect), 760, { samples: 4 });
+    const W = Math.round(640 * aspect);
+    const key = `${W}`;
+    if (!shared.has(key)) shared.set(key, new THREE.WebGLRenderTarget(W, 640, { samples: 4 }));
+    const big = shared.get(key);
     const s = spawnFrom(arrival, 2.6);
+    const destRoom = world.rooms[portal.dest];
+    const floorY = ground(destRoom, s.x, s.z, s.y) ?? s.y;
     cam.aspect = aspect;
     cam.updateProjectionMatrix();
-    cam.position.set(s.x, EYE_HEIGHT, s.z);
+    cam.position.set(s.x, floorY + EYE_HEIGHT, s.z);
     cam.rotation.set(-0.02, s.yaw, 0, 'YXZ');
     cam.updateMatrixWorld();
     applyRoom(portal.dest);
     runAnimators(portal.dest, 1.5, 1 / 60, cam);
-    renderer.setRenderTarget(rt);
+    renderer.setRenderTarget(big);
     renderer.render(scene, cam);
-    portal.surface.material.map = rt.texture;
+    const small = new THREE.WebGLRenderTarget(W, 640, { depthBuffer: false });
+    copyMat.map = big.texture;
+    renderer.setRenderTarget(small);
+    renderer.render(copyScene, copyCam);
+    portal.surface.material.map = small.texture;
     portal.surface.material.needsUpdate = true;
   }
   renderer.setRenderTarget(null);
+  for (const rt of shared.values()) rt.dispose();
+  copyMat.dispose();
   // Compile every room's shaders now so first visits don't hitch.
   for (const id of Object.keys(world.rooms)) {
     applyRoom(id);
@@ -328,14 +350,14 @@ function updateCamera() {
   } else {
     const speed = Math.hypot(player.vx, player.vz);
     const bob = reducedMotion ? 0 : Math.sin(player.bob * Math.PI) * 0.028 * Math.min(1, speed / 2.7);
-    camera.position.set(player.x, EYE_HEIGHT + bob, player.z);
+    camera.position.set(player.x, player.ey + EYE_HEIGHT + bob, player.z);
     camera.rotation.set(player.pitch, player.yaw, player.roll, 'YXZ');
   }
   camera.updateProjectionMatrix();
 }
 
 function playerPose() {
-  return { x: player.x, y: EYE_HEIGHT, z: player.z, yaw: player.yaw, pitch: player.pitch };
+  return { x: player.x, y: player.ey + EYE_HEIGHT, z: player.z, yaw: player.yaw, pitch: player.pitch };
 }
 
 function lerpPose(a, b, t) {
@@ -368,11 +390,18 @@ function walkUpdate(dt) {
   player.vz += (iz * speed - player.vz) * k;
   const room = world.rooms[player.room];
   const nx = player.x + player.vx * dt;
-  if (walkable(room, nx, player.z)) player.x = nx;
-  else player.vx = 0;
+  const hx = walkable(room, nx, player.z, 0.38, player.y);
+  if (hx !== null) {
+    player.x = nx;
+    player.y = hx;
+  } else player.vx = 0;
   const nz = player.z + player.vz * dt;
-  if (walkable(room, player.x, nz)) player.z = nz;
-  else player.vz = 0;
+  const hz = walkable(room, player.x, nz, 0.38, player.y);
+  if (hz !== null) {
+    player.z = nz;
+    player.y = hz;
+  } else player.vz = 0;
+  player.ey += (player.y - player.ey) * Math.min(1, dt * 14);
   const moving = Math.hypot(player.vx, player.vz);
   if (moving > 0.3) {
     player.bob += dt * moving * 0.75;
@@ -388,7 +417,7 @@ function walkUpdate(dt) {
     const along = dx * p.normal.x + dz * p.normal.z;
     const lateral = Math.abs(dx * p.normal.z - dz * p.normal.x);
     const into = -(player.vx * p.normal.x + player.vz * p.normal.z);
-    if (along < 0.8 && along > -0.5 && lateral < p.w / 2 - 0.15 && into > 0.4) {
+    if (along < 0.8 && along > -0.5 && lateral < p.w / 2 - 0.15 && into > 0.4 && Math.abs(player.y - p.pos.y) < 1.2) {
       startPortal(p);
       return;
     }
@@ -416,7 +445,7 @@ function updateHover() {
       const along = dx * p.normal.x + dz * p.normal.z;
       const lateral = Math.abs(dx * p.normal.z - dz * p.normal.x);
       const facingIt = -(-Math.sin(player.yaw) * p.normal.x - Math.cos(player.yaw) * p.normal.z);
-      if (along > 0 && along < 4.5 && lateral < p.w && facingIt > 0.6) {
+      if (along > 0 && along < 4.5 && lateral < p.w && facingIt > 0.6 && Math.abs(player.y - p.pos.y) < 1.2) {
         hint = `<span>Walk into the painting to enter</span><b>${escapeHtml(WINGS[p.dest].name)}</b>`;
         break;
       }
@@ -468,6 +497,7 @@ function startPortal(portal) {
     const start = { x: arrival.pos.x + arrival.normal.x * 0.2, z: arrival.pos.z + arrival.normal.z * 0.2 };
     player.x = start.x;
     player.z = start.z;
+    player.y = player.ey = s.y;
     player.yaw = s.yaw;
     player.pitch = 0;
     player.vx = player.vz = 0;
@@ -475,6 +505,8 @@ function startPortal(portal) {
       const e = 1 - Math.pow(1 - t, 3);
       player.x = lerp(start.x, s.x, e);
       player.z = lerp(start.z, s.z, e);
+      settle(portal.dest);
+      player.ey = player.y;
       if (roll) {
         player.roll = -sign * (Math.PI / 2) * (1 - smoother(t));
         camera.fov = BASE_FOV + 24 * (1 - e);
@@ -928,16 +960,50 @@ function drawMinimap() {
   const X = (x) => ox + x * scale;
   const Z = (z) => oz + z * scale;
   mctx.clearRect(0, 0, S, S);
-  mctx.fillStyle = 'rgba(255,255,255,0.9)';
+  const levelOf = (f) => (f.type === 'helix' ? player.y : f.ramp ? Math.max(f.ramp.h0, f.ramp.h1) : f.h ?? 0);
+  const floors = [...room.floors].sort((a, c) => Math.abs(levelOf(c) - player.y) - Math.abs(levelOf(a) - player.y));
+  for (const f of floors) {
+    const near = Math.abs(levelOf(f) - player.y) < 1.5 || (f.ramp && player.y >= Math.min(f.ramp.h0, f.ramp.h1) - 0.5 && player.y <= Math.max(f.ramp.h0, f.ramp.h1) + 0.5);
+    mctx.fillStyle = near ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.45)';
+    mctx.beginPath();
+    if (f.type === 'rect') mctx.rect(X(f.x0), Z(f.z0), (f.x1 - f.x0) * scale, (f.z1 - f.z0) * scale);
+    else if (f.type === 'circle') mctx.arc(X(f.x), Z(f.z), f.r * scale, 0, Math.PI * 2);
+    else {
+      const a0 = f.type === 'sector' ? f.a0 : 0;
+      const a1 = f.type === 'sector' ? f.a0 + f.span : Math.PI * 2;
+      mctx.arc(X(f.x), Z(f.z), f.r1 * scale, a0, a1);
+      mctx.arc(X(f.x), Z(f.z), f.r0 * scale, a1, a0, true);
+      mctx.closePath();
+    }
+    mctx.fill();
+    if (f.ramp) {
+      mctx.strokeStyle = 'rgba(40,32,24,0.25)';
+      mctx.lineWidth = S * 0.006;
+      const steps = 8;
+      for (let i = 1; i < steps; i++) {
+        mctx.beginPath();
+        if (f.ramp.axis === 'z') {
+          const z = f.z0 + ((f.z1 - f.z0) * i) / steps;
+          mctx.moveTo(X(f.x0), Z(z));
+          mctx.lineTo(X(f.x1), Z(z));
+        } else {
+          const x = f.x0 + ((f.x1 - f.x0) * i) / steps;
+          mctx.moveTo(X(x), Z(f.z0));
+          mctx.lineTo(X(x), Z(f.z1));
+        }
+        mctx.stroke();
+      }
+    }
+  }
   mctx.strokeStyle = 'rgba(40,32,24,0.55)';
   mctx.lineWidth = S * 0.012;
   mctx.beginPath();
   if (b.type === 'circle') mctx.arc(X(b.x), Z(b.z), b.r * scale, 0, Math.PI * 2);
   else mctx.rect(X(b.x0), Z(b.z0), (b.x1 - b.x0) * scale, (b.z1 - b.z0) * scale);
-  mctx.fill();
   mctx.stroke();
   mctx.fillStyle = 'rgba(40,32,24,0.12)';
   for (const o of room.obstacles) {
+    if (o.y0 !== undefined && (player.y < o.y0 || player.y > o.y1)) continue;
     mctx.beginPath();
     if (o.type === 'circle') mctx.arc(X(o.x), Z(o.z), o.r * scale, 0, Math.PI * 2);
     else if (o.type === 'rect') mctx.rect(X(o.x0), Z(o.z0), (o.x1 - o.x0) * scale, (o.z1 - o.z0) * scale);
@@ -952,6 +1018,7 @@ function drawMinimap() {
   mctx.strokeStyle = '#c9a24c';
   mctx.lineWidth = S * 0.03;
   for (const p of room.portals) {
+    mctx.globalAlpha = Math.abs(p.pos.y - player.y) < 1.5 ? 1 : 0.3;
     const tx = p.normal.z * (p.w / 2);
     const tz = -p.normal.x * (p.w / 2);
     mctx.beginPath();
@@ -959,6 +1026,7 @@ function drawMinimap() {
     mctx.lineTo(X(p.pos.x + tx), Z(p.pos.z + tz));
     mctx.stroke();
   }
+  mctx.globalAlpha = 1;
   const px = X(player.x);
   const pz = Z(player.z);
   mctx.save();
@@ -1020,17 +1088,26 @@ window.museum = {
     return hovered?.userData.id || null;
   },
   get portals() {
-    return world.portals.map((p) => ({ room: p.room, dest: p.dest, entrance: !!p.entrance, arrives: arrivalFor(p)?.room === p.dest }));
+    return world.portals.map((p) => ({ room: p.room, dest: p.dest, entrance: !!p.entrance, y: p.pos.y, subtitle: p.subtitle, arrives: arrivalFor(p)?.room === p.dest }));
   },
   start: begin,
   teleport(roomId, dist = 2.4) {
     const room = world.rooms[roomId];
-    const p = room.portals[0];
+    const p = room.portals.find((q) => q.entrance) || room.portals[0];
     enterRoom(roomId);
     Object.assign(player, spawnFrom(p, dist), { vx: 0, vz: 0, pitch: 0, roll: 0 });
+    settle(roomId);
+    player.ey = player.y;
   },
-  look(x, z, yaw, pitch = 0) {
+  look(x, z, yaw, pitch = 0, y) {
     Object.assign(player, { x, z, yaw, pitch });
+    if (y !== undefined) player.y = y;
+    settle(player.room);
+    player.ey = player.y;
+  },
+  walkable: (x, z, y) => walkable(world.rooms[player.room], x, z, 0.38, y),
+  get plan() {
+    return world.plan;
   },
   inspect() {
     if (hovered) startInspect(hovered);

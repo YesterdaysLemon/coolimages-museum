@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "wings": {
     "wing-commitment": {
       "name": "Committed to the Bit",
@@ -14,7 +14,8 @@
         "HTAzoptW4AA-OMJ",
         "HS6P2bkWMAAdPOr",
         "HSrvWjAaMAAdMDu"
-      ]
+      ],
+      "form": "spiral"
     },
     "wing-spare-parts": {
       "name": "Spare Parts",
@@ -31,7 +32,8 @@
         "HRicbHmXUAE6l0D",
         "HQPFbRMXQAA_rIP",
         "HS_NJrfa0AI_SwH"
-      ]
+      ],
+      "form": "iron"
     },
     "wing-wrong-size": {
       "name": "The Wrong Size",
@@ -44,7 +46,8 @@
         "HTCHlVQWIAEgceS",
         "HTBRNcmaIAAo-SS",
         "HS-uZdDb0AA7RWf"
-      ]
+      ],
+      "form": "attic"
     },
     "wing-long-pose": {
       "name": "The Long Pose",
@@ -61,7 +64,8 @@
         "HS9rhvxXMAAtkfg",
         "HO09CQHbIAAPDF4",
         "HRqWCKcWEAEKWhR"
-      ]
+      ],
+      "form": "enfilade"
     },
     "wing-anachronism": {
       "name": "The Anachronism Department",
@@ -75,7 +79,8 @@
         "HSn10KgaoAAt_da",
         "HTAOkRCW0AArXJi",
         "HRkwmJAbAAE048c"
-      ]
+      ],
+      "form": "basilica"
     },
     "wing-plain-evidence": {
       "name": "Plain Evidence",
@@ -89,7 +94,8 @@
         "HSB8KRpX0AsxGry",
         "HRq4SQlXQAAYMFM",
         "HRrpvM-bYAAIMe9"
-      ]
+      ],
+      "form": "void"
     },
     "wing-polite-monsters": {
       "name": "Polite Monsters",
@@ -102,7 +108,8 @@
         "HS-NaM8W8AAGAkl",
         "HSRG4LHWMAARhob",
         "HRozTIJa0AACaVv"
-      ]
+      ],
+      "form": "crypt"
     },
     "wing-signal-loss": {
       "name": "Signal Loss",
@@ -115,7 +122,8 @@
         "HRcQqCnacAAPjFs",
         "HQaO2CXXoAEjm6E",
         "HO9lc7YWEAA4lAa"
-      ]
+      ],
+      "form": "octagon"
     },
     "wing-escalation": {
       "name": "The Escalation Room",
@@ -128,7 +136,8 @@
         "2LdDj-0F47hPX7yX",
         "-ONBNTxZyM0QjSsb",
         "4AzNhblWcUyL7tsq"
-      ]
+      ],
+      "form": "cinema"
     },
     "wing-devotional-diagrams": {
       "name": "Devotional Diagrams",
@@ -141,7 +150,90 @@
         "HQKM3TwWAAADdcT",
         "HRdS7DDbIAAKc57",
         "HSmTvYSXgAAGE61"
-      ]
+      ],
+      "form": "octagon"
     }
+  },
+  "links": [
+    [
+      "gallery",
+      "wing-commitment",
+      "Silliness, fully committed"
+    ],
+    [
+      "eyes",
+      "wing-devotional-diagrams",
+      "More ways of seeing"
+    ],
+    [
+      "familiars",
+      "wing-escalation",
+      "More minds, moving faster"
+    ],
+    [
+      "bedroom",
+      "wing-polite-monsters",
+      "Cute, with teeth"
+    ],
+    [
+      "wing-escalation",
+      "wing-spare-parts",
+      "Robots that don't stop"
+    ],
+    [
+      "wing-escalation",
+      "wing-signal-loss",
+      "Coming apart, faster"
+    ],
+    [
+      "wing-signal-loss",
+      "wing-anachronism",
+      "The pixel, again"
+    ],
+    [
+      "wing-anachronism",
+      "wing-commitment",
+      "Earnest to the end"
+    ],
+    [
+      "wing-devotional-diagrams",
+      "wing-plain-evidence",
+      "Objects as instruments"
+    ],
+    [
+      "wing-devotional-diagrams",
+      "wing-polite-monsters",
+      "Summoned and contained"
+    ],
+    [
+      "wing-polite-monsters",
+      "wing-wrong-size",
+      "Small, sweet, slightly off"
+    ],
+    [
+      "wing-long-pose",
+      "wing-plain-evidence",
+      "Bodies, held still"
+    ],
+    [
+      "wing-long-pose",
+      "wing-commitment",
+      "Holding the pose"
+    ],
+    [
+      "wing-spare-parts",
+      "wing-plain-evidence",
+      "Insides, revealed"
+    ]
+  ],
+  "stairs": {
+    "up": [
+      "wing-commitment",
+      "wing-long-pose",
+      "wing-anachronism",
+      "wing-wrong-size",
+      "wing-spare-parts"
+    ],
+    "down": "wing-escalation"
   }
 }

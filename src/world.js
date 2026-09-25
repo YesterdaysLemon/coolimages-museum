@@ -2,6 +2,7 @@
 // are connected only by portal paintings; only the current room is visible.
 import * as THREE from 'three';
 import * as TX from './textures.js';
+import { makeArchitecture, formFor, capacityOf } from './architecture.js';
 import { WINGS, WORKS } from './catalog.js';
 
 export const EYE_HEIGHT = 1.65;
@@ -41,8 +42,9 @@ export function formatSaved(iso) {
   return `Saved ${month} ${d.getDate()}, ${d.getFullYear()}, ${hours % 12 || 12}:${minutes} ${hours >= 12 ? 'pm' : 'am'}`;
 }
 
-// Generated wings (data/layout.json) are built from these templates and hang
-// off generated rotundas (buildHub).
+// Generated wings (data/layout.json) take their look from these templates and
+// their architecture from a form (architecture.js). They are joined to each
+// other by association doors (layout.links) and to the Stair Hall.
 export const TEMPLATES = {
   salon: { mood: 'gallery', surface: 'wood', frame: 'gilded', plaque: 'brass', ink: 'dark', height: 5 },
   white: { mood: 'familiars', surface: 'void', frame: 'bare', plaque: 'card', ink: 'dark', height: 6, float: true },
@@ -50,37 +52,72 @@ export const TEMPLATES = {
   pastel: { mood: 'bedroom', surface: 'carpet', frame: 'polaroid', plaque: 'note', ink: 'dark', height: 4.2 },
   screening: { mood: 'eyes', surface: 'carpet', frame: 'screen', plaque: 'glass', ink: 'light', height: 5 },
 };
-const MAX_WORKS_PER_WING = 7;
-const WINGS_PER_HUB = 3;
-const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 // Colour of a painting's back, by frame style.
 const VERSO = { gilded: 0x4a3524, museum: 0xb89b72, lightbox: 0x121116, screen: 0x0c0b0d, polaroid: 0xefe9dc, bare: 0xe4dfd5, oval: 0x2a2018 };
 
 export function buildWorld({ scene, art, acquisitions, withheld = new Set(), layout = null, summary }) {
   const generatedWings = Object.entries(layout?.wings || {}).filter(([, w]) => (w.works || []).some((id) => art.has(id)));
-  // Generated wings hang off further rotundas, three per rotunda. Rotunda II is
-  // reached from the entrance hall and from the far door of every original
-  // wing; each generated wing's far door leads on to the next rotunda, and the
-  // last ones loop back to the entrance hall.
-  const hubs = [];
-  for (let i = 0; i < generatedWings.length; i += WINGS_PER_HUB) {
-    const k = hubs.length;
-    const id = `rotunda-${k + 2}`;
-    const wings = generatedWings.slice(i, i + WINGS_PER_HUB);
-    hubs.push({ id, k, wings });
-    WINGS[id] = {
-      name: `Rotunda ${ROMAN[k + 2] || k + 2}`,
-      subtitle: wings.map(([, w]) => w.name).join(' \u00b7 '),
-      statement: '',
-      hub: true,
-    };
-  }
-  const hubOfWing = {};
-  for (const hub of hubs) for (const [key] of hub.wings) hubOfWing[key] = hub.k;
-  const firstHub = hubs[0]?.id || null;
+  const HAND = ['gallery', 'eyes', 'familiars', 'bedroom'];
+  const plan = planWeb();
+  if (plan.stairs) WINGS.stairhall = { name: 'The Stair Hall', subtitle: 'Upstairs to the new wings', statement: '', hub: true };
   // Until generated wings exist, the original wings' far doors chain in a loop.
   const RING = { gallery: 'eyes', eyes: 'familiars', familiars: 'bedroom', bedroom: 'gallery' };
-  const beyond = (id) => firstHub || RING[id];
+  const farDoor = (id) => plan.doors[id]?.[0] || { dest: RING[id] };
+
+  // The association web: each wing's form, its two-way doors to related wings
+  // (layout.links, within every room's door capacity; the original wings have
+  // one far door each), the Stair Hall's doors (layout.stairs), and extra
+  // doors so that every wing can be reached from the entrance.
+  function planWeb() {
+    const keys = generatedWings.map(([k]) => k);
+    const forms = {};
+    const cap = Object.fromEntries(HAND.map((k) => [k, 1]));
+    for (const [k, spec] of generatedWings) {
+      const n = (spec.works || []).filter((id) => art.has(id) || withheld.has(id)).length;
+      forms[k] = formFor(spec, k, n);
+      cap[k] = capacityOf(forms[k], n);
+    }
+    const doors = {};
+    const degree = (k) => (doors[k] || []).length;
+    const linked = (a, b) => (doors[a] || []).some((d) => d.dest === b);
+    const link = (a, b, phrase) => {
+      (doors[a] ||= []).push({ dest: b, subtitle: phrase || undefined });
+      (doors[b] ||= []).push({ dest: a, subtitle: phrase || undefined });
+    };
+    for (const [a, b, phrase] of layout?.links || []) {
+      if (!(a in cap) || !(b in cap) || a === b || linked(a, b)) continue;
+      if (degree(a) < cap[a] && degree(b) < cap[b]) link(a, b, phrase);
+    }
+    if (!keys.length) return { doors, forms, stairs: null };
+    const want = layout?.stairs || {};
+    const down = keys.includes(want.down) ? want.down : null;
+    const up = (want.up || []).filter((k) => keys.includes(k) && k !== down).slice(0, 5);
+    const ground = [];
+    const reachable = () => {
+      const seen = new Set(['lobby', 'stairhall', ...HAND, ...up, ...ground, ...(down ? [down] : [])]);
+      const queue = [...seen];
+      while (queue.length) {
+        for (const d of doors[queue.pop()] || []) {
+          if (seen.has(d.dest)) continue;
+          seen.add(d.dest);
+          queue.push(d.dest);
+        }
+      }
+      return seen;
+    };
+    for (const k of keys) {
+      if (reachable().has(k)) continue;
+      if (up.length < 5) up.push(k);
+      else if (ground.length < 3) ground.push(k);
+      else {
+        const seen = reachable();
+        const host = keys.find((h) => seen.has(h) && degree(h) < cap[h]);
+        if (host && degree(k) < cap[k]) link(host, k, 'Further in');
+      }
+    }
+    return { doors, forms, stairs: { up, down, ground } };
+  }
+
   const world = { rooms: {}, portals: [], artworks: [], animators: [] };
   const glowTex = TX.glowTexture();
   const beamTex = TX.beamTexture();
@@ -108,7 +145,7 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     const group = new THREE.Group();
     group.name = id;
     scene.add(group);
-    const room = { id, group, bounds, surface, env, obstacles: [], portals: [], artworks: [], wing: WINGS[id] };
+    const room = { id, group, bounds, surface, env, obstacles: [], portals: [], artworks: [], wing: WINGS[id], floors: [{ ...bounds, h: 0 }] };
     world.rooms[id] = room;
     return room;
   }
@@ -345,7 +382,7 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
       const m = new THREE.Mesh(new THREE.PlaneGeometry(size * 1.2, 1.1), o.floorGlow ? additive(o.floorGlow, 0.35) : shadowMat);
       m.rotation.x = -Math.PI / 2;
       m.rotation.z = -facing(o.dir);
-      m.position.set(o.pos.x, 0.012, o.pos.z);
+      m.position.set(o.pos.x, (o.floorY ?? 0) + 0.012, o.pos.z);
       room.group.add(m);
     }
     if (o.obstacle) room.obstacles.push({ type: 'circle', x: o.pos.x, z: o.pos.z, r: Math.min(1.1, Math.max(0.5, frame.w / 2)) });
@@ -382,7 +419,7 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
 
   function addPortal(room, { pos, dir, dest, w = 2.8, h = 3.6, signW = 3.6, style = 'dark', subtitle, entrance = false }) {
     const g = new THREE.Group();
-    g.position.set(pos.x, 0.12 + h / 2, pos.z);
+    g.position.set(pos.x, (pos.y || 0) + 0.12 + h / 2, pos.z);
     g.rotation.y = facing(dir);
     room.group.add(g);
     const surface = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: 0xffffff }));
@@ -406,7 +443,7 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     sm.position.set(0, h / 2 + 0.2 + signW / sign.aspect / 2, 0.02);
     g.add(sm);
     const normal = dir.clone().normalize();
-    const portal = { room: room.id, dest, pos: V3(pos.x, 0, pos.z), normal, w, h, surface, group: g, entrance };
+    const portal = { room: room.id, dest, pos: V3(pos.x, pos.y || 0, pos.z), normal, w, h, surface, group: g, entrance, subtitle };
     room.portals.push(portal);
     world.portals.push(portal);
     return portal;
@@ -544,10 +581,10 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
       se.at(-1.45, 2.35),
       se.n,
     );
-    if (firstHub) {
-      // The door to the new wings takes the slab; the exterior moves to the
-      // wall beside the entrance, between the pilaster and the door.
-      addPortal(room, { pos: se.at(1.75, 0), dir: se.n, dest: firstHub, w: 2.2, h: 3.2, signW: 2.6, subtitle: 'The new wings' });
+    if (plan.stairs) {
+      // The door upstairs takes the slab; the exterior moves to the wall
+      // beside the entrance, between the pilaster and the door.
+      addPortal(room, { pos: se.at(1.75, 0), dir: se.n, dest: 'stairhall', w: 2.2, h: 3.2, signW: 2.6, subtitle: 'Upstairs to the new wings' });
       const a = Math.PI - 0.255;
       const d = V3(Math.sin(a), 0, -Math.cos(a));
       addWork(room, 'HSGdkqHWUAI8V2_', { pos: V3(d.x * 8.86, 2.35, d.z * 8.86), dir: d.clone().negate(), h: 1.3, frame: 'museum', plaqueSide: 'below' });
@@ -664,7 +701,7 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
       [0, 4.6, -207, 0xffe2b8, 32, 22],
     ]);
     addPortal(room, { pos: V3(0, 0, -186.06), dir: V3(0, 0, -1), dest: 'lobby', entrance: true });
-    addPortal(room, { pos: V3(-4.45, 0, -213.94), dir: V3(0, 0, 1), dest: beyond('gallery'), w: 2.4, h: 3.2, signW: 2.8 });
+    addPortal(room, { pos: V3(-4.45, 0, -213.94), dir: V3(0, 0, 1), ...farDoor('gallery'), w: 2.4, h: 3.2, signW: 2.8 });
     addText(
       room,
       { kicker: 'Wing I', title: WINGS.gallery.name, subtitle: WINGS.gallery.subtitle, body: WINGS.gallery.statement, width: 3.3 },
@@ -779,7 +816,7 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     });
 
     addPortal(room, { pos: V3(x0 + 0.06, 0, 0), dir: V3(1, 0, 0), dest: 'lobby', style: 'light', entrance: true });
-    addPortal(room, { pos: V3(x1 - 0.06, 0, 7.5), dir: V3(-1, 0, 0), dest: beyond('eyes'), w: 2.4, h: 3.2, signW: 2.8, style: 'light' });
+    addPortal(room, { pos: V3(x1 - 0.06, 0, 7.5), dir: V3(-1, 0, 0), ...farDoor('eyes'), w: 2.4, h: 3.2, signW: 2.8, style: 'light' });
     addText(
       room,
       { kicker: 'Wing II', title: WINGS.eyes.name, subtitle: WINGS.eyes.subtitle, body: WINGS.eyes.statement, width: 3.4, style: 'light' },
@@ -865,7 +902,7 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     const farWall = new THREE.Mesh(new THREE.BoxGeometry(4.2, 4.6, 0.3), M.slab);
     farWall.position.set(0, 2.3, 218.37);
     g.add(farWall);
-    addPortal(room, { pos: V3(0, 0, 218.2), dir: V3(0, 0, -1), dest: beyond('familiars'), w: 2.4, h: 3.2, signW: 2.8 });
+    addPortal(room, { pos: V3(0, 0, 218.2), dir: V3(0, 0, -1), ...farDoor('familiars'), w: 2.4, h: 3.2, signW: 2.8 });
     addText(
       room,
       { kicker: 'Wing III', title: WINGS.familiars.name, subtitle: WINGS.familiars.subtitle, body: WINGS.familiars.statement, width: 3.3 },
@@ -1134,7 +1171,7 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     }
 
     addPortal(room, { pos: V3(x1 - 0.06, 0, 0), dir: V3(-1, 0, 0), dest: 'lobby', w: 2.4, h: 3.0, signW: 3.0, style: 'hand', entrance: true });
-    addPortal(room, { pos: V3(-209.2, 0, z0 + 0.06), dir: V3(0, 0, 1), dest: beyond('bedroom'), w: 2.4, h: 3.0, signW: 2.8, style: 'hand' });
+    addPortal(room, { pos: V3(-209.2, 0, z0 + 0.06), dir: V3(0, 0, 1), ...farDoor('bedroom'), w: 2.4, h: 3.0, signW: 2.8, style: 'hand' });
     addText(
       room,
       { kicker: 'Wing IV', title: WINGS.bedroom.name, subtitle: WINGS.bedroom.subtitle, body: WINGS.bedroom.statement, width: 2.9, style: 'hand' },
@@ -1159,218 +1196,102 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     return room;
   }
 
-  // ------------------------------------------- Generated rotundas (II, III…)
-  // South: back the way you came. North, east, west: up to three generated
-  // wings. A slab to the north-east carries the door on to the next rotunda;
-  // the north-west slab lists what's here.
-  function buildHub(hub) {
-    const { id, k, wings } = hub;
-    const cx = 600 + k * 200;
-    const cz = -600;
-    const R = 8;
-    const H = 6.5;
-    const room = makeRoom(id, { type: 'circle', x: cx, z: cz, r: R }, 'marble', {
-      bg: '#f2efe9',
-      fog: { type: 'linear', color: '#f2efe9', near: 24, far: 90 },
-      envI: 0.5,
-    });
-    rotundaShell(room, { cx, cz, R, H, inscription: `ROTUNDA ${ROMAN[k + 2] || k + 2} · COOLIMAGES · ` });
-    const P = R - 0.2;
-    const back = k === 0 ? 'lobby' : hubs[k - 1].id;
-    addPortal(room, {
-      pos: V3(cx, 0, cz + P),
-      dir: V3(0, 0, -1),
-      dest: back,
-      entrance: true,
-      subtitle: k === 0 ? 'Back to the entrance hall' : `Back to ${WINGS[back].name}`,
-    });
-    const doors = [
-      [V3(cx, 0, cz - P), V3(0, 0, 1), 'North'],
-      [V3(cx + P, 0, cz), V3(-1, 0, 0), 'East'],
-      [V3(cx - P, 0, cz), V3(1, 0, 0), 'West'],
-    ];
-    wings.forEach(([key], i) => addPortal(room, { pos: doors[i][0], dir: doors[i][1], dest: key }));
-
-    const nw = rotundaSlab(room, cx, cz, -Math.PI / 4, { w: 5.6, rr: 7.1 });
-    addText(
-      room,
-      {
-        kicker: 'Generated rotunda',
-        title: WINGS[id].name,
-        subtitle: wings.length === 1 ? 'One new wing' : `${wings.length} new wings`,
-        body: wings.map(([, w], i) => `${doors[i][2]}: ${w.name}, “${w.subtitle}”.`).concat(
-          'These rooms were hung by the curator from images that arrived in the folder. The door to the south leads back.',
-        ),
-        width: 3.6,
-      },
-      nw.at(0, 2.4),
-      nw.n,
-    );
-    const ne = rotundaSlab(room, cx, cz, Math.PI / 4, { w: 5.6, rr: 7.1 });
-    const next = hubs[k + 1];
-    if (next) {
-      addPortal(room, { pos: ne.at(0, 0), dir: ne.n, dest: next.id, w: 2.2, h: 3.2, signW: 2.6, subtitle: 'Onward' });
-    } else {
-      addText(
-        room,
-        {
-          kicker: 'For now',
-          title: 'The end of the new wings',
-          body: 'Every couple of days the folder grows, and when enough new images share a mood, another wing opens. When this rotunda fills up, a door will appear here.',
-          width: 3.2,
-        },
-        ne.at(0, 2.4),
-        ne.n,
-      );
-    }
-    return room;
-  }
-
-  function buildGeneratedWing(key, spec, index) {
-    const t = TEMPLATES[spec.template] || TEMPLATES.salon;
-    const kind = TEMPLATES[spec.template] ? spec.template : 'salon';
-    const accent = new THREE.Color(spec.accent || '#8a6d3b');
-    const ids = (spec.works || []).filter((id) => art.has(id) || withheld.has(id)).slice(0, MAX_WORKS_PER_WING);
-    const cx = -400 + (index % 5) * 200;
-    const z0 = 400 + Math.floor(index / 5) * 200;
-    const rows = Math.max(1, Math.ceil(Math.min(ids.length, 6) / 2));
-    const W = 12;
-    const L = 8 + rows * 5;
-    const H = t.height;
-    const x0 = cx - W / 2;
-    const x1 = cx + W / 2;
-    const z1 = z0 + L;
-    const cinema = kind === 'screening';
-    const dark = kind === 'night' || cinema;
-    const white = kind === 'white';
-    const pastel = kind === 'pastel';
-    const bg = cinema ? '#0b0507' : dark ? '#0d0c20' : pastel ? '#2a2340' : '#f3f0ea';
-    const room = makeRoom(key, { type: 'rect', x0, x1, z0, z1 }, t.surface, {
-      bg,
-      fog: dark ? { type: 'exp2', color: bg, density: 0.022 } : { type: 'linear', color: bg, near: white ? 14 : 30, far: white ? 46 : 80 },
-      envI: dark ? 0.22 : white ? 1.0 : 0.45,
-    });
-    if (white) {
-      const floor = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), new THREE.MeshStandardMaterial({ color: 0xf7f5f1, roughness: 0.95 }));
-      floor.rotation.x = -Math.PI / 2;
-      floor.position.set(cx, 0, z0 + L / 2);
-      room.group.add(floor);
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(11, 4.8, 0.3), M.slab);
-      wall.position.set(cx, 2.4, z0 - 0.17);
-      room.group.add(wall);
-    } else {
-      const wallCanvas = cinema ? TX.plainWall(H, '#3a0e16', '#1a0609') : dark ? TX.eyesWall(H) : pastel ? TX.bedroomWall(H) : TX.galleryWall(H);
-      const floorMat = cinema
-        ? new THREE.MeshStandardMaterial({ color: 0x2a0c12, roughness: 1 })
-        : dark
-        ? new THREE.MeshStandardMaterial({ color: 0x17152e, roughness: 0.6, metalness: 0.1 })
-        : pastel
-          ? new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.carpet(), { repeat: [W / 1.5, L / 1.5] }), roughness: 1 })
-          : new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.parquet(), { repeat: [W / 2, L / 2] }), roughness: 0.5 });
-      rectRoom(room, {
-        x0, x1, z0, z1, H,
-        wallCanvas,
-        floorMat,
-        ceilingMat: new THREE.MeshStandardMaterial({ color: cinema ? 0x070304 : dark ? 0x0b0a1a : pastel ? 0x3a3166 : 0xf4efe5, roughness: 1 }),
-      });
-    }
-    const hemi = cinema ? [0x9a6a70, 0x080305, 0.5] : dark ? [0x6b5fd6, 0x0a0915, 0.6] : pastel ? [0xffe0f0, 0x5a4a7e, 0.85] : white ? [0xffffff, 0xe8e2d6, 1.6] : [0xfff1dc, 0x6e5a44, 0.9];
-    addLights(room, hemi, [
-      [cx, H - 1.2, z0 + L * 0.3, cinema ? 0xffb38a : dark ? accent.getHex() : 0xfff1d8, cinema ? 14 : dark ? 28 : 22, 20],
-      [cx, H - 1.2, z0 + L * 0.75, cinema ? 0xffb38a : dark ? accent.getHex() : 0xfff1d8, cinema ? 12 : dark ? 22 : 26, 20],
-    ]);
-    const tall = H >= 5;
-    const ink = dark ? 'light' : pastel ? 'hand' : 'dark';
-    const hubId = hubs[hubOfWing[key]].id;
-    addPortal(room, { pos: V3(cx, 0, z0 + 0.06), dir: V3(0, 0, 1), dest: hubId, w: tall ? 2.6 : 2.4, h: tall ? 3.4 : 3.0, signW: 3.0, style: ink, entrance: true });
-    // Far door: on to the next rotunda, or back to the beginning after the last.
-    const next = hubs[hubOfWing[key] + 1]?.id || 'lobby';
-    if (white) {
-      const farWall = new THREE.Mesh(new THREE.BoxGeometry(4.2, 4.6, 0.3), M.slab);
-      farWall.position.set(cx + 3.8, 2.3, z1 + 0.17);
-      room.group.add(farWall);
-    }
-    addPortal(room, {
-      pos: V3(cx + 3.8, 0, z1 - 0.06),
-      dir: V3(0, 0, -1),
-      dest: next,
-      w: 2.4,
-      h: Math.min(3.2, H - 1.2),
-      signW: 2.8,
-      style: ink,
-      subtitle: next === 'lobby' ? 'Back to the beginning' : undefined,
-    });
-    addText(
-      room,
-      { kicker: 'Generated wing', title: spec.name, subtitle: spec.subtitle, body: spec.statement, width: 3.0, style: ink },
-      V3(cx - 3.9, 2.4, z0 + 0.03),
-      V3(0, 0, 1),
-    );
-
-    // Velvet benches down the middle, one per pair of screens.
-    if (cinema) {
-      const velvet = new THREE.MeshStandardMaterial({ color: 0x4a0e17, roughness: 0.95 });
-      for (let r = 0; r < rows; r++) {
-        const z = z0 + 6 + r * 5;
-        const seat = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.42, 2.6), velvet);
-        seat.position.set(cx, 0.21, z);
-        room.group.add(seat);
-        const base = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.08, 2.5), M.black);
-        base.position.set(cx, 0.04, z);
-        room.group.add(base);
-        room.obstacles.push({ type: 'rect', x0: cx - 0.55, x1: cx + 0.55, z0: z - 1.3, z1: z + 1.3 });
-      }
-    }
-
-    const common = {
-      frame: t.frame,
-      plaque: t.plaque,
-      ink: t.ink,
-      margin: 1.0,
-      maxW: 3.0,
-      glow: accent.getHex(),
-      float: !!t.float,
-      shadow: !!t.float,
-      obstacle: !!t.float,
-    };
-    ids.forEach((id, k) => {
-      const y = pastel ? 2.1 : 2.2;
-      const tilt = pastel ? (TX.hash(id) - 0.5) * 0.12 : 0;
-      let placed;
-      if (k < 6) {
-        const z = z0 + 6 + Math.floor(k / 2) * 5;
-        const west = k % 2 === 0;
-        const inset = t.float ? 2.2 : 0.04;
-        placed = addWork(room, id, { ...common, tilt, pos: V3(west ? x0 + inset : x1 - inset, cinema ? 2.6 : y, z), dir: V3(west ? 1 : -1, 0, 0), h: cinema ? 2.6 : 1.9, maxW: cinema ? 3.9 : 3.0 });
-      } else {
-        placed = addWork(room, id, { ...common, tilt, pos: V3(cx, y + 0.2, z1 - (t.float ? 2.2 : 0.04)), dir: V3(0, 0, -1), h: 2.3 });
-      }
-      if (kind === 'salon') pictureLight(placed);
-    });
-  }
-
   buildLobby();
   buildGallery();
   buildEyes();
   buildFamiliars();
   buildBedroom();
-  hubs.forEach((hub) => buildHub(hub));
-  generatedWings.forEach(([key, spec], i) => buildGeneratedWing(key, spec, i));
+  const arch = makeArchitecture({ M, V3, facing, additive, glowTex, beamTex, makeRoom, addLights, addWork, addPortal, addText, animate, pictureLight, rectRoom, art, withheld, TEMPLATES });
+  if (plan.stairs) {
+    const { up, down, ground } = plan.stairs;
+    const name = (k) => WINGS[k].name;
+    arch.buildStairHall({
+      up: up.map((dest) => ({ dest })),
+      down: down ? { dest: down, subtitle: 'Downstairs' } : null,
+      ground: ground.map((dest) => ({ dest })),
+      directory: {
+        kicker: 'Directory',
+        title: 'The Stair Hall',
+        body: [
+          up.length ? `Upstairs: ${up.map(name).join(', ')}.` : '',
+          down ? `Downstairs: ${name(down)}.` : '',
+          'Every other wing is a door or two from these, and each one has a door straight back here.',
+        ].filter(Boolean),
+      },
+    });
+  }
+  generatedWings.forEach(([key, spec], i) => {
+    const back = { dest: 'stairhall', subtitle: key === plan.stairs.down ? 'Up to the Stair Hall' : 'Back to the Stair Hall' };
+    arch.buildWing(key, spec, i, plan.forms[key], { back, links: plan.doors[key] || [] });
+  });
+  world.plan = plan;
   return world;
 }
 
 
-// Movement collision: a room's walkable area minus its obstacles.
-export function walkable(room, x, z, pad = 0.38) {
-  const b = room.bounds;
-  if (b.type === 'circle') {
-    if (Math.hypot(x - b.x, z - b.z) > b.r - pad) return false;
-  } else if (x < b.x0 + pad || x > b.x1 - pad || z < b.z0 + pad || z > b.z1 - pad) return false;
+// ------------------------------------------------------------- walking
+// A room's walkable surfaces are room.floors: rects, circles and ring sectors
+// at a fixed height `h`, rects with a `ramp` (stairs), and helices (a spiral
+// ramp). Surfaces may overlap at different heights (a balcony over a hall);
+// you stay on whichever is within a step of where you are.
+export const STEP = 0.45;
+const TAU = Math.PI * 2;
+const SAMPLES = Array.from({ length: 8 }, (_, i) => [Math.cos((i * Math.PI) / 4), Math.sin((i * Math.PI) / 4)]);
+
+function inShape(s, x, z) {
+  if (s.type === 'rect') return x >= s.x0 && x <= s.x1 && z >= s.z0 && z <= s.z1;
+  const d = Math.hypot(x - s.x, z - s.z);
+  if (s.type === 'circle') return d <= s.r;
+  if (d < s.r0 || d > s.r1) return false;
+  if (s.type === 'sector') return (((Math.atan2(z - s.z, x - s.x) - s.a0) % TAU) + TAU) % TAU <= s.span;
+  return true;
+}
+
+function heightOn(s, x, z, yRef) {
+  if (s.type === 'helix') {
+    const turn = ((((Math.atan2(z - s.z, x - s.x) - s.a0) % TAU) + TAU) % TAU) / TAU;
+    const k = Math.round((yRef - s.h0) / s.rise - turn);
+    let best = null;
+    for (const kk of [k - 1, k, k + 1]) {
+      const u = turn + kk;
+      if (u < 0 || u > s.turns) continue;
+      const h = s.h0 + s.rise * u;
+      if (best === null || Math.abs(h - yRef) < Math.abs(best - yRef)) best = h;
+    }
+    return best;
+  }
+  if (s.ramp) {
+    const r = s.ramp;
+    const t = Math.min(1, Math.max(0, ((r.axis === 'x' ? x : z) - r.from) / (r.to - r.from)));
+    return r.h0 + (r.h1 - r.h0) * t;
+  }
+  return s.h ?? 0;
+}
+
+// The floor height under (x, z) nearest to yRef, if within a step of it.
+export function ground(room, x, z, yRef = 0) {
+  let best = null;
+  for (const s of room.floors) {
+    if (!inShape(s, x, z)) continue;
+    const h = heightOn(s, x, z, yRef);
+    if (h === null || Math.abs(h - yRef) > STEP) continue;
+    if (best === null || Math.abs(h - yRef) < Math.abs(best - yRef)) best = h;
+  }
+  return best;
+}
+
+// Movement collision: the floor height at (x, z) for someone of radius `pad`
+// standing near height y, or null where they can't stand.
+export function walkable(room, x, z, pad = 0.38, y = 0) {
+  const h = ground(room, x, z, y);
+  if (h === null) return null;
+  for (const [ux, uz] of SAMPLES) if (ground(room, x + ux * pad, z + uz * pad, h) === null) return null;
   for (const o of room.obstacles) {
+    if (o.y0 !== undefined && (h < o.y0 || h > o.y1)) continue;
     if (o.type === 'circle') {
-      if (Math.hypot(x - o.x, z - o.z) < o.r + pad) return false;
+      if (Math.hypot(x - o.x, z - o.z) < o.r + pad) return null;
     } else if (o.type === 'rect') {
-      if (x > o.x0 - pad && x < o.x1 + pad && z > o.z0 - pad && z < o.z1 + pad) return false;
+      if (x > o.x0 - pad && x < o.x1 + pad && z > o.z0 - pad && z < o.z1 + pad) return null;
     } else if (o.type === 'sector') {
       const dx = x - o.x;
       const dz = z - o.z;
@@ -1378,9 +1299,9 @@ export function walkable(room, x, z, pad = 0.38) {
       if (dist > o.r0 - pad && dist < o.r1) {
         let diff = Math.atan2(dx, -dz) - o.a;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-        if (Math.abs(diff) < o.half + pad / Math.max(dist, 1)) return false;
+        if (Math.abs(diff) < o.half + pad / Math.max(dist, 1)) return null;
       }
     }
   }
-  return true;
+  return h;
 }

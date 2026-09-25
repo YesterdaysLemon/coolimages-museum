@@ -48,6 +48,16 @@ MAX_WING = 7
 MAX_BATCH = 16
 TEMPLATES = ("salon", "white", "night", "pastel", "screening")
 HAND_BUILT_WINGS = {"lobby", "gallery", "eyes", "familiars", "bedroom"}
+# Architecture for new wings (src/architecture.js): the least-used form for the
+# template, with octagons only for small wings.
+DEFAULT_FORMS = {
+    "salon": ["enfilade", "octagon", "rect"],
+    "white": ["spiral", "basilica", "void", "octagon"],
+    "night": ["iron", "crypt", "octagon"],
+    "pastel": ["attic", "rect"],
+    "screening": ["cinema"],
+}
+MAX_LINKS = 3
 DEFAULT_ACCENT = {"salon": "#9a2f2f", "white": "#1f7a8c", "night": "#6c5ce7", "pastel": "#d4679a", "screening": "#c0392b"}
 
 STYLE_GUIDE = """You are the curator of "coolimages", a walkable 3D museum built from one person's folder of images saved from X. The museum's voice: observant, specific, dry, warm, and a little funny. It is modelled on the 1990s Eyewitness museum: pictures floating in white space with small italic labels pointing at details.
@@ -62,7 +72,7 @@ For each image you receive, write:
 
 Some works are videos. They play silently on a loop and with sound when a visitor steps close. You see a video as a contact sheet: six frames in playback order, left to right, top to bottom. Write about the whole video, including what happens over time; the medium can say so ("AI-generated video, 11 seconds"). For a video, give at most 2 callouts, with u and v measured within a single frame (not the whole sheet), and only on something that stays in place for most of the video; otherwise give none.
 
-Grouping: gather works that share a mood, subject or visual language into new wings of 3 to 7 works. A wing needs a key (lowercase slug, e.g. "wing-small-gods"), a name ("The Small Gods"), a subtitle (2 to 4 words), a statement (2 or 3 sentences, in the same voice, about what connects the works), a template matching the mood (salon: gilded frames on cream walls, for anything painterly or grave; white: floating in white space, for graphic, digital or conceptual work; night: dark room with glowing lightboxes, for eerie, cosmic or occult work; pastel: taped polaroids on a lilac bedroom wall, for cute, sweet or sinister-cute work; screening: a dark screening room with glowing screens and velvet benches, made for videos, though videos can hang in any template), and an accent colour as #rrggbb. A work may instead join an existing generated wing that has space. When a work doesn't fit anything yet and there aren't enough like it, set placement to "hold": it waits on the entrance easels for company. Never invent a wing for fewer than 3 works.
+Grouping: gather works that share a mood, subject or visual language into new wings of 3 to 7 works. A wing needs a key (lowercase slug, e.g. "wing-small-gods"), a name ("The Small Gods"), a subtitle (2 to 4 words), a statement (2 or 3 sentences, in the same voice, about what connects the works), a template matching the mood (salon: gilded frames on cream walls, for anything painterly or grave; white: floating in white space, for graphic, digital or conceptual work; night: dark room with glowing lightboxes, for eerie, cosmic or occult work; pastel: taped polaroids on a lilac bedroom wall, for cute, sweet or sinister-cute work; screening: a dark screening room with glowing screens and velvet benches, made for videos, though videos can hang in any template), and an accent colour as #rrggbb. For a new wing, also name up to 3 related wings: existing generated wings (by key) that it rhymes with in subject, mood or idea, each with a door phrase of 2 to 5 words that says what connects them without explaining too much, e.g. "Robots that don't stop" or "Cute, with teeth". Visitors walk between related wings through doors marked with that phrase. A work may instead join an existing generated wing that has space. When a work doesn't fit anything yet and there aren't enough like it, set placement to "hold": it waits on the entrance easels for company. Never invent a wing for fewer than 3 works.
 
 Existing hand-built wings (closed; do not place works in them), for tone:
 - The Grand Gallery, "Serious Treatment": silly things given grave dignity.
@@ -109,8 +119,17 @@ SCHEMA = {
                     "statement": {"type": "string"},
                     "template": {"type": "string", "enum": list(TEMPLATES)},
                     "accent": {"type": "string"},
+                    "related": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {"key": {"type": "string"}, "phrase": {"type": "string"}},
+                            "required": ["key", "phrase"],
+                            "additionalProperties": False,
+                        },
+                    },
                 },
-                "required": ["key", "name", "subtitle", "statement", "template", "accent"],
+                "required": ["key", "name", "subtitle", "statement", "template", "accent", "related"],
                 "additionalProperties": False,
             },
         },
@@ -233,6 +252,26 @@ def ask_claude(client, batch, held, catalog, layout, videos):
     return json.loads(text)
 
 
+def pick_form(spec, wings):
+    options = [f for f in DEFAULT_FORMS.get(spec["template"], ["rect"]) if f != "octagon" or len(spec["works"]) <= 4]
+    used = [w.get("form") for w in wings.values()]
+    return min(options, key=lambda f: (used.count(f), options.index(f)))
+
+
+def add_links(layout, key, related):
+    """Doors between a new wing and the generated wings it rhymes with."""
+    links = layout.setdefault("links", [])
+    degree = lambda k: sum(k in link[:2] for link in links)  # noqa: E731
+    for target, phrase in related:
+        if target == key or target not in layout["wings"] or not phrase:
+            continue
+        if degree(key) >= MAX_LINKS or degree(target) >= MAX_LINKS:
+            continue
+        if any({key, target} == set(link[:2]) for link in links):
+            continue
+        links.append([key, target, phrase])
+
+
 def apply_result(result, batch_ids, held, catalog, layout, now):
     wings = layout["wings"]
 
@@ -258,7 +297,8 @@ def apply_result(result, batch_ids, held, catalog, layout, now):
         taken.add(key)
         template = w["template"] if w["template"] in TEMPLATES else "salon"
         accent = w["accent"] if re.fullmatch(r"#[0-9a-fA-F]{6}", w.get("accent", "")) else DEFAULT_ACCENT[template]
-        proposed[w["key"]] = (key, {
+        related = [(r.get("key", ""), str(r.get("phrase", "")).strip()[:40]) for r in w.get("related", [])][:MAX_LINKS]
+        proposed[w["key"]] = (key, related, {
             "name": w["name"][:60],
             "subtitle": w["subtitle"][:60],
             "statement": w["statement"][:600],
@@ -275,10 +315,12 @@ def apply_result(result, batch_ids, held, catalog, layout, now):
     hung = {}
     for target, ids in members.items():
         if target in proposed and len(ids) >= MIN_WING:
-            key, spec = proposed[target]
+            key, related, spec = proposed[target]
             spec["works"] = ids[:MAX_WING]
+            spec["form"] = pick_form(spec, wings)
             wings[key] = spec
             hung.update({item_id: key for item_id in spec["works"]})
+            add_links(layout, key, related)
         elif target in wings and target not in HAND_BUILT_WINGS:
             space = max(0, MAX_WING - len(wings[target]["works"]))
             wings[target]["works"].extend(ids[:space])

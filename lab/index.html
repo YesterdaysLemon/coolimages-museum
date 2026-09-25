@@ -87,6 +87,8 @@
   .drawer { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
   @media (min-width: 900px) { .drawer { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); max-height: calc(100vh - 36px); } }
   .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .filters .toggle { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); cursor: pointer; }
+  .filters .toggle input { accent-color: var(--ok); width: 16px; height: 16px; margin: 0; }
   .filters input { grid-column: 1 / -1; }
   .filters input, .filters select { width: 100%; min-width: 0; height: 36px; padding: 0 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); }
   .count { font-size: 12px; color: var(--faint); letter-spacing: 0.04em; text-transform: uppercase; }
@@ -203,6 +205,7 @@
           <option value="approved">Approved, waiting</option>
           <option value="live">Live</option>
         </select>
+        <label class="toggle" for="finished"><input id="finished" type="checkbox" /> Show finished (live in the museum)</label>
       </div>
       <div class="count" id="count">Loading the collection…</div>
       <ul class="list" id="list"></ul>
@@ -324,6 +327,7 @@
     const st = $("#state").value;
     if (wing && item.wing !== wing) return false;
     if (st && statusOf(item) !== st) return false;
+    if (!st && !$("#finished").checked && statusOf(item) === "live") return false;
     if (!q) return true;
     const hay = [item.title, item.note, item.artist, item.wingName, item.id, state.notes[item.id]?.text].join(" ").toLowerCase();
     return hay.includes(q);
@@ -348,7 +352,9 @@
         return el("li", {}, row);
       }),
     );
-    $("#count").textContent = shown.length === state.items.length ? `${shown.length} works` : `${shown.length} of ${state.items.length} works`;
+    const finished = state.items.filter((i) => statusOf(i) === "live").length;
+    const hidden = finished && !$("#finished").checked && !$("#state").value;
+    $("#count").textContent = `${shown.length} ${hidden ? "to go" : "works"}${hidden ? ` · ${finished} finished, hidden` : ""}`;
     tally();
   }
 
@@ -682,7 +688,7 @@
   $("#stop-btn").addEventListener("click", () => state.ctl?.abort());
   $("#prev").addEventListener("click", () => step(-1));
   $("#next").addEventListener("click", () => step(1));
-  for (const id of ["#q", "#wing", "#state"]) $(id).addEventListener("input", renderList);
+  for (const id of ["#q", "#wing", "#state", "#finished"]) $(id).addEventListener("input", renderList);
   $("#list").addEventListener("keydown", (e) => {
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
     e.preventDefault();
@@ -714,6 +720,8 @@
       $("#store-notice").textContent = "Notes can't be saved in this view. Open the lab on claude.ai to keep them.";
     } else {
       state.db = db;
+      let first = true;
+      let lastLive = "";
       db.collection("notes").onSnapshot(
         (snap) => {
           for (const change of snap.docChanges()) {
@@ -721,8 +729,14 @@
             else if (!writes.has(change.doc.id) || !snap.metadata.hasPendingWrites) state.notes[change.doc.id] = structuredClone(change.doc.data());
           }
           renderBench(false);
-          markRows();
-          if ($("#state").value || $("#q").value) renderList();
+          // Finished works drop out of the list once they're live, so redraw
+          // it whenever that set changes (or a filter depends on the notes).
+          const live = state.items.filter((i) => statusOf(i) === "live").map((i) => i.id).join();
+          if (first || live !== lastLive || $("#state").value || $("#q").value) renderList();
+          else markRows();
+          lastLive = live;
+          if (first && !location.hash.slice(1) && !visibleIds().includes(state.current) && visibleIds().length) select(visibleIds()[0]);
+          first = false;
         },
         () => {
           $("#store-notice").hidden = false;

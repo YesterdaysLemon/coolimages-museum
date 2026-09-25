@@ -1,0 +1,1021 @@
+// Architecture for the upstairs: the Stair Hall and the generated wings.
+// Each generated wing is built in one "form": a spiral ramp, a basilica (as a
+// temple, an iron hall or a crypt), an octagon, an enfilade of salons, an
+// attic, or the classic box (white void, screening room, plain room). Rooms
+// may have floors at several heights; see ground() and walkable() in world.js.
+import * as THREE from 'three';
+import * as TX from './textures.js';
+
+const TAU = Math.PI * 2;
+
+// cap: how many association doors the form has room for.
+export const FORMS = {
+  spiral: { cap: 3, maxWorks: 7 },
+  basilica: { cap: 3, maxWorks: 8 },
+  iron: { cap: 3, maxWorks: 8 },
+  crypt: { cap: 3, maxWorks: 8 },
+  octagon: { cap: 3, maxWorks: 4 },
+  enfilade: { cap: 3, maxWorks: 7 },
+  attic: { cap: 2, maxWorks: 8 },
+  void: { cap: 3, maxWorks: 7 },
+  cinema: { cap: 3, maxWorks: 7 },
+  rect: { cap: 3, maxWorks: 7 },
+};
+
+export const DEFAULT_FORMS = {
+  salon: ['enfilade', 'octagon', 'rect'],
+  white: ['spiral', 'basilica', 'void', 'octagon'],
+  night: ['iron', 'crypt', 'octagon'],
+  pastel: ['attic', 'rect'],
+  screening: ['cinema'],
+};
+
+// A wing's own form if it fits its works, else a stable default for its template.
+export function formFor(spec, key, works) {
+  const fits = (f) => FORMS[f] && works <= FORMS[f].maxWorks;
+  if (spec.form && fits(spec.form)) return spec.form;
+  const options = (DEFAULT_FORMS[spec.template] || DEFAULT_FORMS.salon).filter(fits);
+  return options[Math.floor(TX.hash(key) * options.length)] || 'rect';
+}
+
+export function capacityOf(form, works) {
+  if ((form === 'void' || form === 'cinema' || form === 'rect') && works > 6) return 2;
+  return FORMS[form]?.cap ?? 2;
+}
+
+// Splits a rectangle into walkable rectangles that avoid the given holes.
+export function rectMinus(outer, holes, h = 0) {
+  const cuts = (a, b, keys) => [...new Set([a, b, ...keys.filter((v) => v > a && v < b)])].sort((p, q) => p - q);
+  const xs = cuts(outer.x0, outer.x1, holes.flatMap((r) => [r.x0, r.x1]));
+  const zs = cuts(outer.z0, outer.z1, holes.flatMap((r) => [r.z0, r.z1]));
+  const out = [];
+  for (let i = 0; i < xs.length - 1; i++) {
+    for (let j = 0; j < zs.length - 1; j++) {
+      const mx = (xs[i] + xs[i + 1]) / 2;
+      const mz = (zs[j] + zs[j + 1]) / 2;
+      if (holes.some((r) => mx > r.x0 && mx < r.x1 && mz > r.z0 && mz < r.z1)) continue;
+      out.push({ type: 'rect', x0: xs[i], x1: xs[i + 1], z0: zs[j], z1: zs[j + 1], h });
+    }
+  }
+  return out;
+}
+
+export function makeArchitecture(ctx) {
+  const { M, V3, facing, additive, glowTex, beamTex, makeRoom, addLights, addWork, addPortal, addText, animate, pictureLight, rectRoom, art, withheld, TEMPLATES } = ctx;
+  const std = (color, roughness = 0.85, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness, ...extra });
+  const twoSided = (color, roughness = 0.9, extra = {}) => std(color, roughness, { side: THREE.DoubleSide, ...extra });
+
+  // ------------------------------------------------------------- helpers
+  function mesh(room, geo, mat, x = 0, y = 0, z = 0) {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    room.group.add(m);
+    return m;
+  }
+  function box(room, w, h, d, x, y, z, mat, rotY = 0) {
+    const m = mesh(room, new THREE.BoxGeometry(w, h, d), mat, x, y, z);
+    m.rotation.y = rotY;
+    return m;
+  }
+  // A square beam from point a to point b.
+  function beam(room, a, b, size, mat) {
+    const dir = new THREE.Vector3().subVectors(b, a);
+    const m = mesh(room, new THREE.BoxGeometry(size, dir.length(), size), mat);
+    m.position.copy(a).addScaledVector(dir, 0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+    return m;
+  }
+  function floorPlane(room, x0, x1, z0, z1, y, mat) {
+    const m = mesh(room, new THREE.PlaneGeometry(x1 - x0, z1 - z0), mat, (x0 + x1) / 2, y, (z0 + z1) / 2);
+    m.rotation.x = -Math.PI / 2;
+    return m;
+  }
+  function ceilingPlane(room, x0, x1, z0, z1, y, mat) {
+    const m = mesh(room, new THREE.PlaneGeometry(x1 - x0, z1 - z0), mat, (x0 + x1) / 2, y, (z0 + z1) / 2);
+    m.rotation.x = Math.PI / 2;
+    return m;
+  }
+  // A textured wall plane facing `dir`, from y0 to y0 + H.
+  function wall(room, len, H, canvasTex, x, z, dir, y0 = 0, tile = 4) {
+    const t = canvasTex.clone();
+    t.needsUpdate = true;
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(len / tile, 1);
+    const m = mesh(room, new THREE.PlaneGeometry(len, H), new THREE.MeshStandardMaterial({ map: t, roughness: 0.95 }), x, y0 + H / 2, z);
+    m.rotation.y = facing(dir);
+    return m;
+  }
+  // Balustrade along a polyline of walking-surface points.
+  function rail(room, pts, mat, height = 1.0) {
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i];
+      const b = pts[i + 1];
+      beam(room, V3(a.x, a.y + height, a.z), V3(b.x, b.y + height, b.z), 0.07, mat);
+      beam(room, V3(a.x, a.y + 0.12, a.z), V3(b.x, b.y + 0.12, b.z), 0.05, mat);
+      const n = Math.max(1, Math.round(a.distanceTo(b) / 0.45));
+      for (let k = 0; k <= n; k++) {
+        const p = a.clone().lerp(b, k / n);
+        box(room, 0.04, height - 0.12, 0.04, p.x, p.y + 0.12 + (height - 0.12) / 2, p.z, mat);
+      }
+    }
+  }
+  function column(room, x, z, y0, h, r, mat, { capital = true, base = true, obstacle = true } = {}) {
+    mesh(room, new THREE.CylinderGeometry(r * 0.92, r, h, 20), mat, x, y0 + h / 2, z);
+    if (base) box(room, r * 2.6, 0.26, r * 2.6, x, y0 + 0.13, z, mat);
+    if (capital) box(room, r * 2.7, 0.3, r * 2.7, x, y0 + h - 0.15, z, mat);
+    if (obstacle) room.obstacles.push({ type: 'circle', x, z, r: r * 1.25, y0: y0 - 0.6, y1: y0 + h - 0.5 });
+  }
+  // A straight flight of steps. The run goes from `from` (height h0) to `to`
+  // (height h1) along `axis`; a0..a1 spans the other axis. Returns its ramp.
+  function flight(room, { axis, from, to, a0, a1, h0, h1, mat }) {
+    const n = Math.max(1, Math.round(Math.abs(h1 - h0) / 0.17));
+    const run = (to - from) / n;
+    const dh = (h1 - h0) / n;
+    const bottom = Math.min(h0, h1) - 0.06;
+    const width = a1 - a0;
+    const mid = (a0 + a1) / 2;
+    for (let i = 0; i < n; i++) {
+      const top = h0 + (i + 1) * dh;
+      const c = from + (i + 0.5) * run;
+      const hgt = Math.max(0.05, top - bottom);
+      if (axis === 'z') box(room, width, hgt, Math.abs(run) + 0.01, mid, bottom + hgt / 2, c, mat);
+      else box(room, Math.abs(run) + 0.01, hgt, width, c, bottom + hgt / 2, mid, mat);
+    }
+    const lo = Math.min(from, to);
+    const hi = Math.max(from, to);
+    const rect = axis === 'z' ? { x0: a0, x1: a1, z0: lo, z1: hi } : { x0: lo, x1: hi, z0: a0, z1: a1 };
+    return { type: 'rect', ...rect, ramp: { axis, from, to, h0, h1 } };
+  }
+  // A wall with a round-headed opening, centred on x (along the x axis at z).
+  function archWall(room, { x, z, w, H, aw, ah, depth = 0.4, mat, rotY = 0 }) {
+    const s = new THREE.Shape();
+    const r = aw / 2;
+    s.moveTo(-w / 2, 0);
+    s.lineTo(-r, 0);
+    s.lineTo(-r, ah - r);
+    s.absarc(0, ah - r, r, Math.PI, 0, true);
+    s.lineTo(r, 0);
+    s.lineTo(w / 2, 0);
+    s.lineTo(w / 2, H);
+    s.lineTo(-w / 2, H);
+    s.lineTo(-w / 2, 0);
+    const geo = new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: false, curveSegments: 20 });
+    geo.translate(0, 0, -depth / 2);
+    const m = mesh(room, geo, mat, x, 0, z);
+    m.rotation.y = rotY;
+    return m;
+  }
+  function glowPoints(room, positions, color, size, opacity = 0.9) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    const pts = new THREE.Points(
+      geo,
+      new THREE.PointsMaterial({ map: glowTex, size, color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending }),
+    );
+    room.group.add(pts);
+    return pts;
+  }
+  // Arched window: a glowing panel with glazing bars.
+  function archWindow(room, x, y, z, dir, w, h, frameMat, color = 0xfff6e6) {
+    const s = new THREE.Shape();
+    s.moveTo(-w / 2, 0);
+    s.lineTo(w / 2, 0);
+    s.lineTo(w / 2, h - w / 2);
+    s.absarc(0, h - w / 2, w / 2, 0, Math.PI, false);
+    s.lineTo(-w / 2, 0);
+    const g = new THREE.Group();
+    g.position.set(x, y, z);
+    g.rotation.y = facing(dir);
+    room.group.add(g);
+    g.add(new THREE.Mesh(new THREE.ShapeGeometry(s, 16), new THREE.MeshBasicMaterial({ color, toneMapped: false })));
+    for (const bx of [-w / 6, w / 6]) {
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.05, h - 0.1, 0.05), frameMat);
+      bar.position.set(bx, (h - 0.1) / 2, 0.03);
+      g.add(bar);
+    }
+    for (const by of [h * 0.33, h * 0.62]) {
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(w, 0.05, 0.05), frameMat);
+      bar.position.set(0, by, 0.03);
+      g.add(bar);
+    }
+    return g;
+  }
+  // Flat ribbon following a helix, between radii rIn and rOut.
+  function helixStrip(cx, cz, rIn, rOut, a0, u0, u1, rise, yOff, segs) {
+    const pos = [];
+    const idx = [];
+    for (let i = 0; i <= segs; i++) {
+      const u = u0 + ((u1 - u0) * i) / segs;
+      const a = a0 + u * TAU;
+      const y = rise * u + yOff;
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      pos.push(cx + rIn * c, y, cz + rIn * s, cx + rOut * c, y, cz + rOut * s);
+      if (i) {
+        const k = 2 * i;
+        idx.push(k - 2, k - 1, k, k - 1, k + 1, k);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }
+  // Vertical ribbon at radius r following u, from bottom(u) to top(u).
+  function helixBand(cx, cz, r, a0, u0, u1, bottom, top, segs) {
+    const pos = [];
+    const idx = [];
+    for (let i = 0; i <= segs; i++) {
+      const u = u0 + ((u1 - u0) * i) / segs;
+      const a = a0 + u * TAU;
+      const x = cx + r * Math.cos(a);
+      const z = cz + r * Math.sin(a);
+      pos.push(x, bottom(u), z, x, top(u), z);
+      if (i) {
+        const k = 2 * i;
+        idx.push(k - 2, k - 1, k, k - 1, k + 1, k);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }
+  // Ring sector lying flat, in this module's angle convention (from +x toward +z).
+  function ringSector(rIn, rOut, a0, span, segs = 32) {
+    const g = new THREE.RingGeometry(rIn, rOut, segs, 1, -a0 - span, span);
+    g.rotateX(-Math.PI / 2);
+    return g;
+  }
+  // Angle convention bridge for world.js 'sector' obstacles (from -z, clockwise).
+  const sectorAngle = (a) => a + Math.PI / 2;
+
+  function hangDoors(room, slots, doors, style) {
+    doors.forEach((d, i) => {
+      if (slots[i]) addPortal(room, { ...slots[i], dest: d.dest, subtitle: d.subtitle, style });
+    });
+    return slots.slice(doors.length);
+  }
+  function wingText(room, spec, pos, dir, ink, width = 3.0) {
+    return addText(room, { kicker: 'Generated wing', title: spec.name, subtitle: spec.subtitle, body: spec.statement, width, style: ink }, pos, dir);
+  }
+  function worksOf(spec) {
+    return (spec.works || []).filter((id) => art.has(id) || withheld.has(id));
+  }
+  function workStyle(t, accent) {
+    return { frame: t.frame, plaque: t.plaque, ink: t.ink, margin: 1.0, maxW: 3.0, glow: accent.getHex() };
+  }
+
+  // ------------------------------------------------------------ Stair Hall
+  // A double-height hall: a grand flight up to a U-shaped balcony (doors to
+  // the upper wings) and a flight down into a pit (the basement door).
+  function buildStairHall({ up = [], down = null, ground = [], directory }) {
+    const SX = 0;
+    const SZ = -600;
+    const X = (x) => SX + x;
+    const Z = (z) => SZ + z;
+    const UP = 4.6;
+    const DOWN = -2.9;
+    const H = 10.5;
+    const bounds = { type: 'rect', x0: X(-11), x1: X(11), z0: Z(-12), z1: Z(12) };
+    const room = makeRoom('stairhall', bounds, 'marble', {
+      bg: '#efe8dc',
+      fog: { type: 'linear', color: '#efe8dc', near: 30, far: 90 },
+      envI: 0.5,
+    });
+    const stone = std(0xefe7da, 0.8);
+    const darkStone = std(0x8d8272, 0.9);
+    const brass = M.brass;
+    const stairFoot = { x0: X(-2.7), x1: X(2.7), z0: Z(-8.6), z1: Z(-0.75) };
+    const pit = { x0: X(-10.8), x1: X(-8.0), z0: Z(-0.4), z1: Z(6.5) };
+    const groundFloors = rectMinus(bounds, [stairFoot, pit], 0);
+    room.floors = [
+      ...groundFloors,
+      flight(room, { axis: 'z', from: Z(-0.75), to: Z(-8.6), a0: X(-2.7), a1: X(2.7), h0: 0, h1: UP, mat: stone }),
+      { type: 'rect', x0: X(-11), x1: X(11), z0: Z(-12), z1: Z(-8.6), h: UP },
+      { type: 'rect', x0: X(-11), x1: X(-7.6), z0: Z(-12), z1: Z(4), h: UP },
+      { type: 'rect', x0: X(7.6), x1: X(11), z0: Z(-12), z1: Z(4), h: UP },
+      flight(room, { axis: 'z', from: Z(6.5), to: Z(1.6), a0: X(-10.8), a1: X(-8.0), h0: 0, h1: DOWN, mat: darkStone }),
+      { type: 'rect', x0: X(-10.8), x1: X(-8.0), z0: Z(-0.4), z1: Z(1.6), h: DOWN },
+    ];
+
+    // Floor (with holes for the flight and the pit), walls, coffered ceiling.
+    const floorMat = new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.tileFloor(), { repeat: [5.5, 6] }), roughness: 0.35 });
+    for (const f of groundFloors) {
+      const mat = floorMat.clone();
+      mat.map = floorMat.map.clone();
+      mat.map.repeat.set((f.x1 - f.x0) / 4, (f.z1 - f.z0) / 4);
+      mat.map.offset.set(f.x0 / 4, -f.z1 / 4);
+      mat.map.needsUpdate = true;
+      floorPlane(room, f.x0, f.x1, f.z0, f.z1, 0, mat);
+    }
+    floorPlane(room, pit.x0, pit.x1, Z(-0.4), Z(1.6), DOWN, darkStone);
+    const wallTex = TX.toTexture(TX.plainWall(H, '#ece3d3', '#c9b99c'));
+    wall(room, 22, H, wallTex, X(0), Z(-12), V3(0, 0, 1));
+    wall(room, 22, H, wallTex, X(0), Z(12), V3(0, 0, -1));
+    wall(room, 24, H, wallTex, X(-11), Z(0), V3(1, 0, 0));
+    wall(room, 24, H, wallTex, X(11), Z(0), V3(-1, 0, 0));
+    ceilingPlane(room, X(-11), X(11), Z(-12), Z(12), H, new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.coffers(), { repeat: [5.5, 6] }), roughness: 1 }));
+    // Pit walls.
+    for (const [x, z, len, dir] of [
+      [X(-10.8), Z(3.05), 6.9, V3(1, 0, 0)],
+      [X(-8.0), Z(3.05), 6.9, V3(-1, 0, 0)],
+    ]) {
+      const m = mesh(room, new THREE.PlaneGeometry(len, -DOWN), darkStone, x, DOWN / 2, z);
+      m.rotation.y = facing(dir);
+    }
+    mesh(room, new THREE.PlaneGeometry(2.8, -DOWN), darkStone, X(-9.4), DOWN / 2, Z(-0.4));
+
+    // Balconies, columns and balustrades.
+    const slab = std(0xf3ede3, 0.85);
+    box(room, 22, 0.36, 3.4, X(0), UP - 0.18, Z(-10.3), slab);
+    box(room, 3.4, 0.36, 16, X(-9.3), UP - 0.18, Z(-4), slab);
+    box(room, 3.4, 0.36, 16, X(9.3), UP - 0.18, Z(-4), slab);
+    box(room, 22, 0.14, 0.1, X(0), UP - 0.3, Z(-8.62), brass);
+    for (const sx of [-1, 1]) {
+      box(room, 0.1, 0.14, 12.6, X(sx * 7.62), UP - 0.3, Z(-2.3), brass);
+      for (const z of [-8.6, -2.3, 4]) column(room, X(sx * 7.6), Z(z), 0, UP - 0.36, 0.3, stone);
+      column(room, X(sx * 4.6), Z(-8.6), 0, UP - 0.36, 0.3, stone);
+    }
+    const railMat = std(0x2b2520, 0.5, { metalness: 0.4 });
+    rail(room, [V3(X(-7.6), UP, Z(-8.6)), V3(X(-2.7), UP, Z(-8.6))], railMat);
+    rail(room, [V3(X(2.7), UP, Z(-8.6)), V3(X(7.6), UP, Z(-8.6))], railMat);
+    for (const sx of [-1, 1]) {
+      rail(room, [V3(X(sx * 7.6), UP, Z(-8.6)), V3(X(sx * 7.6), UP, Z(4)), V3(X(sx * 11), UP, Z(4))], railMat);
+      rail(room, [V3(X(sx * 2.75), 0, Z(-0.75)), V3(X(sx * 2.75), UP, Z(-8.6))], railMat);
+    }
+    rail(room, [V3(X(-8.0), 0, Z(6.5)), V3(X(-8.0), 0, Z(-0.4)), V3(X(-10.8), 0, Z(-0.4))], railMat);
+    // A runner up the middle of the grand flight.
+    const runner = std(0x7a1f2b, 1);
+    const n = Math.round(UP / 0.17);
+    for (let i = 0; i < n; i++) {
+      const z = Z(-0.75) + ((i + 0.5) * (Z(-8.6) - Z(-0.75))) / n;
+      box(room, 2.2, 0.012, 0.3, X(0), ((i + 1) * UP) / n + 0.006, z, runner);
+      box(room, 2.2, UP / n, 0.012, X(0), ((i + 0.5) * UP) / n, z + (Z(-0.75) - Z(-8.6)) / n / 2 + 0.006, runner);
+    }
+
+    // Tall windows above the balconies, and a chandelier over the stair foot.
+    const frameMat = std(0x4a3c2c, 0.6);
+    for (const sx of [-1, 1]) {
+      for (const z of [-7, 0]) archWindow(room, X(sx * 10.96), UP + 1.1, Z(z), V3(-sx, 0, 0), 1.9, 4.2, frameMat);
+    }
+    const chX = X(0);
+    const chZ = Z(-2.5);
+    beam(room, V3(chX, H, chZ), V3(chX, 7.9, chZ), 0.05, brass);
+    const lights = [];
+    for (const [r, y, count] of [[1.8, 7.5, 18], [1.1, 7.1, 12], [0.5, 6.8, 6]]) {
+      const ring = mesh(room, new THREE.TorusGeometry(r, 0.03, 6, 48), brass, chX, y, chZ);
+      ring.rotation.x = Math.PI / 2;
+      for (let i = 0; i < count; i++) {
+        const a = (i / count) * TAU;
+        lights.push(chX + Math.cos(a) * r, y + 0.1, chZ + Math.sin(a) * r);
+      }
+    }
+    const bulbs = glowPoints(room, lights, 0xffe2b0, 0.34);
+    animate(room, (t) => {
+      bulbs.material.opacity = 0.82 + Math.sin(t * 2.3) * 0.06;
+    });
+    addLights(room, [0xfff4e6, 0x8a7a66, 1.0], [
+      [chX, 7.2, chZ, 0xffe6c0, 60, 34],
+      [X(-9.4), 1.2, Z(1.4), 0xffc890, 8, 9],
+    ]);
+
+    // Doors: in from the Rotunda; up on the balconies; down in the pit.
+    addPortal(room, { pos: V3(X(0), 0, Z(12) - 0.06), dir: V3(0, 0, -1), dest: 'lobby', w: 2.6, h: 3.4, signW: 3.2, entrance: true, subtitle: 'Back to the Rotunda' });
+    const upSlots = [
+      { pos: V3(X(0), UP, Z(-12) + 0.06), dir: V3(0, 0, 1), w: 2.4, h: 3.2, signW: 2.8 },
+      { pos: V3(X(-6.2), UP, Z(-12) + 0.06), dir: V3(0, 0, 1), w: 2.4, h: 3.2, signW: 2.8 },
+      { pos: V3(X(6.2), UP, Z(-12) + 0.06), dir: V3(0, 0, 1), w: 2.4, h: 3.2, signW: 2.8 },
+      { pos: V3(X(-11) + 0.06, UP, Z(-3.5)), dir: V3(1, 0, 0), w: 2.4, h: 3.2, signW: 2.8 },
+      { pos: V3(X(11) - 0.06, UP, Z(-3.5)), dir: V3(-1, 0, 0), w: 2.4, h: 3.2, signW: 2.8 },
+    ];
+    hangDoors(room, upSlots, up, 'dark');
+    if (down) addPortal(room, { pos: V3(X(-9.4), DOWN, Z(-0.4) + 0.06), dir: V3(0, 0, 1), dest: down.dest, subtitle: down.subtitle, w: 2.2, h: 2.1, signW: 2.1 });
+    const groundSlots = [
+      { pos: V3(X(11) - 0.06, 0, Z(8)), dir: V3(-1, 0, 0), w: 2.4, h: 3.2, signW: 2.8 },
+      { pos: V3(X(6.5), 0, Z(12) - 0.06), dir: V3(0, 0, -1), w: 2.4, h: 3.2, signW: 2.8 },
+      { pos: V3(X(-5.5), 0, Z(12) - 0.06), dir: V3(0, 0, -1), w: 2.4, h: 3.2, signW: 2.8 },
+    ];
+    hangDoors(room, groundSlots, ground, 'dark');
+
+    // Directory on a freestanding stand at the foot of the stairs.
+    box(room, 2.3, 2.6, 0.12, X(4.9), 1.3, Z(2.2), std(0x2d2721, 0.6));
+    addText(room, { ...directory, width: 2.0, style: 'light' }, V3(X(4.9), 1.55, Z(2.2) + 0.07), V3(0, 0, 1));
+    room.obstacles.push({ type: 'rect', x0: X(3.7), x1: X(6.1), z0: Z(2.05), z1: Z(2.35) });
+
+    // Where you arrive from a wing that has no door of its own here.
+    room.landing = { room: 'stairhall', pos: V3(X(0), UP, Z(-12) + 0.1), normal: V3(0, 0, 1), w: 2.4, h: 3.2 };
+    return room;
+  }
+
+  // ------------------------------------------------------------ wing forms
+  function buildWing(key, spec, index, form, doors) {
+    const t = TEMPLATES[spec.template] || TEMPLATES.salon;
+    const kind = TEMPLATES[spec.template] ? spec.template : 'salon';
+    const accent = new THREE.Color(spec.accent || '#8a6d3b');
+    const ids = worksOf(spec).slice(0, FORMS[form].maxWorks);
+    const cx = -400 + (index % 5) * 200;
+    const z0 = 400 + Math.floor(index / 5) * 200;
+    const args = { key, spec, t, kind, accent, ids, cx, z0, doors };
+    const build = { spiral, basilica, iron: basilica, crypt: basilica, octagon, enfilade, attic }[form] || classic;
+    return build({ ...args, form });
+  }
+
+  // Spiral: a ramp winding up around an atrium to a landing at the top.
+  function spiral({ key, spec, t, accent, ids, cx, z0, doors }) {
+    const cz = z0 + 16;
+    const r0 = 4.2;
+    const r1 = 8.2;
+    const rise = 3.5;
+    const turns = 1.75;
+    const a0 = Math.PI / 2;
+    const top = rise * turns;
+    const aEnd = a0 + turns * TAU;
+    const roofY = top + 3.9;
+    const room = makeRoom(key, { type: 'circle', x: cx, z: cz, r: r1 }, 'marble', {
+      bg: '#f4f2ee',
+      fog: { type: 'linear', color: '#f4f2ee', near: 26, far: 70 },
+      envI: 0.9,
+    });
+    room.floors = [
+      { type: 'circle', x: cx, z: cz, r: r0, h: 0 },
+      { type: 'helix', x: cx, z: cz, r0, r1, a0, turns, rise, h0: 0 },
+      { type: 'sector', x: cx, z: cz, r0, r1, a0: aEnd, span: Math.PI / 2, h: top },
+    ];
+    const concrete = twoSided(0xe7e2d8, 0.85);
+    const underside = twoSided(0xd3cdc1, 0.95);
+    const parapetMat = twoSided(0xfbfaf7, 0.95);
+    const handrail = twoSided(0x4d443b, 0.5, { metalness: 0.4 });
+    mesh(room, new THREE.CircleGeometry(r1, 96).rotateX(-Math.PI / 2), std(0xeeebe4, 0.6), cx, 0, cz);
+    mesh(room, helixStrip(cx, cz, r0, r1, a0, 0, turns, rise, 0, 260), concrete);
+    mesh(room, helixStrip(cx, cz, r0, r1, a0, 0, turns, rise, -0.32, 260), underside);
+    const bottom = (u) => (u < 1 ? 0 : rise * u - 0.32);
+    const crest = (u) => rise * u + 1.05;
+    mesh(room, helixBand(cx, cz, r0, a0, 0.1, turns, bottom, crest, 240), parapetMat);
+    mesh(room, helixBand(cx, cz, r0 + 0.16, a0, 0.1, turns, (u) => rise * u, crest, 240), parapetMat);
+    mesh(room, helixStrip(cx, cz, r0 - 0.01, r0 + 0.17, a0, 0.1, turns, rise, 1.05, 240), parapetMat);
+    mesh(room, helixStrip(cx, cz, r0 + 0.03, r0 + 0.13, a0, 0.1, turns, rise, 1.065, 240), handrail);
+    mesh(room, helixBand(cx, cz, r0 - 0.012, a0, 0.1, turns, (u) => rise * u + 1.0, (u) => rise * u + 1.06, 240), handrail);
+    // Landing slab and its parapet.
+    mesh(room, ringSector(r0, r1, aEnd, Math.PI / 2), concrete, cx, top, cz);
+    mesh(room, ringSector(r0, r1, aEnd, Math.PI / 2), underside, cx, top - 0.32, cz);
+    mesh(room, helixBand(cx, cz, r0, aEnd, 0, 0.25, () => top - 0.32, () => top + 1.05, 40), parapetMat);
+    mesh(room, helixStrip(cx, cz, r0 - 0.01, r0 + 0.17, aEnd, 0, 0.25, 0, top + 1.05, 40), parapetMat);
+    mesh(room, helixStrip(cx, cz, r0 + 0.03, r0 + 0.13, aEnd, 0, 0.25, 0, top + 1.065, 40), handrail);
+    // Cheek wall where the ramp begins, closing the space under the first turn.
+    const cheek = mesh(room, new THREE.PlaneGeometry(r1 - r0, rise - 0.32), parapetMat, cx + ((r0 + r1) / 2) * Math.cos(a0 - 0.01), (rise - 0.32) / 2, cz + ((r0 + r1) / 2) * Math.sin(a0 - 0.01));
+    cheek.rotation.y = facing(V3(-Math.sin(a0), 0, Math.cos(a0)));
+    // Where the parapet begins, keep people from stepping through it.
+    const pa = a0 + 0.1 * TAU;
+    room.obstacles.push({ type: 'sector', x: cx, z: cz, r0: r0 - 0.15, r1: r0 + 0.2, a: sectorAngle(pa + 0.35), half: 0.38, y0: -1, y1: 0.9 });
+    // Outer drum and the glass roof.
+    mesh(room, new THREE.CylinderGeometry(r1, r1, roofY, 96, 1, true), std(0xf8f7f3, 0.95, { side: THREE.BackSide }), cx, roofY / 2, cz);
+    mesh(room, new THREE.CircleGeometry(r1, 64).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xf2f7ff, toneMapped: false }), cx, roofY, cz);
+    const rib = std(0xdcd8cf, 0.7);
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * TAU;
+      beam(room, V3(cx + Math.cos(a) * 1.2, roofY - 0.08, cz + Math.sin(a) * 1.2), V3(cx + Math.cos(a) * r1, roofY - 0.08, cz + Math.sin(a) * r1), 0.14, rib);
+    }
+    for (const r of [1.2, 4.2]) mesh(room, new THREE.TorusGeometry(r, 0.07, 6, 64).rotateX(Math.PI / 2), rib, cx, roofY - 0.1, cz);
+    addLights(room, [0xffffff, 0xe6e2da, 1.25], [
+      [cx, roofY - 1.2, cz, 0xffffff, 40, 30],
+      [cx, 2.4, cz, 0xfff4e6, 10, 12],
+    ]);
+
+    const style = t.ink === 'light' ? 'light' : 'dark';
+    const at = (a, r, y) => V3(cx + r * Math.cos(a), y, cz + r * Math.sin(a));
+    const inward = (a) => V3(-Math.cos(a), 0, -Math.sin(a));
+    const ea = a0 + 0.24;
+    addPortal(room, { pos: at(ea, r1 - 0.12, (rise * 0.24) / TAU), dir: inward(ea), dest: doors.back.dest, subtitle: doors.back.subtitle, w: 2.2, h: 2.5, signW: 2.4, entrance: true, style });
+    const m = doors.links.length;
+    doors.links.forEach((d, i) => {
+      const a = aEnd + ((i + 1) / (m + 1)) * (Math.PI / 2);
+      addPortal(room, { pos: at(a, r1 - 0.12, top), dir: inward(a), dest: d.dest, subtitle: d.subtitle, w: 2.2, h: 2.8, signW: 2.2, style });
+    });
+    // Works climb the outer wall.
+    const common = workStyle(t, accent);
+    ids.forEach((id, k) => {
+      const u = 0.32 + (k * (turns - 0.62)) / Math.max(1, ids.length - 1);
+      const a = a0 + u * TAU;
+      addWork(room, id, { ...common, pos: at(a, r1 - 0.17, rise * u + 1.6), dir: inward(a), h: 1.8, maxW: 2.5 });
+    });
+    box(room, 2.5, 1.75, 0.14, cx, 0.875, cz - 2.2, std(0x3b342e, 0.6));
+    wingText(room, spec, V3(cx, 0.95, cz - 2.2 + 0.08), V3(0, 0, 1), 'light', 2.2);
+    room.obstacles.push({ type: 'rect', x0: cx - 1.3, x1: cx + 1.3, z0: cz - 2.3, z1: cz - 2.1 });
+    return room;
+  }
+
+  // Basilica: a nave between colonnades, aisles hung with works. As a white
+  // temple (coffered vault, gold apse), an iron-and-glass hall, or a crypt.
+  function basilica({ key, spec, t, kind, accent, ids, cx, z0, doors, form }) {
+    const v = form === 'iron' ? 'iron' : form === 'crypt' ? 'crypt' : 'temple';
+    const nb = Math.max(2, Math.ceil(ids.length / 2));
+    const bay = v === 'crypt' ? 4.2 : 4.6;
+    const x0 = cx - 7.5;
+    const x1 = cx + 7.5;
+    const colX = 3.3;
+    const zc0 = z0 + 3.5;
+    const z1 = zc0 + nb * bay + 3.0;
+    const apse = v !== 'iron';
+    const Hw = { temple: 5.2, iron: 6.5, crypt: 3.4 }[v];
+    const spring = { temple: 6.0, iron: 6.5, crypt: 2.9 }[v];
+    const palette = {
+      temple: { bg: '#f4f0e8', wall: ['#ebe4d6', '#cfc3ae'], col: 0xefe8dc, floor: 0xece6da, hemi: [0xfff6e8, 0xb9ae98, 0.8], light: 0xfff0dc, ink: 'dark', surface: 'marble' },
+      iron: { bg: '#1a1c22', wall: ['#2a2b33', '#17181d'], col: 0x2f3440, floor: 0x2a2b30, hemi: [0x9fb2c8, 0x15151b, 0.75], light: 0xdfe8ff, ink: 'light', surface: 'stone' },
+      crypt: { bg: '#120e0b', wall: ['#3b342d', '#221d18'], col: 0x5a5046, floor: 0x3a342c, hemi: [0x6a5a4a, 0x0c0908, 0.5], light: 0xffb070, ink: 'light', surface: 'stone' },
+    }[v];
+    const dark = v !== 'temple';
+    const room = makeRoom(key, { type: 'rect', x0, x1, z0, z1: apse ? z1 + colX : z1 }, palette.surface, {
+      bg: palette.bg,
+      fog: dark ? { type: 'exp2', color: palette.bg, density: v === 'crypt' ? 0.045 : 0.02 } : { type: 'linear', color: palette.bg, near: 30, far: 80 },
+      envI: dark ? 0.25 : 0.6,
+    });
+    room.floors = [{ type: 'rect', x0, x1, z0, z1, h: 0 }];
+    if (apse) room.floors.push({ type: 'circle', x: cx, z: z1, r: colX, h: 0 });
+    const colMat = std(palette.col, v === 'iron' ? 0.45 : 0.7, v === 'iron' ? { metalness: 0.6 } : {});
+    const floorMat = v === 'temple'
+      ? new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.tileFloor(), { repeat: [15 / 4, (z1 - z0) / 4] }), roughness: 0.3 })
+      : std(palette.floor, v === 'iron' ? 0.35 : 0.95, v === 'iron' ? { metalness: 0.25 } : {});
+    floorPlane(room, x0, x1, z0, z1, 0, floorMat);
+    const wallTex = TX.toTexture(TX.plainWall(Hw, ...palette.wall));
+    const L = z1 - z0;
+    wall(room, L, Hw, wallTex, x0, (z0 + z1) / 2, V3(1, 0, 0));
+    wall(room, L, Hw, wallTex, x1, (z0 + z1) / 2, V3(-1, 0, 0));
+    wall(room, 15, Hw, wallTex, cx, z0, V3(0, 0, 1));
+    if (apse) {
+      wall(room, 7.5 - colX, Hw, wallTex, cx - (7.5 + colX) / 2, z1, V3(0, 0, -1));
+      wall(room, 7.5 - colX, Hw, wallTex, cx + (7.5 + colX) / 2, z1, V3(0, 0, -1));
+    } else wall(room, 15, Hw, wallTex, cx, z1, V3(0, 0, -1));
+
+    // Colonnades.
+    const colR = { temple: 0.42, iron: 0.17, crypt: 0.45 }[v];
+    const colH = { temple: 5.2, iron: 6.5, crypt: 2.9 }[v];
+    for (let i = 0; i <= nb; i++) {
+      const z = zc0 + i * bay;
+      for (const sx of [-1, 1]) column(room, cx + sx * colX, z, 0, colH, colR, colMat, { capital: v !== 'iron' });
+    }
+    if (v === 'temple') {
+      // Entablature, aisle ceilings, a coffered barrel vault with a skylight.
+      for (const sx of [-1, 1]) {
+        box(room, 0.95, 0.8, L, cx + sx * colX, 5.6, (z0 + z1) / 2, colMat);
+        ceilingPlane(room, sx < 0 ? x0 : cx + colX, sx < 0 ? cx - colX : x1, z0, z1, 5.2, std(0xf3eee4, 1));
+      }
+      const vaultTex = TX.toTexture(TX.coffers(), { repeat: [L / 2.2, 5] });
+      const vault = new THREE.CylinderGeometry(colX, colX, L, 40, 1, true, Math.PI / 2, Math.PI).rotateX(Math.PI / 2);
+      mesh(room, vault, new THREE.MeshStandardMaterial({ map: vaultTex, roughness: 1, side: THREE.BackSide }), cx, spring, (z0 + z1) / 2);
+      const sky = mesh(room, new THREE.PlaneGeometry(0.9, L - 1), new THREE.MeshBasicMaterial({ color: 0xfffaf0, toneMapped: false }), cx, spring + colX - 0.04, (z0 + z1) / 2);
+      sky.rotation.x = Math.PI / 2;
+      // Apse: a half-drum with a gold half-dome.
+      mesh(room, new THREE.CylinderGeometry(colX, colX, spring, 32, 1, true, -Math.PI / 2, Math.PI), std(0xefe8da, 0.9, { side: THREE.BackSide }), cx, spring / 2, z1);
+      mesh(room, new THREE.SphereGeometry(colX, 32, 12, 0, Math.PI, 0, Math.PI / 2), std(0xc9a24c, 0.45, { metalness: 0.6, side: THREE.BackSide }), cx, spring, z1);
+      box(room, 15, spring - Hw, 0.3, cx, Hw + (spring - Hw) / 2, z0, std(0xf1ece2, 0.95));
+      mesh(room, new THREE.CircleGeometry(colX, 32, 0, Math.PI), std(0xf1ece2, 0.95), cx, spring, z0 + 0.02);
+    } else if (v === 'iron') {
+      // An elliptical glass roof on iron ribs, and rails down the nave.
+      const roof = new THREE.CylinderGeometry(7.5, 7.5, L, 48, 1, true, Math.PI / 2, Math.PI).rotateX(Math.PI / 2);
+      roof.scale(1, 0.56, 1);
+      mesh(room, roof, new THREE.MeshStandardMaterial({ color: 0xbfcad6, emissive: 0x6b7f93, emissiveIntensity: 0.55, roughness: 0.2, side: THREE.DoubleSide }), cx, Hw, (z0 + z1) / 2);
+      for (let i = 0; i <= nb; i++) {
+        const arc = new THREE.TorusGeometry(7.4, 0.08, 6, 48, Math.PI);
+        arc.scale(1, 0.56, 1);
+        mesh(room, arc, colMat, cx, Hw, zc0 + i * bay);
+      }
+      for (const a of [0.35, 0.8, 1.2, 1.57, 1.94, 2.34, 2.79]) {
+        box(room, 0.07, 0.07, L, cx + Math.cos(a) * 7.4, Hw + Math.sin(a) * 7.4 * 0.56, (z0 + z1) / 2, colMat);
+      }
+      for (const sx of [-1, 1]) {
+        box(room, 0.08, 0.05, L - 1, cx + sx * 0.72, 0.025, (z0 + z1) / 2, std(0x8a8f99, 0.3, { metalness: 0.9 }));
+      }
+      for (let z = z0 + 1; z < z1 - 0.5; z += 0.8) box(room, 2.1, 0.03, 0.22, cx, 0.015, z, std(0x3a2f26, 0.9));
+      const lunette = new THREE.Shape();
+      lunette.moveTo(-7.5, 0);
+      lunette.absellipse(0, 0, 7.5, 7.5 * 0.56, Math.PI, 0, true);
+      lunette.lineTo(-7.5, 0);
+      mesh(room, new THREE.ShapeGeometry(lunette, 32), std(0x2a2b33, 0.9, { side: THREE.DoubleSide }), cx, Hw, z0 + 0.02);
+      const fan = mesh(room, new THREE.ShapeGeometry(lunette, 32), new THREE.MeshBasicMaterial({ color: 0xcfdcea, toneMapped: false, side: THREE.DoubleSide }), cx, Hw, z1 - 0.02);
+      fan.scale.set(0.96, 0.94, 1);
+      for (let i = 1; i < 8; i++) {
+        const a = (i / 8) * Math.PI;
+        beam(room, V3(cx, Hw, z1 - 0.06), V3(cx + Math.cos(a) * 7.2, Hw + Math.sin(a) * 7.2 * 0.56, z1 - 0.06), 0.09, colMat);
+      }
+      mesh(room, new THREE.TorusGeometry(3.6, 0.06, 6, 32, Math.PI).scale(1, 0.56, 1), colMat, cx, Hw, z1 - 0.07);
+    } else {
+      // Crypt: low barrel vaults over nave and aisles, candles by every work.
+      const stone = std(0x4a423a, 0.95, { side: THREE.BackSide });
+      const vault = new THREE.CylinderGeometry(colX, colX, L, 32, 1, true, Math.PI / 2, Math.PI).rotateX(Math.PI / 2);
+      mesh(room, vault, stone, cx, spring, (z0 + z1) / 2);
+      for (const sx of [-1, 1]) {
+        const ar = (7.5 - colX) / 2;
+        const aisle = new THREE.CylinderGeometry(ar, ar, L, 24, 1, true, Math.PI / 2, Math.PI).rotateX(Math.PI / 2);
+        mesh(room, aisle, stone, cx + sx * (colX + ar), spring, (z0 + z1) / 2);
+        box(room, 0.7, spring + 0.9 - colH, L, cx + sx * colX, colH + (spring + 0.9 - colH) / 2, (z0 + z1) / 2, std(0x5a5046, 0.95));
+      }
+      mesh(room, new THREE.CylinderGeometry(colX, colX, spring, 32, 1, true, -Math.PI / 2, Math.PI), std(0x3d352e, 0.95, { side: THREE.BackSide }), cx, spring / 2, z1);
+      mesh(room, new THREE.SphereGeometry(colX, 24, 10, 0, Math.PI, 0, Math.PI / 2), std(0x3d352e, 0.95, { side: THREE.BackSide }), cx, spring, z1);
+      box(room, 15, 3.4, 0.3, cx, Hw + 1.7, z0, std(0x3b342d, 0.95));
+    }
+    addLights(room, palette.hemi, [
+      [cx, dark ? spring - 0.4 : 8, z0 + L * 0.3, palette.light, v === 'crypt' ? 9 : v === 'temple' ? 20 : 28, v === 'crypt' ? 14 : 26],
+      [cx, dark ? spring - 0.4 : 8, z1 - 2, palette.light, v === 'crypt' ? 9 : v === 'temple' ? 18 : 26, v === 'crypt' ? 14 : 26],
+    ]);
+
+    const ink = palette.ink;
+    const dh = v === 'crypt' ? 2.6 : 3.2;
+    addPortal(room, { pos: V3(cx, 0, z0 + 0.06), dir: V3(0, 0, 1), dest: doors.back.dest, subtitle: doors.back.subtitle, w: 2.4, h: dh, signW: 2.8, entrance: true, style: ink });
+    const slots = apse
+      ? [
+          { pos: V3(cx, 0, z1 + colX - 0.28), dir: V3(0, 0, -1), w: 2.2, h: dh, signW: 2.4 },
+          { pos: V3(cx - 5.4, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.2, h: dh, signW: 2.4 },
+          { pos: V3(cx + 5.4, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.2, h: dh, signW: 2.4 },
+        ]
+      : [
+          { pos: V3(cx, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.4, h: 3.4, signW: 2.8 },
+          { pos: V3(cx - 5.2, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.4, h: 3.4, signW: 2.8 },
+          { pos: V3(cx + 5.2, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.4, h: 3.4, signW: 2.8 },
+        ];
+    hangDoors(room, slots, doors.links, ink);
+    wingText(room, spec, V3(cx - 4.9, v === 'crypt' ? 1.8 : 2.4, z0 + 0.03), V3(0, 0, 1), ink, 2.8);
+
+    const common = workStyle(t, accent);
+    const wy = { temple: 2.5, iron: 2.8, crypt: 1.8 }[v];
+    const wh = { temple: 2.1, iron: 2.3, crypt: 1.45 }[v];
+    const flames = [];
+    ids.forEach((id, k) => {
+      const i = Math.floor(k / 2);
+      const west = k % 2 === 0;
+      const z = zc0 + (i + 0.5) * bay;
+      const placed = addWork(room, id, { ...common, pos: V3(west ? x0 + 0.05 : x1 - 0.05, wy, z), dir: V3(west ? 1 : -1, 0, 0), h: wh, maxW: 3.1 });
+      if (kind === 'salon') pictureLight(placed);
+      if (v === 'crypt') {
+        const fx = west ? x0 + 0.9 : x1 - 0.9;
+        for (const dz of [-1.6, 1.6]) {
+          mesh(room, new THREE.CylinderGeometry(0.035, 0.05, 1.25, 8), M.brass, fx, 0.62, z + dz);
+          mesh(room, new THREE.CylinderGeometry(0.045, 0.045, 0.16, 8), std(0xf3ead8, 0.8), fx, 1.33, z + dz);
+          flames.push(fx, 1.47, z + dz);
+          room.obstacles.push({ type: 'circle', x: fx, z: z + dz, r: 0.2 });
+        }
+      }
+    });
+    if (flames.length) {
+      const f = glowPoints(room, flames, 0xffb35c, 0.42);
+      animate(room, (tt) => {
+        f.material.opacity = 0.75 + Math.sin(tt * 9.1) * 0.08 + Math.sin(tt * 13.7) * 0.05;
+      });
+    }
+    return room;
+  }
+
+  // Octagon: eight faces under a dome with an open lantern. A chapel (warm
+  // stone, gold) or a white octagon whose light comes through as scanlines.
+  function octagon({ key, spec, t, accent, ids, cx, z0, doors }) {
+    const white = spec.template === 'white';
+    const cz = z0 + 10;
+    const A = 7.2;
+    const R = A / Math.cos(Math.PI / 8);
+    const Hw = 6.4;
+    const room = makeRoom(key, { type: 'circle', x: cx, z: cz, r: A }, 'marble', {
+      bg: white ? '#f3f3f1' : '#efe4d0',
+      fog: { type: 'linear', color: white ? '#f3f3f1' : '#efe4d0', near: 24, far: 70 },
+      envI: white ? 0.8 : 0.5,
+    });
+    room.floors = [{ type: 'circle', x: cx, z: cz, r: A, h: 0 }];
+    const floorTex = white ? TX.toTexture(TX.tileFloor(), { repeat: [3.5, 3.5] }) : TX.lobbyFloor(R, `${spec.name.toUpperCase()} · `);
+    const floor = mesh(room, new THREE.CircleGeometry(R, 8, Math.PI / 8).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.35 }), cx, 0, cz);
+    floor.rotation.y = 0;
+    const wallTex = TX.toTexture(white ? TX.plainWall(Hw, '#f6f6f4', '#dcdcd8') : TX.plainWall(Hw, '#e8dcc4', '#b8a27a'));
+    wallTex.wrapS = THREE.RepeatWrapping;
+    wallTex.repeat.set(8 * 1.4, 1);
+    const walls = mesh(room, new THREE.CylinderGeometry(R, R, Hw, 8, 1, true, Math.PI / 8), new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.95, side: THREE.BackSide }), cx, Hw / 2, cz);
+    walls.rotation.y = 0;
+    const trim = white ? std(0xaeb3bc, 0.5, { metalness: 0.2 }) : std(0xc9a24c, 0.45, { metalness: 0.5 });
+    for (let i = 0; i < 8; i++) {
+      const a = Math.PI / 8 + (i * Math.PI) / 4;
+      const p = box(room, 0.5, Hw, 0.3, cx + Math.sin(a) * (R - 0.12), Hw / 2, cz + Math.cos(a) * (R - 0.12), trim);
+      p.rotation.y = a;
+    }
+    mesh(room, new THREE.TorusGeometry(R - 0.12, 0.12, 8, 8, TAU).rotateX(Math.PI / 2), trim, cx, Hw, cz).rotation.y = Math.PI / 8;
+    const dome = mesh(room, new THREE.SphereGeometry(R, 48, 16, 0, TAU, 0, Math.PI / 2), std(white ? 0xfbfbfa : 0xf2e9d6, 1, { side: THREE.BackSide }), cx, Hw, cz);
+    dome.scale.y = 0.62;
+    const topY = Hw + R * 0.62;
+    mesh(room, new THREE.CircleGeometry(1.4, 40).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), cx, topY - 0.06, cz);
+    const shaft = mesh(
+      room,
+      new THREE.CylinderGeometry(1.3, 2.2, topY - 0.1, 40, 1, true),
+      new THREE.MeshBasicMaterial({ map: beamTex, color: white ? 0xe8f4ff : 0xfff1d4, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
+      cx,
+      (topY - 0.1) / 2,
+      cz,
+    );
+    if (white) {
+      const lines = mesh(room, new THREE.CircleGeometry(R * 0.98, 48).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ map: TX.scanlines(), transparent: true, opacity: 0.35, depthWrite: false, toneMapped: false }), cx, topY - 0.3, cz);
+      animate(room, (tt) => {
+        lines.material.opacity = 0.25 + (Math.sin(tt * 0.7) > 0.96 ? 0.35 : 0);
+        shaft.material.opacity = 0.16 + Math.sin(tt * 1.3) * 0.03;
+      });
+    }
+    addLights(room, white ? [0xffffff, 0xdedede, 1.3] : [0xfff0d8, 0x5a4a38, 0.8], [
+      [cx, topY - 1, cz, white ? 0xf4f8ff : 0xffe6bc, 40, 26],
+      [cx, 2.6, cz + 2, white ? 0xffffff : 0xffd9a0, 10, 12],
+    ]);
+
+    const ink = 'dark';
+    const face = (phi, inset, y) => ({ pos: V3(cx + Math.sin(phi) * (A - inset), y, cz + Math.cos(phi) * (A - inset)), dir: V3(-Math.sin(phi), 0, -Math.cos(phi)) });
+    addPortal(room, { ...face(0, 0.06, 0), dest: doors.back.dest, subtitle: doors.back.subtitle, w: 2.4, h: 3.3, signW: 2.8, entrance: true, style: ink });
+    const doorFaces = [Math.PI, Math.PI / 2, -Math.PI / 2];
+    const slots = doorFaces.map((phi) => ({ ...face(phi, 0.06, 0), w: 2.4, h: 3.3, signW: 2.8 }));
+    const spare = hangDoors(room, slots, doors.links, ink);
+    // The statement takes a spare door face, else a lectern by the entrance.
+    if (spare.length) {
+      const phi = doorFaces[doorFaces.length - spare.length];
+      const f = face(phi, 0.04, 2.5);
+      wingText(room, spec, f.pos, f.dir, ink, 3.0);
+    } else {
+      box(room, 1.9, 1.4, 0.12, cx + 2.4, 0.7, cz + 4.2, std(0x3a3028, 0.6));
+      wingText(room, spec, V3(cx + 2.4, 1.0, cz + 4.2 - 0.07), V3(0, 0, -1), 'light', 1.7);
+      room.obstacles.push({ type: 'rect', x0: cx + 1.4, x1: cx + 3.4, z0: cz + 4.1, z1: cz + 4.3 });
+    }
+    const common = workStyle(t, accent);
+    const flames = [];
+    [(3 * Math.PI) / 4, (-3 * Math.PI) / 4, Math.PI / 4, -Math.PI / 4].slice(0, ids.length).forEach((phi, k) => {
+      const f = face(phi, 0.06, 2.6);
+      const placed = addWork(room, ids[k], { ...common, pos: f.pos, dir: f.dir, h: 2.2, maxW: 3.6 });
+      if (!white) {
+        pictureLight(placed);
+        const bx = cx + Math.sin(phi) * (A - 1.2);
+        const bz = cz + Math.cos(phi) * (A - 1.2);
+        mesh(room, new THREE.CylinderGeometry(0.04, 0.12, 1.1, 10), M.brass, bx, 0.55, bz);
+        flames.push(bx, 1.2, bz);
+        room.obstacles.push({ type: 'circle', x: bx, z: bz, r: 0.25 });
+      }
+    });
+    if (flames.length) {
+      const f = glowPoints(room, flames, 0xffb35c, 0.45);
+      animate(room, (tt) => {
+        f.material.opacity = 0.78 + Math.sin(tt * 8.3) * 0.08;
+      });
+    }
+    return room;
+  }
+
+  // Enfilade: three salons in a row, joined by arched openings.
+  function enfilade({ key, spec, t, accent, ids, cx, z0, doors, kind }) {
+    const D = 8.5;
+    const W = 9;
+    const H = 5.6;
+    const x0 = cx - W / 2;
+    const x1 = cx + W / 2;
+    const z1 = z0 + 3 * D;
+    const room = makeRoom(key, { type: 'rect', x0, x1, z0, z1 }, 'wood', {
+      bg: '#f1ebe0',
+      fog: { type: 'linear', color: '#f1ebe0', near: 30, far: 80 },
+      envI: 0.45,
+    });
+    rectRoom(room, {
+      x0, x1, z0, z1, H,
+      wallCanvas: TX.galleryWall(H),
+      floorMat: new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.parquet(), { repeat: [W / 2, (3 * D) / 2] }), roughness: 0.5 }),
+      ceilingMat: new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.coffers(), { repeat: [W / 1.5, (3 * D) / 1.5] }), roughness: 1 }),
+    });
+    const wallMat = std(0xe9dfcf, 0.95);
+    const gold = std(0xc9a24c, 0.4, { metalness: 0.7 });
+    for (const k of [1, 2]) {
+      const z = z0 + k * D;
+      archWall(room, { x: cx, z, w: W, H, aw: 2.8, ah: 4.0, depth: 0.5, mat: wallMat });
+      const moulding = new THREE.TorusGeometry(1.45, 0.07, 8, 32, Math.PI);
+      for (const s of [-1, 1]) mesh(room, moulding, gold, cx, 4.0 - 1.4, z + s * 0.26);
+      room.obstacles.push({ type: 'rect', x0, x1: cx - 1.4, z0: z - 0.28, z1: z + 0.28 });
+      room.obstacles.push({ type: 'rect', x0: cx + 1.4, x1, z0: z - 0.28, z1: z + 0.28 });
+    }
+    // A lantern skylight in each salon's ceiling, and an ottoman in the middle one.
+    for (let k = 0; k < 3; k++) {
+      const zc = z0 + (k + 0.5) * D;
+      const sky = mesh(room, new THREE.PlaneGeometry(2.6, 2.6), new THREE.MeshBasicMaterial({ color: 0xfff8ea, toneMapped: false }), cx, H - 0.02, zc);
+      sky.rotation.x = Math.PI / 2;
+      for (const [w, d, dx, dz] of [[2.9, 0.15, 0, 1.37], [2.9, 0.15, 0, -1.37], [0.15, 2.9, 1.37, 0], [0.15, 2.9, -1.37, 0]]) box(room, w, 0.18, d, cx + dx, H - 0.09, zc + dz, gold);
+    }
+    const velvet = std(0x6b1d25, 0.95);
+    mesh(room, new THREE.CylinderGeometry(0.9, 0.95, 0.45, 32), velvet, cx, 0.225, z0 + 1.5 * D);
+    mesh(room, new THREE.CylinderGeometry(0.22, 0.3, 0.7, 16), velvet, cx, 0.6, z0 + 1.5 * D);
+    room.obstacles.push({ type: 'circle', x: cx, z: z0 + 1.5 * D, r: 1.0 });
+    addLights(room, [0xfff1dc, 0x6e5a44, 0.9], [
+      [cx, H - 1, z0 + 0.5 * D, 0xfff1d8, 20, 14],
+      [cx, H - 1, z0 + 2.5 * D, 0xfff1d8, 20, 14],
+    ]);
+
+    const ink = 'dark';
+    addPortal(room, { pos: V3(cx, 0, z0 + 0.06), dir: V3(0, 0, 1), dest: doors.back.dest, subtitle: doors.back.subtitle, w: 2.4, h: 3.2, signW: 2.8, entrance: true, style: ink });
+    const mid = z0 + 1.5 * D;
+    const slots = [
+      { pos: V3(cx, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.4, h: 3.2, signW: 2.8 },
+      { pos: V3(x0 + 0.06, 0, mid), dir: V3(1, 0, 0), w: 2.4, h: 3.2, signW: 2.8 },
+      { pos: V3(x1 - 0.06, 0, mid), dir: V3(-1, 0, 0), w: 2.4, h: 3.2, signW: 2.8 },
+    ];
+    const spare = hangDoors(room, slots, doors.links, ink);
+    wingText(room, spec, V3(cx - 3.1, 2.4, z0 + 0.03), V3(0, 0, 1), ink, 2.3);
+
+    // Works: the side walls of the first and last salons, then any free wall.
+    const common = workStyle(t, accent);
+    const wallSlot = (x, z, west) => ({ pos: V3(west ? x0 + 0.04 : x1 - 0.04, 2.35, z), dir: V3(west ? 1 : -1, 0, 0), h: 2.0, maxW: 4.2 });
+    const workSlots = [
+      wallSlot(x0, z0 + 0.5 * D, true),
+      wallSlot(x1, z0 + 0.5 * D, false),
+      wallSlot(x0, z0 + 2.5 * D, true),
+      wallSlot(x1, z0 + 2.5 * D, false),
+      ...spare.filter((s) => s.dir.z === 0).map((s) => wallSlot(s.pos.x, s.pos.z, s.dir.x > 0)),
+    ];
+    if (spare.some((s) => s.dir.z !== 0)) workSlots.push({ pos: V3(cx, 2.4, z1 - 0.04), dir: V3(0, 0, -1), h: 2.3, maxW: 4 });
+    for (const k of [1, 2]) {
+      for (const s of [-1, 1]) workSlots.push({ pos: V3(cx + s * 2.95, 2.3, z0 + k * D - 0.27), dir: V3(0, 0, -1), h: 1.35, maxW: 2.0, plaqueSide: 'below' });
+    }
+    ids.forEach((id, k) => {
+      const slot = workSlots[k];
+      if (!slot) return;
+      const placed = addWork(room, id, { ...common, ...slot });
+      if (kind === 'salon') pictureLight(placed);
+    });
+    return room;
+  }
+
+  // Attic: under a pitched roof with exposed rafters, skylights and fairy
+  // lights; polaroids along the knee walls.
+  function attic({ key, spec, t, accent, ids, cx, z0, doors }) {
+    const W = 9;
+    const eave = 2.3;
+    const ridge = 5.4;
+    const x0 = cx - W / 2;
+    const x1 = cx + W / 2;
+    const perSide = Math.max(2, Math.ceil(ids.length / 2));
+    const L = Math.max(14, 6 + perSide * 3.4);
+    const z1 = z0 + L;
+    const zm = (z0 + z1) / 2;
+    const room = makeRoom(key, { type: 'rect', x0, x1, z0, z1 }, 'wood', {
+      bg: '#2a2340',
+      fog: { type: 'linear', color: '#2a2340', near: 20, far: 60 },
+      envI: 0.4,
+    });
+    floorPlane(room, x0, x1, z0, z1, 0, new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.parquet(), { repeat: [W / 2.4, L / 2.4] }), roughness: 0.6 }));
+    const rug = mesh(room, new THREE.CircleGeometry(1.8, 48).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.checkerRug()), roughness: 1 }), cx, 0.01, zm);
+    rug.scale.set(1, 1, 1.6);
+    const knee = TX.toTexture(TX.bedroomWall(eave));
+    wall(room, L, eave, knee, x0, zm, V3(1, 0, 0), 0, 3);
+    wall(room, L, eave, knee, x1, zm, V3(-1, 0, 0), 0, 3);
+    const run = W / 2;
+    const slope = Math.hypot(run, ridge - eave);
+    const pitch = Math.atan2(ridge - eave, run);
+    const boards = std(0xc49a6c, 0.9, { side: THREE.DoubleSide });
+    for (const s of [-1, 1]) {
+      const roof = mesh(room, new THREE.PlaneGeometry(L, slope), boards, cx + (s * run) / 2, (eave + ridge) / 2, zm);
+      roof.rotation.order = 'YXZ';
+      roof.rotation.y = s < 0 ? Math.PI / 2 : -Math.PI / 2;
+      roof.rotation.x = Math.PI / 2 - pitch;
+    }
+    // Gable ends.
+    const gable = new THREE.Shape();
+    gable.moveTo(-run, 0);
+    gable.lineTo(run, 0);
+    gable.lineTo(run, eave);
+    gable.lineTo(0, ridge);
+    gable.lineTo(-run, eave);
+    gable.lineTo(-run, 0);
+    const gableMat = std(0xd9c7ef, 0.95, { side: THREE.DoubleSide });
+    mesh(room, new THREE.ShapeGeometry(gable), gableMat, cx, 0, z0);
+    mesh(room, new THREE.ShapeGeometry(gable), gableMat, cx, 0, z1);
+    const moon = mesh(room, new THREE.CircleGeometry(0.55, 32), new THREE.MeshBasicMaterial({ map: TX.nightWindow(), toneMapped: false }), cx, 4.3, z1 - 0.02);
+    moon.rotation.y = Math.PI;
+    // Rafters, ridge beam, collar ties.
+    const timber = std(0x7a5534, 0.8);
+    box(room, 0.18, 0.24, L, cx, ridge - 0.12, zm, timber);
+    for (let z = z0 + 0.6; z < z1 - 0.3; z += 1.2) {
+      for (const s of [-1, 1]) beam(room, V3(cx + s * (run - 0.05), eave - 0.02, z), V3(cx + s * 0.1, ridge - 0.08, z), 0.12, timber);
+    }
+    for (let z = z0 + 1.8; z < z1 - 1; z += 3.6) box(room, run * 2 * ((ridge - 4.1) / (ridge - eave)), 0.12, 0.12, cx, 4.1, z, timber);
+    // Roof lights on one slope, fairy lights along the ridge.
+    const sky = TX.nightWindow();
+    for (let z = z0 + 3; z < z1 - 2; z += 5) {
+      const u = 0.45;
+      const win = mesh(room, new THREE.PlaneGeometry(1.1, 1.3), new THREE.MeshBasicMaterial({ map: sky, toneMapped: false, side: THREE.DoubleSide }), cx + run * (1 - u) - 0.03, eave + (ridge - eave) * u - 0.03, z);
+      win.rotation.order = 'YXZ';
+      win.rotation.y = -Math.PI / 2;
+      win.rotation.x = Math.PI / 2 - pitch;
+    }
+    const fairy = [];
+    for (let i = 0; i <= 40; i++) {
+      const z = z0 + 0.4 + ((L - 0.8) * i) / 40;
+      const sag = Math.sin(((z - z0) / L) * Math.PI * 5) ** 2 * 0.28;
+      fairy.push(cx + 0.35, ridge - 0.35 - sag, z);
+    }
+    const lights = glowPoints(room, fairy, 0xffd9a8, 0.22);
+    animate(room, (tt) => {
+      lights.material.opacity = 0.8 + Math.sin(tt * 1.7) * 0.12;
+    });
+    addLights(room, [0xffe0f0, 0x5a4a7e, 0.85], [
+      [cx, 4.2, z0 + L * 0.28, 0xffd6b0, 12, 12],
+      [cx, 4.2, z0 + L * 0.72, 0xffd6b0, 12, 12],
+    ]);
+
+    const ink = 'hand';
+    addPortal(room, { pos: V3(cx, 0, z0 + 0.06), dir: V3(0, 0, 1), dest: doors.back.dest, subtitle: doors.back.subtitle, w: 2.2, h: 2.9, signW: 2.2, entrance: true, style: ink });
+    const slots = doors.links.length === 1
+      ? [{ pos: V3(cx, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.2, h: 2.9, signW: 2.0 }]
+      : [
+          { pos: V3(cx - 1.8, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.0, h: 2.6, signW: 1.8 },
+          { pos: V3(cx + 1.8, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.0, h: 2.6, signW: 1.8 },
+        ];
+    hangDoors(room, slots, doors.links, ink);
+    wingText(room, spec, V3(cx - 2.95, 1.55, z0 + 0.03), V3(0, 0, 1), ink, 1.9);
+
+    const common = workStyle(t, accent);
+    ids.forEach((id, k) => {
+      const west = k % 2 === 0;
+      const i = Math.floor(k / 2);
+      const z = z0 + 4 + i * 3.4;
+      addWork(room, id, { ...common, pos: V3(west ? x0 + 0.05 : x1 - 0.05, 1.28, z), dir: V3(west ? 1 : -1, 0, 0), h: 1.05, maxW: 1.6, tilt: (TX.hash(id) - 0.5) * 0.14 });
+    });
+    return room;
+  }
+
+  // The classic box: white void, screening room, or a plain salon/night/pastel room.
+  function classic({ key, spec, t, kind, accent, ids, cx, z0, doors, form }) {
+    const rows = Math.max(1, Math.ceil(Math.min(ids.length, 6) / 2));
+    const W = 12;
+    const L = 8 + rows * 5;
+    const H = t.height;
+    const x0 = cx - W / 2;
+    const x1 = cx + W / 2;
+    const z1 = z0 + L;
+    const cinema = kind === 'screening';
+    const dark = kind === 'night' || cinema;
+    const white = form === 'void' || (kind === 'white' && form !== 'rect');
+    const pastel = kind === 'pastel';
+    const bg = cinema ? '#0b0507' : dark ? '#0d0c20' : pastel ? '#2a2340' : '#f3f0ea';
+    const room = makeRoom(key, { type: 'rect', x0, x1, z0, z1 }, t.surface, {
+      bg,
+      fog: dark ? { type: 'exp2', color: bg, density: 0.022 } : { type: 'linear', color: bg, near: white ? 14 : 30, far: white ? 46 : 80 },
+      envI: dark ? 0.22 : white ? 1.0 : 0.45,
+    });
+    if (white) {
+      mesh(room, new THREE.PlaneGeometry(140, 140).rotateX(-Math.PI / 2), std(0xf7f5f1, 0.95), cx, 0, z0 + L / 2);
+      box(room, 11, 4.8, 0.3, cx, 2.4, z0 - 0.17, M.slab);
+    } else {
+      const wallCanvas = cinema ? TX.plainWall(H, '#3a0e16', '#1a0609') : dark ? TX.eyesWall(H) : pastel ? TX.bedroomWall(H) : TX.galleryWall(H);
+      const floorMat = cinema
+        ? std(0x2a0c12, 1)
+        : dark
+          ? std(0x17152e, 0.6, { metalness: 0.1 })
+          : pastel
+            ? new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.carpet(), { repeat: [W / 1.5, L / 1.5] }), roughness: 1 })
+            : new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.parquet(), { repeat: [W / 2, L / 2] }), roughness: 0.5 });
+      rectRoom(room, { x0, x1, z0, z1, H, wallCanvas, floorMat, ceilingMat: std(cinema ? 0x070304 : dark ? 0x0b0a1a : pastel ? 0x3a3166 : 0xf4efe5, 1) });
+    }
+    const hemi = cinema ? [0x9a6a70, 0x080305, 0.5] : dark ? [0x6b5fd6, 0x0a0915, 0.6] : pastel ? [0xffe0f0, 0x5a4a7e, 0.85] : white ? [0xffffff, 0xe8e2d6, 1.6] : [0xfff1dc, 0x6e5a44, 0.9];
+    addLights(room, hemi, [
+      [cx, H - 1.2, z0 + L * 0.3, cinema ? 0xffb38a : dark ? accent.getHex() : 0xfff1d8, cinema ? 14 : dark ? 28 : 22, 20],
+      [cx, H - 1.2, z0 + L * 0.75, cinema ? 0xffb38a : dark ? accent.getHex() : 0xfff1d8, cinema ? 12 : dark ? 22 : 26, 20],
+    ]);
+    const tall = H >= 5;
+    const ink = dark ? 'light' : pastel ? 'hand' : 'dark';
+    addPortal(room, { pos: V3(cx, 0, z0 + 0.06), dir: V3(0, 0, 1), dest: doors.back.dest, subtitle: doors.back.subtitle, w: tall ? 2.6 : 2.4, h: tall ? 3.4 : 3.0, signW: 3.0, style: ink, entrance: true });
+    const farH = Math.min(3.2, H - 1.2);
+    const xs = ids.length > 6 ? [3.8, -3.8] : [3.8, -3.8, 0];
+    const slots = xs.map((dx) => ({ pos: V3(cx + dx, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.4, h: farH, signW: 2.8 }));
+    doors.links.forEach((d, i) => {
+      if (white && slots[i]) box(room, 4.2, 4.6, 0.3, slots[i].pos.x, 2.3, z1 + 0.17, M.slab);
+    });
+    hangDoors(room, slots, doors.links, ink);
+    wingText(room, spec, V3(cx - 3.9, 2.4, z0 + 0.03), V3(0, 0, 1), ink, 3.0);
+    if (cinema) {
+      // Velvet benches, and ducts along the ceiling: this one is in the basement.
+      const velvet = std(0x4a0e17, 0.95);
+      for (let r = 0; r < rows; r++) {
+        const z = z0 + 6 + r * 5;
+        box(room, 1.1, 0.42, 2.6, cx, 0.21, z, velvet);
+        box(room, 1.0, 0.08, 2.5, cx, 0.04, z, M.black);
+        room.obstacles.push({ type: 'rect', x0: cx - 0.55, x1: cx + 0.55, z0: z - 1.3, z1: z + 1.3 });
+      }
+      const duct = std(0x2b2426, 0.5, { metalness: 0.6 });
+      for (const [dx, r] of [[-4.6, 0.22], [-3.9, 0.12], [4.4, 0.18]]) {
+        mesh(room, new THREE.CylinderGeometry(r, r, L, 16).rotateX(Math.PI / 2), duct, cx + dx, H - 0.35, z0 + L / 2);
+      }
+    }
+    const common = { ...workStyle(t, accent), float: white, shadow: white, obstacle: white };
+    ids.forEach((id, k) => {
+      const y = pastel ? 2.1 : 2.2;
+      const tilt = pastel ? (TX.hash(id) - 0.5) * 0.12 : 0;
+      let placed;
+      if (k < 6) {
+        const z = z0 + 6 + Math.floor(k / 2) * 5;
+        const west = k % 2 === 0;
+        const inset = white ? 2.2 : 0.04;
+        placed = addWork(room, id, { ...common, tilt, pos: V3(west ? x0 + inset : x1 - inset, cinema ? 2.6 : y, z), dir: V3(west ? 1 : -1, 0, 0), h: cinema ? 2.6 : 1.9, maxW: cinema ? 3.9 : 3.0 });
+      } else {
+        placed = addWork(room, id, { ...common, tilt, pos: V3(cx, y + 0.2, z1 - (white ? 2.2 : 0.04)), dir: V3(0, 0, -1), h: 2.3 });
+      }
+      if (kind === 'salon') pictureLight(placed);
+    });
+    return room;
+  }
+
+  return { buildStairHall, buildWing };
+}

@@ -116,6 +116,13 @@ export const CREDITS = {
     profileUrl: 'https://x.com/kitanya_design',
     confidence: 'medium',
   },
+  // Named by the collector, from her post advertising Slutcon.
+  HO09CQHbIAAPDF4: {
+    creator: 'Aella',
+    handle: '@Aella_Girl',
+    profileUrl: 'https://x.com/Aella_Girl',
+    confidence: 'medium',
+  },
   '4AzNhblWcUyL7tsq': {
     creator: 'Pleometric',
     handle: '@pleometric',
