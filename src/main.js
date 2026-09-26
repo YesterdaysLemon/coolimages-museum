@@ -259,15 +259,22 @@ function videoElement(v) {
   if (v.el) return v.el;
   const el = document.createElement('video');
   Object.assign(el, { muted: true, loop: true, playsInline: true, preload: 'auto', src: v.entry.video });
+  // Keep the poster until a real frame has been decoded, so a slow start
+  // never shows a black screen.
+  const swap = () => {
+    if (v.texture) return;
+    v.texture = new THREE.VideoTexture(el);
+    v.texture.colorSpace = THREE.SRGBColorSpace;
+    for (const mesh of v.meshes) {
+      mesh.material.map = v.texture;
+      mesh.material.needsUpdate = true;
+    }
+  };
   el.addEventListener(
     'playing',
     () => {
-      v.texture = new THREE.VideoTexture(el);
-      v.texture.colorSpace = THREE.SRGBColorSpace;
-      for (const mesh of v.meshes) {
-        mesh.material.map = v.texture;
-        mesh.material.needsUpdate = true;
-      }
+      if (el.requestVideoFrameCallback) el.requestVideoFrameCallback(swap);
+      else el.addEventListener('timeupdate', swap, { once: true });
     },
     { once: true },
   );
@@ -375,6 +382,7 @@ function updateCamera() {
     camera.rotation.set(player.pitch, player.yaw, player.roll, 'YXZ');
   }
   camera.updateProjectionMatrix();
+  camera.updateMatrixWorld();
 }
 
 function playerPose() {
@@ -495,6 +503,43 @@ function updateHover() {
     }
   }
   setHint(hint);
+}
+
+// Callout labels: on the work you're looking at (the default), on every
+// work, or off. Never while looking closer: the caption has the words then.
+const LABEL_MODES = ['look', 'always', 'off'];
+const LABEL_TEXT = { look: 'Labels: on the work you look at', always: 'Labels: always on', off: 'Labels: off' };
+let labelMode = 'look';
+try {
+  const saved = localStorage.getItem('coolimages.labels');
+  if (LABEL_MODES.includes(saved)) labelMode = saved;
+} catch {}
+function cycleLabels() {
+  labelMode = LABEL_MODES[(LABEL_MODES.indexOf(labelMode) + 1) % LABEL_MODES.length];
+  try {
+    localStorage.setItem('coolimages.labels', labelMode);
+  } catch {}
+  $('#labels-toggle').textContent = LABEL_TEXT[labelMode];
+  toast(LABEL_TEXT[labelMode]);
+}
+function updateDecals(dt) {
+  const k = Math.min(1, dt * 7);
+  for (const m of world.rooms[player.room].artworks) {
+    const d = m.userData.decal;
+    if (!d) continue;
+    const want = state === 'inspect' || state === 'transition' || labelMode === 'off' ? 0 : labelMode === 'always' || (state === 'walk' && hovered === m) ? 1 : 0;
+    const o = d.material.opacity + (want - d.material.opacity) * k;
+    d.material.opacity = o < 0.01 ? 0 : o;
+    d.visible = d.material.opacity > 0;
+  }
+}
+let toastTimer = null;
+function toast(text) {
+  const el = $('#toast');
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
 }
 
 let lastHint = null;
@@ -1092,6 +1137,8 @@ $('#museum-map').addEventListener('click', (e) => {
 });
 $('#minimap').addEventListener('click', openMap);
 for (const el of document.querySelectorAll('[data-open-map]')) el.addEventListener('click', openMap);
+$('#labels-toggle').textContent = LABEL_TEXT[labelMode];
+$('#labels-toggle').addEventListener('click', cycleLabels);
 $('#menu').addEventListener('click', () => {
   if (state === 'walk' || state === 'inspect') showPause('Menu');
 });
@@ -1163,6 +1210,7 @@ addEventListener('keydown', (e) => {
   }
   if (e.code === 'KeyM' && state !== 'loading') toggleMute();
   if (e.code === 'KeyC' && state !== 'loading') openCredits();
+  if (e.code === 'KeyL' && state !== 'loading' && state !== 'ready') cycleLabels();
   if (e.code === 'Tab' && (state === 'walk' || state === 'inspect') && $('#credits').hasAttribute('hidden')) {
     e.preventDefault();
     openMap();
@@ -1446,6 +1494,7 @@ function simulate(dt) {
   runAnimators(player.room, elapsed, dt, camera);
   if (state === 'walk') updateHover();
   else if (state !== 'inspect') setHint('');
+  updateDecals(dt);
   updateMarker(dt);
 }
 

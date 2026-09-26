@@ -60,8 +60,28 @@ export function rectMinus(outer, holes, h = 0) {
   return out;
 }
 
+// How works are shown, mixed per room: on the wall, on an easel, leaning
+// against the wall, hung on wires, floating, or on a freestanding panel.
+// Each wing takes its form's palette from a stable offset, so neighbouring
+// works differ and every wing mixes differently.
+const PALETTES = {
+  enfilade: ['wall', 'easel', 'wall', 'wire', 'wall', 'lean'],
+  basilica: ['wall', 'float', 'wire', 'wall', 'easel', 'wall'],
+  iron: ['wire', 'float', 'wall', 'wire', 'float', 'lean'],
+  crypt: ['lean', 'wall', 'easel', 'lean', 'wall'],
+  octagon: ['wall', 'easel', 'wall', 'lean'],
+  attic: ['wall', 'easel', 'wall', 'lean', 'wall', 'easel'],
+  void: ['float', 'easel', 'float', 'panel', 'float', 'easel'],
+  rect: ['wall', 'easel', 'wall', 'lean', 'wire'],
+};
+export function displayModes(form, key, n) {
+  const palette = PALETTES[form] || ['wall'];
+  const offset = Math.floor(TX.hash(`${key}:display`) * palette.length);
+  return Array.from({ length: n }, (_, k) => palette[(k + offset) % palette.length]);
+}
+
 export function makeArchitecture(ctx) {
-  const { M, V3, facing, additive, glowTex, beamTex, makeRoom, addLights, addWork, addPortal, addText, animate, pictureLight, rectRoom, art, withheld, TEMPLATES } = ctx;
+  const { M, V3, facing, additive, glowTex, beamTex, makeRoom, addLights, addWork, addPortal, addText, animate, pictureLight, rectRoom, easel, art, withheld, TEMPLATES } = ctx;
   const std = (color, roughness = 0.85, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness, ...extra });
   const twoSided = (color, roughness = 0.9, extra = {}) => std(color, roughness, { side: THREE.DoubleSide, ...extra });
 
@@ -264,6 +284,60 @@ export function makeArchitecture(ctx) {
   function worksOf(spec) {
     return (spec.works || []).filter((id) => art.has(id) || withheld.has(id));
   }
+  // Shows one work. `slot` is where it would hang on a wall (centre, facing
+  // `dir`); floor-standing modes stand `inset` metres out from that spot.
+  const wireMat = std(0x2a2622, 0.4, { metalness: 0.6 });
+  function hang(room, id, slot, mode, common, env = {}) {
+    const floorY = env.floorY ?? 0;
+    const d = slot.dir.clone().normalize();
+    const at = (dist, y) => V3(slot.pos.x + d.x * dist, y, slot.pos.z + d.z * dist);
+    const inset = env.inset ?? 1.8;
+    if (mode === 'easel') return easel(room, id, at(inset, floorY), d, { ...common, h: Math.min(1.25, slot.h), maxW: 1.5 });
+    if (mode === 'float') {
+      const glow = env.dark ? { floorGlow: common.glow } : { shadow: true };
+      return addWork(room, id, { ...common, ...glow, pos: at(inset + 0.4, floorY + 2.0), dir: d, h: Math.min(slot.h, 1.8), maxW: 2.4, float: true, obstacle: true, floorY });
+    }
+    if (mode === 'panel') {
+      const res = addWork(room, id, { ...common, pos: at(inset + 0.12, floorY + 1.75), dir: d, h: Math.min(slot.h, 1.7), maxW: 2.2 });
+      const fw = (res?.frame.w ?? 1.6) + 1.1;
+      const c = at(inset, floorY + 1.55);
+      box(room, fw, 3.1, 0.2, c.x, c.y, c.z, M.slab, facing(d));
+      const hx = Math.abs(d.z) * (fw / 2) + Math.abs(d.x) * 0.1;
+      const hz = Math.abs(d.x) * (fw / 2) + Math.abs(d.z) * 0.1;
+      room.obstacles.push({ type: 'rect', x0: c.x - hx, x1: c.x + hx, z0: c.z - hz, z1: c.z + hz, y0: floorY - 0.5, y1: floorY + 0.5 });
+      return res;
+    }
+    if (mode === 'lean') {
+      const lean = 0.13;
+      const res = addWork(room, id, { ...common, ...slot, h: Math.min(slot.h * 1.05, env.leanMax ?? 2.0), lean, pos: at(0.3, floorY + 1) });
+      if (!res) return res;
+      const fh = res.frame.h;
+      res.group.position.copy(at(0.06 + (fh / 2) * Math.sin(lean), floorY + 0.03 + (fh / 2) * Math.cos(lean)));
+      const foot = at(0.32, floorY);
+      room.obstacles.push({ type: 'circle', x: foot.x, z: foot.z, r: Math.min(0.9, res.frame.w / 2), y0: floorY - 0.5, y1: floorY + 0.5 });
+      return res;
+    }
+    if (mode === 'wire') {
+      const res = addWork(room, id, { ...common, ...slot, pos: at(0.1, slot.pos.y), lean: -0.05 });
+      if (!res) return res;
+      const top = slot.pos.y + res.frame.h / 2 + (res.frame.cy || 0);
+      const railY = env.wireTo ?? top + 1.1;
+      if (railY < top + 0.25) return res;
+      const r = V3(d.z, 0, -d.x);
+      const fw = res.frame.w;
+      const c = at(0.03, railY);
+      box(room, fw + 0.5, 0.05, 0.05, c.x, c.y, c.z, M.brass, facing(d));
+      for (const sx of [-1, 1]) {
+        const off = (fw / 2 - 0.12) * sx;
+        const a = V3(slot.pos.x + d.x * 0.14 + r.x * off, top - 0.03, slot.pos.z + d.z * 0.14 + r.z * off);
+        const b = V3(slot.pos.x + d.x * 0.03 + r.x * off * 0.7, railY, slot.pos.z + d.z * 0.03 + r.z * off * 0.7);
+        beam(room, a, b, 0.012, wireMat);
+      }
+      return res;
+    }
+    return addWork(room, id, { ...common, ...slot });
+  }
+
   function workStyle(t, accent) {
     return { frame: t.frame, plaque: t.plaque, ink: t.ink, margin: 1.0, maxW: 3.0, glow: accent.getHex() };
   }
@@ -642,13 +716,16 @@ export function makeArchitecture(ctx) {
     const wy = { temple: 2.5, iron: 2.8, crypt: 1.8 }[v];
     const wh = { temple: 2.1, iron: 2.3, crypt: 1.45 }[v];
     const flames = [];
+    const plan = displayModes(v === 'temple' ? 'basilica' : v, key, ids.length);
+    const env = { dark, inset: 1.7, wireTo: v === 'iron' ? Hw + 0.3 : v === 'crypt' ? 2.8 : Hw - 0.1, leanMax: v === 'crypt' ? 1.6 : 2.0 };
     ids.forEach((id, k) => {
       const i = Math.floor(k / 2);
       const west = k % 2 === 0;
       const z = zc0 + (i + 0.5) * bay;
-      const placed = addWork(room, id, { ...common, pos: V3(west ? x0 + 0.05 : x1 - 0.05, wy, z), dir: V3(west ? 1 : -1, 0, 0), h: wh, maxW: 3.1 });
-      if (kind === 'salon') pictureLight(placed);
-      if (v === 'crypt') {
+      const mode = plan[k];
+      const placed = hang(room, id, { pos: V3(west ? x0 + 0.05 : x1 - 0.05, wy, z), dir: V3(west ? 1 : -1, 0, 0), h: wh, maxW: 3.1 }, mode, common, env);
+      if (kind === 'salon' && mode === 'wall') pictureLight(placed);
+      if (v === 'crypt' && (mode === 'wall' || mode === 'lean')) {
         const fx = west ? x0 + 0.9 : x1 - 0.9;
         for (const dz of [-1.6, 1.6]) {
           mesh(room, new THREE.CylinderGeometry(0.035, 0.05, 1.25, 8), M.brass, fx, 0.62, z + dz);
@@ -738,10 +815,12 @@ export function makeArchitecture(ctx) {
     }
     const common = workStyle(t, accent);
     const flames = [];
+    const plan = displayModes('octagon', key, ids.length);
     [(3 * Math.PI) / 4, (-3 * Math.PI) / 4, Math.PI / 4, -Math.PI / 4].slice(0, ids.length).forEach((phi, k) => {
       const f = face(phi, 0.06, 2.6);
-      const placed = addWork(room, ids[k], { ...common, pos: f.pos, dir: f.dir, h: 2.2, maxW: 3.6 });
-      if (!white) {
+      const mode = plan[k];
+      const placed = hang(room, ids[k], { pos: f.pos, dir: f.dir, h: 2.2, maxW: 3.6 }, mode, common, { inset: 1.8, wireTo: Hw - 0.2, leanMax: 2.0 });
+      if (!white && mode === 'wall') {
         pictureLight(placed);
         const bx = cx + Math.sin(phi) * (A - 1.2);
         const bz = cz + Math.cos(phi) * (A - 1.2);
@@ -827,13 +906,15 @@ export function makeArchitecture(ctx) {
     ];
     if (spare.some((s) => s.dir.z !== 0)) workSlots.push({ pos: V3(cx, 2.4, z1 - 0.04), dir: V3(0, 0, -1), h: 2.3, maxW: 4 });
     for (const k of [1, 2]) {
-      for (const s of [-1, 1]) workSlots.push({ pos: V3(cx + s * 2.95, 2.3, z0 + k * D - 0.27), dir: V3(0, 0, -1), h: 1.35, maxW: 2.0, plaqueSide: 'below' });
+      for (const s of [-1, 1]) workSlots.push({ pos: V3(cx + s * 2.95, 2.3, z0 + k * D - 0.27), dir: V3(0, 0, -1), h: 1.35, maxW: 2.0, plaqueSide: 'below', fixed: true });
     }
+    const plan = displayModes('enfilade', key, ids.length);
     ids.forEach((id, k) => {
       const slot = workSlots[k];
       if (!slot) return;
-      const placed = addWork(room, id, { ...common, ...slot });
-      if (kind === 'salon') pictureLight(placed);
+      const mode = slot.fixed ? 'wall' : plan[k];
+      const placed = hang(room, id, slot, mode, common, { inset: 1.9, wireTo: H - 0.15, leanMax: 2.2 });
+      if (kind === 'salon' && mode === 'wall') pictureLight(placed);
     });
     return room;
   }
@@ -927,11 +1008,13 @@ export function makeArchitecture(ctx) {
     wingText(room, spec, V3(cx - 2.95, 1.55, z0 + 0.03), V3(0, 0, 1), ink, 1.9);
 
     const common = workStyle(t, accent);
+    const plan = displayModes('attic', key, ids.length);
     ids.forEach((id, k) => {
       const west = k % 2 === 0;
       const i = Math.floor(k / 2);
       const z = z0 + 4 + i * 3.4;
-      addWork(room, id, { ...common, pos: V3(west ? x0 + 0.05 : x1 - 0.05, 1.28, z), dir: V3(west ? 1 : -1, 0, 0), h: 1.05, maxW: 1.6, tilt: (TX.hash(id) - 0.5) * 0.14 });
+      const slot = { pos: V3(west ? x0 + 0.05 : x1 - 0.05, 1.28, z), dir: V3(west ? 1 : -1, 0, 0), h: 1.05, maxW: 1.6, tilt: (TX.hash(id) - 0.5) * 0.14 };
+      hang(room, id, slot, plan[k], common, { inset: 2.0, wireTo: 2.25, leanMax: 1.3 });
     });
     return room;
   }
@@ -999,20 +1082,23 @@ export function makeArchitecture(ctx) {
         mesh(room, new THREE.CylinderGeometry(r, r, L, 16).rotateX(Math.PI / 2), duct, cx + dx, H - 0.35, z0 + L / 2);
       }
     }
-    const common = { ...workStyle(t, accent), float: white, shadow: white, obstacle: white };
+    const common = workStyle(t, accent);
+    const plan = displayModes(cinema ? 'cinema' : white ? 'void' : 'rect', key, ids.length);
+    const env = { dark, inset: white ? 1.8 : 1.7, wireTo: H - 0.15, leanMax: Math.min(2.1, H - 1.2) };
     ids.forEach((id, k) => {
       const y = pastel ? 2.1 : 2.2;
       const tilt = pastel ? (TX.hash(id) - 0.5) * 0.12 : 0;
-      let placed;
+      let slot;
       if (k < 6) {
         const z = z0 + 6 + Math.floor(k / 2) * 5;
         const west = k % 2 === 0;
-        const inset = white ? 2.2 : 0.04;
-        placed = addWork(room, id, { ...common, tilt, pos: V3(west ? x0 + inset : x1 - inset, cinema ? 2.6 : y, z), dir: V3(west ? 1 : -1, 0, 0), h: cinema ? 2.6 : 1.9, maxW: cinema ? 3.9 : 3.0 });
+        slot = { tilt, pos: V3(west ? x0 + 0.04 : x1 - 0.04, cinema ? 2.6 : y, z), dir: V3(west ? 1 : -1, 0, 0), h: cinema ? 2.6 : 1.9, maxW: cinema ? 3.9 : 3.0 };
       } else {
-        placed = addWork(room, id, { ...common, tilt, pos: V3(cx, y + 0.2, z1 - (white ? 2.2 : 0.04)), dir: V3(0, 0, -1), h: 2.3 });
+        slot = { tilt, pos: V3(cx, y + 0.2, z1 - 0.04), dir: V3(0, 0, -1), h: 2.3 };
       }
-      if (kind === 'salon') pictureLight(placed);
+      const mode = plan[k];
+      const placed = hang(room, id, slot, mode, common, env);
+      if (kind === 'salon' && mode === 'wall') pictureLight(placed);
     });
     return room;
   }

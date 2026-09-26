@@ -79,6 +79,8 @@ enters Git or the Docker image.
 - Deploy Manager's `docker run` has no volume mounts, so content is served by Caddy from the host rather than from the container.
 - Images in the folder that aren't in `WORKS` or the generated catalog appear on the Rotunda's "New acquisitions" easels (up to 4, newest first).
 - Portal paintings show render-to-texture previews made once at load; `renderer.compile` then warms every room.
+- Callout labels (the DK-style points of interest) are hidden by default and fade in on the work you're looking at; never while looking closer. L or the menu cycles "on the work you look at" / "always on" / "off" (kept in localStorage). `TX.calloutDecal` measures labels first: margins fit the text and clear the frame border (`gap`), wrapped labels are split evenly, and the canvas grows so nothing is cut off.
+- How works are shown is mixed per wing (`PALETTES` / `displayModes` in `src/architecture.js`, `hang()`): on the wall, on an easel, leaning against the wall, on wires from a rail, floating, or on a freestanding panel. Floor-standing works stand in front of their wall spot. The spiral and the cinema stay on the walls. `easel()` in `src/world.js` is shared: the work rests on the ledge in front of the legs and the clamp grips its top edge.
 - Videos show their poster until their room is entered, then loop muted (`syncVideos` in `src/main.js`; only the current room's videos load or play). Looking closer (E) unmutes a video with audio and ducks the music, unless sound is off (M). The `screening` template (dark velvet room, bezel screens with light spill, benches) is meant for videos, but videos can hang in any template. `server.mjs` answers byte ranges locally; Caddy does in production.
 
 ### Verify

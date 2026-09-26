@@ -868,21 +868,46 @@ const CALLOUT = {
 };
 
 // DK/Eyewitness-style annotation layer: labels in the margins, leader lines
-// running into the picture. The decal is centred on the artwork.
-export function calloutDecal(callouts, artW, artH, { margin = 1.3, ppm = 200, style = 'dark', reserve = 0 } = {}) {
-  const padY = 0.3;
-  const W = artW + margin * 2;
-  const H = artH + padY * 2;
-  const scale = Math.min(ppm, 4096 / W, 4096 / H);
-  const c = makeCanvas(W * scale, H * scale);
-  const ctx = c.getContext('2d');
+// running into the picture. Everything is measured first: the margins fit
+// the labels, a label that wraps is split into even lines, labels stack
+// without overlapping, and the canvas grows (symmetrically, so the decal
+// stays centred on the work) until nothing is cut off.
+export function calloutDecal(callouts, artW, artH, { style = 'dark', reserve = 0, gap: frameGap = 0.12 } = {}) {
   const st = CALLOUT[style] || CALLOUT.dark;
-  // Label size grows with the work so murals stay readable from afar.
-  const fontM = Math.min(0.2, Math.max(0.115, 0.06 + 0.03 * Math.max(artW, artH)));
-  const fontPx = Math.round(fontM * scale);
-  ctx.font = `italic 500 ${fontPx}px ${FONT.serif}`;
-  const lineH = fontPx * 1.12;
-  const maxTextW = (margin - 0.24) * scale;
+  const fontM = Math.min(0.2, Math.max(0.11, 0.06 + 0.028 * Math.max(artW, artH)));
+  const maxLine = Math.max(0.85, Math.min(1.4, fontM * 8.5));
+  const probe = makeCanvas(8, 8).getContext('2d');
+  const PPM = 200;
+  const fontFor = (ppm) => `italic 500 ${Math.round(fontM * ppm)}px ${FONT.serif}`;
+  probe.font = fontFor(PPM);
+  const width = (t) => probe.measureText(t).width / PPM;
+  const wrap = (text) => {
+    const words = String(text).trim().split(/\s+/);
+    if (width(words.join(' ')) <= maxLine || words.length < 2) return [words.join(' ')];
+    // Two even lines if they fit, else greedy lines.
+    let best = null;
+    for (let i = 1; i < words.length; i++) {
+      const a = words.slice(0, i).join(' ');
+      const b = words.slice(i).join(' ');
+      const w = Math.max(width(a), width(b));
+      if (!best || w < best.w) best = { w, lines: [a, b] };
+    }
+    if (best.w <= maxLine) return best.lines;
+    const lines = [];
+    let line = '';
+    for (const word of words) {
+      const next = line ? `${line} ${word}` : word;
+      if (line && width(next) > maxLine) {
+        lines.push(line);
+        line = word;
+      } else line = next;
+    }
+    if (line) lines.push(line);
+    return lines;
+  };
+
+  const lineH = fontM * 1.16;
+  const gap = fontM * 0.5;
   const left = [];
   const right = [];
   for (const co of [...callouts].sort((a, b) => a.u - b.u)) {
@@ -890,40 +915,55 @@ export function calloutDecal(callouts, artW, artH, { margin = 1.3, ppm = 200, st
     else if (co.u > 0.58) right.push(co);
     else (left.length <= right.length ? left : right).push(co);
   }
-  const gap = 0.06 * scale;
-  const place = (list, isLeft) => {
-    list.sort((a, b) => a.v - b.v);
-    const top = padY * scale;
-    const bottom = (padY + artH - (isLeft ? 0 : reserve)) * scale;
-    const items = [];
+  // Stack one side: each label centred on its point where possible, pushed
+  // down past the one above, and the whole stack lifted if it runs too low.
+  const stack = (list, isLeft) => {
+    const items = list
+      .sort((a, b) => a.v - b.v)
+      .map((co) => {
+        const lines = wrap(co.t);
+        return { co, lines, h: lines.length * lineH, w: Math.max(...lines.map(width)) };
+      });
     let prev = -Infinity;
-    for (const co of list) {
-      const lines = wrapLines(ctx, co.t, maxTextW);
-      const h = lines.length * lineH;
-      const want = (padY + co.v * artH) * scale - lineH / 2;
-      const y = Math.max(want, prev + gap, top);
-      items.push({ co, lines, h, y });
-      prev = y + h;
+    for (const it of items) {
+      it.y = Math.max(it.co.v * artH - it.h / 2, prev + gap);
+      prev = it.y + it.h;
     }
-    if (items.length) {
-      const over = prev - bottom;
-      if (over > 0) {
-        const room = items[0].y - top;
-        const shift = Math.min(over, room);
-        for (const it of items) it.y -= shift;
-      }
-    }
-    const labelX = isLeft ? (margin - 0.12) * scale : (margin + artW + 0.12) * scale;
-    for (const { co, lines, y } of items) {
-      const tx = (margin + co.u * artW) * scale;
-      const ty = (padY + co.v * artH) * scale;
-      const ay = y + lineH / 2;
-      const ax = isLeft ? labelX + 0.05 * scale : labelX - 0.05 * scale;
-      const elbow = isLeft ? ax + 0.1 * scale : ax - 0.1 * scale;
-      const lw = Math.max(2, 0.011 * scale);
-      for (const [color, width] of [[st.halo, lw * 3.2], [st.line, lw]]) {
+    const floor = artH - (isLeft ? 0 : reserve);
+    const over = prev - floor;
+    if (items.length && over > 0) for (const it of items) it.y -= over;
+    return items;
+  };
+  const L = stack(left, true);
+  const R = stack(right, false);
+  const all = [...L, ...R];
+  const lead = 0.34;
+  // Labels start clear of the frame, which sits in front of this layer.
+  const margin = Math.max(0.3, ...all.map((it) => it.w + lead + frameGap));
+  const top = Math.max(0, ...all.map((it) => -it.y));
+  const bottom = Math.max(0, ...all.map((it) => it.y + it.h - artH));
+  const padY = 0.12 + Math.max(top, bottom);
+  const W = artW + margin * 2;
+  const H = artH + padY * 2;
+  const scale = Math.min(PPM, 4096 / W, 4096 / H);
+  const c = makeCanvas(Math.ceil(W * scale), Math.ceil(H * scale));
+  const ctx = c.getContext('2d');
+  ctx.font = fontFor(scale);
+  ctx.textBaseline = 'middle';
+  const X = (m) => m * scale;
+  const Y = (m) => (padY + m) * scale;
+  const lw = Math.max(2, 0.011 * scale);
+  for (const [items, isLeft] of [[L, true], [R, false]]) {
+    const edge = isLeft ? margin - frameGap : margin + artW + frameGap;
+    for (const { co, lines, h, y } of items) {
+      const tx = X(margin + co.u * artW);
+      const ty = Y(co.v * artH);
+      const ay = Y(y + h / 2);
+      const ax = X(isLeft ? edge + 0.05 : edge - 0.05);
+      const elbow = X(isLeft ? edge + 0.15 : edge - 0.15);
+      for (const [color, w] of [[st.halo, lw * 3.2], [st.line, lw]]) {
         ctx.strokeStyle = color;
-        ctx.lineWidth = width;
+        ctx.lineWidth = w;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -940,13 +980,18 @@ export function calloutDecal(callouts, artW, artH, { margin = 1.3, ppm = 200, st
       ctx.beginPath();
       ctx.arc(tx, ty, 0.018 * scale, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = st.ink;
+      // Labels sit flush against their leader line; a soft halo keeps them
+      // legible over busy walls.
       ctx.textAlign = isLeft ? 'right' : 'left';
-      ctx.textBaseline = 'middle';
-      lines.forEach((line, i) => ctx.fillText(line, labelX, ay + i * lineH));
+      lines.forEach((line, i) => {
+        const ly = Y(y + (i + 0.5) * lineH);
+        ctx.lineWidth = lw * 2.4;
+        ctx.strokeStyle = st.halo;
+        ctx.strokeText(line, X(edge), ly);
+        ctx.fillStyle = st.ink;
+        ctx.fillText(line, X(edge), ly);
+      });
     }
-  };
-  place(left, true);
-  place(right, false);
+  }
   return { texture: toTexture(c), width: W, height: H };
 }

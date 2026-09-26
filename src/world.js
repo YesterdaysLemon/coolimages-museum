@@ -333,21 +333,21 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     const plaqueW = 0.5;
     const plaqueH = plaqueW / TX.PLAQUE_ASPECT;
     const callouts = o.callouts !== false && work?.callouts?.length ? work.callouts : null;
+    let decalMesh = null;
     if (callouts) {
       const decal = TX.calloutDecal(callouts, w, h, {
-        margin: o.margin ?? 1.3,
         style: o.ink || 'dark',
+        gap: Math.max(0.12, (frame.w - w) / 2 + 0.1),
         reserve: plaqueStyle && o.plaqueSide !== 'below' ? plaqueH + 0.12 : 0,
       });
-      const dm = new THREE.Mesh(
+      decalMesh = new THREE.Mesh(
         new THREE.PlaneGeometry(decal.width, decal.height),
-        new THREE.MeshBasicMaterial({ map: decal.texture, transparent: true, depthWrite: false, toneMapped: false }),
+        new THREE.MeshBasicMaterial({ map: decal.texture, transparent: true, opacity: 0, depthWrite: false, toneMapped: false }),
       );
-      dm.position.z = 0.022;
-      dm.renderOrder = 2;
-      g.add(dm);
-      viewW = Math.max(viewW, decal.width - 0.3);
-      viewH = Math.max(viewH, decal.height - 0.3);
+      decalMesh.position.z = 0.022;
+      decalMesh.renderOrder = 2;
+      decalMesh.visible = false;
+      g.add(decalMesh);
     }
     if (plaqueStyle) {
       const plaque = customPlaque(
@@ -366,7 +366,7 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
       if (plaqueStyle === 'note') plaque.rotation.z = (TX.hash(`${id}n`) - 0.5) * 0.14;
       g.add(plaque);
     }
-    mesh.userData = { id, entry, work, room: room.id, viewW, viewH, group: g };
+    mesh.userData = { id, entry, work, room: room.id, viewW, viewH, group: g, decal: decalMesh };
     world.artworks.push(mesh);
     room.artworks.push(mesh);
 
@@ -447,6 +447,69 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     room.portals.push(portal);
     world.portals.push(portal);
     return portal;
+  }
+
+  // ------------------------------------------------------------- easels
+  const FRAME_PAD = { museum: 0.23, gilded: 0.34, polaroid: 0.36, lightbox: 0.06, bare: 0, screen: 0.14, oval: 0 };
+  const easelWood = new THREE.MeshStandardMaterial({ color: 0x8a6a45, roughness: 0.7 });
+  // A studio A-frame at floor point `pos`, facing `dir`. Two front legs lean
+  // back at the work's angle, a rear leg props them, a ledge holds the work.
+  function easel(room, id, pos, dir, o = {}) {
+    const entry = art.get(id);
+    const aspect = entry?.aspect || WORKS[id]?.aspect || 0.8;
+    const frame = o.frame || 'museum';
+    const h = Math.min(o.h ?? 1.1, (o.maxW ?? 1.4) / aspect);
+    const pad = FRAME_PAD[frame] ?? 0.2;
+    const lean = 0.126;
+    const tilt = Math.tan(lean);
+    const ledgeY = 0.88;
+    const legZ = (y) => 0.14 - y * tilt;
+    const ledgeZ = legZ(ledgeY) + 0.05;
+    const half = (h + pad) / 2;
+    const cy = ledgeY + 0.025 + half * Math.cos(lean);
+    const cz = ledgeZ + 0.03 - half * Math.sin(lean);
+    const topY = ledgeY + 0.025 + (h + pad) * Math.cos(lean);
+    const headY = Math.max(2.05, topY + 0.16);
+    const g = new THREE.Group();
+    g.position.copy(pos);
+    g.rotation.y = facing(dir);
+    room.group.add(g);
+    const beam = (a, b, size = 0.05) => {
+      const d = new THREE.Vector3().subVectors(b, a);
+      const m = new THREE.Mesh(new THREE.BoxGeometry(size, d.length(), size), easelWood);
+      m.position.copy(a).addScaledVector(d, 0.5);
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+      g.add(m);
+    };
+    const spread = Math.max(0.42, (h * aspect) / 2 * 0.7);
+    const foot = (sx) => V3(sx * spread, 0, legZ(0));
+    const head = (sx) => V3(sx * 0.1, headY, legZ(headY));
+    const along = (sx, y) => foot(sx).lerp(head(sx), y / headY);
+    beam(foot(-1), head(-1));
+    beam(foot(1), head(1));
+    beam(V3(0, 0, -0.75), V3(0, headY - 0.1, legZ(headY - 0.1) - 0.04));
+    beam(along(-1, 0.42), along(1, 0.42), 0.035);
+    const ledge = new THREE.Mesh(new THREE.BoxGeometry(Math.max(0.95, h * aspect + 0.12), 0.045, 0.16), easelWood);
+    ledge.position.set(0, ledgeY, ledgeZ);
+    g.add(ledge);
+    const clamp = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.06, 0.12), easelWood);
+    clamp.position.set(0, topY + 0.035, legZ(topY) + 0.04);
+    g.add(clamp);
+    const f = V3(Math.sin(facing(dir)), 0, Math.cos(facing(dir)));
+    const res = addWork(room, id, {
+      ...o,
+      pos: V3(pos.x + f.x * cz, pos.y + cy, pos.z + f.z * cz),
+      dir,
+      h,
+      lean,
+      frame,
+      plaqueSide: 'ledge',
+      float: false,
+      shadow: false,
+      obstacle: false,
+    });
+    room.obstacles.push({ type: 'circle', x: pos.x - f.x * 0.2, z: pos.z - f.z * 0.2, r: 0.75, y0: pos.y - 0.5, y1: pos.y + 0.5 });
+    return res;
   }
 
   // ------------------------------------------------------------ Rotundas
@@ -631,45 +694,7 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     const slots = [[-3.0, 2.4], [3.0, 2.4], [-3.0, -2.4], [3.0, -2.4]];
     acquisitions.slice(0, slots.length).forEach((id, i) => {
       const [x, z] = slots[i];
-      // Studio A-frame: two front legs splayed slightly and leaning back, one
-      // rear leg, a ledge the painting rests on, and a cross brace.
-      const wood = new THREE.MeshStandardMaterial({ color: 0x8a6a45, roughness: 0.7 });
-      const beam = (a, b, size = 0.05) => {
-        const dir = new THREE.Vector3().subVectors(b, a);
-        const m = new THREE.Mesh(new THREE.BoxGeometry(size, dir.length(), size), wood);
-        m.position.copy(a).addScaledVector(dir, 0.5);
-        m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
-        g.add(m);
-      };
-      const lean = 0.126;
-      const foot = (sx) => V3(x + sx * 0.42, 0, z + 0.14);
-      const head = (sx) => V3(x + sx * 0.1, 2.05, z - 0.12);
-      const along = (sx, y) => foot(sx).lerp(head(sx), y / 2.05);
-      beam(foot(-1), head(-1));
-      beam(foot(1), head(1));
-      beam(V3(x, 0, z - 0.75), V3(x, 1.95, z - 0.16));
-      beam(along(-1, 0.42), along(1, 0.42), 0.035);
-      const ledgeY = 0.88;
-      const ledgeZ = along(1, ledgeY).z + 0.05;
-      const ledge = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.045, 0.16), wood);
-      ledge.position.set(x, ledgeY, ledgeZ);
-      g.add(ledge);
-      const clamp = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.06, 0.07), wood);
-      clamp.position.set(x, 2.02, z - 0.1);
-      g.add(clamp);
-      // The framed work (museum frame adds 0.23 m) sits on the ledge, tilted to
-      // match the legs.
-      const h = 1.1;
-      const half = (h + 0.23) / 2;
-      addWork(room, id, {
-        pos: V3(x, ledgeY + 0.025 + half * Math.cos(lean), ledgeZ - 0.02 - half * Math.sin(lean)),
-        dir: V3(0, 0, 1),
-        h,
-        lean,
-        frame: 'museum',
-        plaqueSide: 'ledge',
-      });
-      room.obstacles.push({ type: 'circle', x, z: z - 0.2, r: 0.75 });
+      easel(room, id, V3(x, 0, z), V3(0, 0, 1), { h: 1.1, frame: 'museum' });
     });
     return room;
   }
@@ -1201,7 +1226,7 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
   buildEyes();
   buildFamiliars();
   buildBedroom();
-  const arch = makeArchitecture({ M, V3, facing, additive, glowTex, beamTex, makeRoom, addLights, addWork, addPortal, addText, animate, pictureLight, rectRoom, art, withheld, TEMPLATES });
+  const arch = makeArchitecture({ M, V3, facing, additive, glowTex, beamTex, makeRoom, addLights, addWork, addPortal, addText, animate, pictureLight, rectRoom, easel, art, withheld, TEMPLATES });
   if (plan.stairs) {
     const { up, down, ground } = plan.stairs;
     const name = (k) => WINGS[k].name;
