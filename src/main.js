@@ -57,7 +57,7 @@ let camPose = null;
 let inspect = null;
 let rollSign = 1;
 const keys = new Set();
-const player = { x: 0, z: 6.2, y: 0, ey: 0, yaw: 0, pitch: -0.04, roll: 0, vx: 0, vz: 0, bob: 0, stepAcc: 0, room: 'lobby' };
+const player = { x: 0, z: 19.6, y: 0, ey: 0, yaw: 0, pitch: -0.04, roll: 0, vx: 0, vz: 0, bob: 0, stepAcc: 0, room: 'lobby' };
 const touchMove = { x: 0, y: 0 };
 
 // ------------------------------------------------------------------ helpers
@@ -193,7 +193,7 @@ async function boot() {
   const art = await loadArt(manifest.items);
   setStatus('Lighting the rooms…');
   await new Promise((r) => setTimeout(r, 30));
-  // Anything no room has claimed goes on the Rotunda's acquisition easels.
+  // Anything no room has claimed goes on the Entrance Hall's acquisition easels.
   const placed = new Set(Object.keys(WORKS).filter((id) => !WORKS[id].generated));
   for (const wing of Object.values(layout?.wings || {})) for (const id of wing.works || []) placed.add(id);
   const acquisitions = manifest.items.filter((i) => !placed.has(i.id)).map((i) => i.id).reverse();
@@ -215,6 +215,7 @@ async function boot() {
   renderCredits();
   renderPreviews();
   enterRoom('lobby');
+  arriveAtStart(world.rooms.lobby);
   updateCamera();
   renderer.render(scene, camera);
   state = 'ready';
@@ -535,6 +536,11 @@ function updateDecals(dt) {
     const o = d.material.opacity + (want - d.material.opacity) * k;
     d.material.opacity = o < 0.01 ? 0 : o;
     d.visible = d.material.opacity > 0;
+    // The work you're looking at gets its labels drawn over everything (until
+    // they have faded out), so a nearby wall, column or frame can't cut them.
+    if (hovered === m) d.userData.over = true;
+    else if (!d.visible) d.userData.over = false;
+    d.material.depthTest = !d.userData.over;
   }
 }
 let toastTimer = null;
@@ -1106,20 +1112,24 @@ function closeMap(relock = true) {
   if (relock) requestLock();
 }
 
+// Where a room is entered from the map: its start (inside the museum's front
+// doors), else in front of its entrance.
+function arriveAtStart(room) {
+  const s = room.start ? { y: 0, ...room.start } : spawnFrom(room.portals.find((p) => p.entrance) || room.landing || room.portals[0]);
+  Object.assign(player, { x: s.x, z: s.z, y: s.y, ey: s.y, yaw: s.yaw, pitch: room.start ? -0.04 : 0, vx: 0, vz: 0 });
+  settle(room.id);
+  player.ey = player.y;
+}
+
 // Revisit a room: fade out, arrive at its entrance, fade in.
 function travelTo(id) {
   closeMap(false);
   requestLock();
-  const room = world.rooms[id];
-  const arrival = room.portals.find((p) => p.entrance) || room.landing || room.portals[0];
   state = 'transition';
   audio.whoosh();
   runAnim(reducedMotion ? 0.2 : 0.5, (t) => setFade(smooth(t)), () => {
     enterRoom(id);
-    const s = spawnFrom(arrival);
-    Object.assign(player, { x: s.x, z: s.z, y: s.y, ey: s.y, yaw: s.yaw, pitch: 0, vx: 0, vz: 0 });
-    settle(id);
-    player.ey = player.y;
+    arriveAtStart(world.rooms[id]);
     runAnim(reducedMotion ? 0.2 : 0.6, (t) => setFade(1 - smooth(t)), () => {
       state = 'walk';
       showBanner(id);
@@ -1562,6 +1572,58 @@ window.museum = {
   },
   walkable: (x, z, y) => walkable(world.rooms[player.room], x, z, 0.38, y),
   tap: (x, y) => tapAt(x, y),
+  // For checks: works that something hides from a viewer standing in front
+  // of them (a wall they poke into, a column, an easel). Casts rays to a grid
+  // over each picture; returns the ones with blocked points and what blocks.
+  audit(roomId) {
+    const ray = new THREE.Raycaster();
+    const eye = new THREE.Vector3();
+    const target = new THREE.Vector3();
+    const normal = new THREE.Vector3();
+    const out = [];
+    for (const room of roomId ? [world.rooms[roomId]] : Object.values(world.rooms)) {
+      room.group.updateMatrixWorld(true);
+      const solids = [];
+      room.group.traverse((o) => {
+        if (!o.isMesh || !o.material) return;
+        const m = o.material;
+        if (m.blending === THREE.AdditiveBlending || m.depthWrite === false || (m.transparent && m.opacity < 0.5 && !m.alphaTest)) return;
+        solids.push(o);
+      });
+      for (const art of room.artworks) {
+        const { width: w, height: h } = art.geometry.parameters;
+        const { viewW, viewH } = art.userData;
+        const own = new Set();
+        art.userData.group.traverse((o) => own.add(o));
+        art.getWorldPosition(target);
+        normal.set(0, 0, 1).transformDirection(art.matrixWorld);
+        const d = THREE.MathUtils.clamp(1.4 * Math.max(viewW, viewH), 2, 5);
+        eye.copy(target).addScaledVector(normal, d);
+        const blockers = new Map();
+        let blocked = 0;
+        let total = 0;
+        for (let i = 0; i < 5; i++) {
+          for (let j = 0; j < 5; j++) {
+            const p = new THREE.Vector3((i / 4 - 0.5) * w * 0.94, (j / 4 - 0.5) * h * 0.94, 0.002).applyMatrix4(art.matrixWorld);
+            const dir = p.clone().sub(eye);
+            const dist = dir.length();
+            ray.set(eye, dir.normalize());
+            ray.far = dist - 0.03;
+            const hit = ray.intersectObjects(solids, false).find((x) => !own.has(x.object));
+            total++;
+            if (hit) {
+              blocked++;
+              const o = hit.object;
+              const key = `${o.geometry.type} @ ${o.getWorldPosition(new THREE.Vector3()).toArray().map((v) => v.toFixed(1)).join(',')}`;
+              blockers.set(key, (blockers.get(key) || 0) + 1);
+            }
+          }
+        }
+        if (blocked) out.push({ room: room.id, id: art.userData.id, blocked: `${blocked}/${total}`, by: [...blockers.entries()].map(([k, n]) => `${k} (${n})`) });
+      }
+    }
+    return out;
+  },
   // Look closer at a work by id, from wherever you are (for checks).
   show(id) {
     const m = world.artworks.find((a) => a.userData.id === id);

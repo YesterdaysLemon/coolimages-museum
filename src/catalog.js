@@ -4,38 +4,43 @@
 
 export const WINGS = {
   lobby: {
-    name: 'The Rotunda',
-    subtitle: 'Entrance Hall',
+    name: 'The Entrance Hall',
+    subtitle: 'Where the trip begins',
     statement: '',
+    accent: '#8a6d3b',
   },
   gallery: {
     name: 'The Grand Gallery',
     subtitle: 'Serious Treatment',
+    accent: '#9a2f2f',
     statement:
       'A poker shark gets the dignity of an ancestral portrait. A pin-up gets museum varnish. A phone manual gets a gilded frame. In this wing, silly things receive grave dignity, and nobody in any picture winks. The humor comes from full commitment.',
   },
   eyes: {
     name: 'The Hall of Eyes',
     subtitle: 'The Seer’s Chamber',
+    accent: '#6c5ce7',
     statement:
       'Things that see, and things that are seen into: a weeping eye, a seraph made of eyes, a heart with one eye, a camera pointed into a brain. The floor is the Tree of Life, labelled twice, once in the old tradition and once in Psychomechanics. The eye in the middle is watching you. That’s fine.',
   },
   familiars: {
     name: 'The Familiars',
     subtitle: 'Minds Inside Things',
+    accent: '#1f7a8c',
     statement:
       'Servant, product, person, artist. Read in order, these works tell a four-act story about the line between person and program blurring from both sides: the human dissolving into pixels while the machine grows dreams. Displayed in the manner of a certain 1990s museum, as colorful pictures floating in white space with captions wrapped around them.',
   },
   bedroom: {
     name: 'The Bedroom Wall',
     subtitle: 'Sweet & Sinister',
+    accent: '#d4679a',
     statement:
       'Sweet things calmly coexisting with something dark, and nobody panicking. Yami-kawaii began as a way to talk about feeling bad in a cute voice, so the darkness becomes sayable. Hung salon-style, with tape, the way it would be on a real bedroom wall.',
   },
 };
 
 export const WORKS = {
-  // ---------------------------------------------------------------- Rotunda
+  // --------------------------------------------------------- Entrance Hall
   HRsJtzQWIAA24vx: {
     wing: 'lobby',
     title: 'Raven in the Chao Garden',
@@ -209,7 +214,7 @@ export const WORKS = {
     artist: 'Unknown artist',
     medium: 'Pencil, heavily tinted red',
     note:
-      'A head impaled on a spike inside an open display case, laced with web-like strands. A mind in a box, on display. The museum takes the hint and keeps its own vitrine in the Rotunda strictly for hats.',
+      'A head impaled on a spike inside an open display case, laced with web-like strands. A mind in a box, on display. The museum takes the hint and keeps its own vitrine in the Entrance Hall strictly for hats.',
     callouts: [
       { u: 0.49, v: 0.04, t: 'Spike' },
       { u: 0.585, v: 0.43, t: 'Specimen (awake)' },

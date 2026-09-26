@@ -938,7 +938,7 @@ export function calloutDecal(callouts, artW, artH, { style = 'dark', reserve = 0
   const R = stack(right, false);
   const all = [...L, ...R];
   const lead = 0.34;
-  // Labels start clear of the frame, which sits in front of this layer.
+  // Labels start clear of the frame, so they never sit on the moulding.
   const margin = Math.max(0.3, ...all.map((it) => it.w + lead + frameGap));
   const top = Math.max(0, ...all.map((it) => -it.y));
   const bottom = Math.max(0, ...all.map((it) => it.y + it.h - artH));
@@ -994,4 +994,228 @@ export function calloutDecal(callouts, artW, artH, { style = 'dark', reserve = 0
     }
   }
   return { texture: toTexture(c), width: W, height: H };
+}
+
+// ------------------------------------------------------------ entrance
+// Board-formed concrete: faint plank bands, soft mottling and tie holes.
+// One canvas is 4 m wide by H tall, like the other wall canvases.
+export function concreteWall(H, base = '#8f897f') {
+  const ppm = 200;
+  const W = 4 * ppm;
+  const Hp = Math.round(H * ppm);
+  const c = makeCanvas(W, Hp);
+  const ctx = c.getContext('2d');
+  const r = rng(Math.round(H * 37));
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, W, Hp);
+  for (let i = 0; i < 70; i++) {
+    const x = r() * W;
+    const y = r() * Hp;
+    const rad = (0.2 + r() * 0.7) * ppm;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
+    g.addColorStop(0, r() < 0.5 ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.06)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+  }
+  const board = 0.3 * ppm;
+  for (let y = 0, k = 0; y < Hp; y += board, k++) {
+    const v = (r() - 0.5) * 0.08;
+    ctx.fillStyle = v > 0 ? `rgba(255,255,255,${v})` : `rgba(0,0,0,${-v})`;
+    ctx.fillRect(0, y, W, board);
+    ctx.fillStyle = 'rgba(40,36,30,0.16)';
+    ctx.fillRect(0, y, W, 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.07)';
+    ctx.fillRect(0, y + 2, W, 1);
+    if (k % 3 !== 1) continue;
+    for (let x = 0.6 * ppm; x < W; x += 1.2 * ppm) {
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.beginPath();
+      ctx.arc(x, y + board / 2 + 1.5, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(35,31,26,0.5)';
+      ctx.beginPath();
+      ctx.arc(x, y + board / 2, 7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  grain(ctx, W, Hp, 16, r);
+  return c;
+}
+
+// The front wall: concrete perforated with square holes that thin out like a
+// dither pattern (after the Okinawa museum in "The Museum, Exterior"), with
+// daylight in the holes. Returns a colour map and an emissive mask; the
+// doorway (door = {w, h}, centred at the bottom) stays solid.
+export function perforatedScreen(w, h, door) {
+  const ppm = 160;
+  const W = Math.round(w * ppm);
+  const H = Math.round(h * ppm);
+  const map = makeCanvas(W, H);
+  const glow = makeCanvas(W, H);
+  const m = map.getContext('2d');
+  const g = glow.getContext('2d');
+  const r = rng(71);
+  m.fillStyle = '#b3ada3';
+  m.fillRect(0, 0, W, H);
+  grain(m, W, H, 12, r);
+  g.fillStyle = '#000';
+  g.fillRect(0, 0, W, H);
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  const cell = 0.34;
+  const hole = 0.17;
+  const cols = Math.floor(w / cell);
+  const rows = Math.floor(h / cell);
+  const x0 = (w - cols * cell) / 2;
+  for (let j = 0; j < rows; j++) {
+    for (let i = 0; i < cols; i++) {
+      const cx = x0 + (i + 0.5) * cell;
+      const cyUp = (j + 0.5) * cell;
+      if (Math.abs(cx - w / 2) < door.w / 2 + 0.3 && cyUp < door.h + 0.35) continue;
+      // Dense high up, thinning toward the floor and the corners.
+      const up = cyUp / h;
+      const side = Math.abs(cx - w / 2) / (w / 2);
+      const density = Math.min(1, Math.max(0, (up - 0.12) * 1.25 - side * side * 0.35));
+      if (density * 16 <= BAYER[(j % 4) * 4 + (i % 4)]) continue;
+      const px = (cx - hole / 2) * ppm;
+      const py = H - (cyUp + hole / 2) * ppm;
+      m.fillStyle = '#6f6a62';
+      m.fillRect(px - 3, py - 3, hole * ppm + 6, hole * ppm + 6);
+      m.fillStyle = '#fff6e4';
+      m.fillRect(px, py, hole * ppm, hole * ppm);
+      g.fillStyle = '#fff';
+      g.fillRect(px, py, hole * ppm, hole * ppm);
+    }
+  }
+  return { map, glow };
+}
+
+// A coir doormat with a welcome and a pair of watchful eyes.
+export function doormat() {
+  const W = 1024;
+  const H = 512;
+  const c = makeCanvas(W, H);
+  const ctx = c.getContext('2d');
+  const r = rng(5);
+  ctx.fillStyle = '#9a7442';
+  ctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 9000; i++) {
+    ctx.fillStyle = r() < 0.5 ? 'rgba(60,40,18,0.18)' : 'rgba(210,170,110,0.18)';
+    ctx.fillRect(r() * W, r() * H, 1 + r() * 3, 6 + r() * 10);
+  }
+  ctx.strokeStyle = '#4a321a';
+  ctx.lineWidth = 22;
+  ctx.strokeRect(34, 34, W - 68, H - 68);
+  ctx.fillStyle = '#3d2914';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `600 124px ${FONT.serif}`;
+  spaced(ctx, 26);
+  ctx.fillText('WELCOME', W / 2 + 13, H / 2 + 6);
+  spaced(ctx, 0);
+  for (const sx of [-1, 1]) {
+    const x = W / 2 + sx * 400;
+    const y = H / 2;
+    ctx.beginPath();
+    ctx.moveTo(x - 44, y);
+    ctx.quadraticCurveTo(x, y - 40, x + 44, y);
+    ctx.quadraticCurveTo(x, y + 40, x - 44, y);
+    ctx.fill();
+    ctx.fillStyle = '#9a7442';
+    ctx.beginPath();
+    ctx.arc(x, y, 13, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#3d2914';
+  }
+  return c;
+}
+
+// Letters cut into stone: a spaced title and an optional smaller line.
+export function inscription(title, sub = '', { width = 5, ink = '#5d554a', light = 'rgba(255,255,255,0.45)' } = {}) {
+  const W = 2400;
+  const H = sub ? 420 : 280;
+  const c = makeCanvas(W, H);
+  const ctx = c.getContext('2d');
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const cut = (text, font, y, spacing) => {
+    ctx.font = font;
+    spaced(ctx, spacing);
+    ctx.fillStyle = light;
+    ctx.fillText(text, W / 2 + spacing / 2, y + 3);
+    ctx.fillStyle = ink;
+    ctx.fillText(text, W / 2 + spacing / 2, y);
+  };
+  cut(title, `500 190px ${FONT.serif}`, 140, 60);
+  if (sub) cut(sub, `500 66px ${FONT.serif}`, 330, 22);
+  spaced(ctx, 0);
+  return { texture: toTexture(c), width, height: (width * H) / W };
+}
+
+// Exhibition banner for a wing: its colour, a kicker, its name, a crop of
+// one of its works, and a swallowtail hem (cut with the canvas alpha).
+export function bannerTexture({ kicker, title, subtitle, accent = '#8a6d3b', image = null }) {
+  const W = 512;
+  const H = 1600;
+  const c = makeCanvas(W, H);
+  const ctx = c.getContext('2d');
+  const col = new THREE.Color(accent);
+  const lum = 0.2126 * col.r + 0.7152 * col.g + 0.0722 * col.b;
+  const ink = lum > 0.5 ? '#1f1a14' : '#fbf7ef';
+  const soft = lum > 0.5 ? 'rgba(31,26,20,0.75)' : 'rgba(251,247,239,0.8)';
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(W, 0);
+  ctx.lineTo(W, H);
+  ctx.lineTo(W / 2, H - 120);
+  ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.clip();
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, 0, W, H);
+  const shade = ctx.createLinearGradient(0, 0, 0, H);
+  shade.addColorStop(0, 'rgba(255,255,255,0.08)');
+  shade.addColorStop(1, 'rgba(0,0,0,0.18)');
+  ctx.fillStyle = shade;
+  ctx.fillRect(0, 0, W, H);
+  grain(ctx, W, H, 6, rng(Math.round(hash(title) * 1e4)));
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  let y = 110;
+  if (kicker) {
+    ctx.fillStyle = soft;
+    ctx.font = `600 30px ${FONT.serif}`;
+    spaced(ctx, 7);
+    ctx.fillText(kicker.toUpperCase(), W / 2 + 3, y);
+    spaced(ctx, 0);
+    y += 44;
+  }
+  ctx.fillStyle = ink;
+  ctx.fillRect(W / 2 - 40, y, 80, 3);
+  y += 34;
+  ctx.font = `500 66px ${FONT.serif}`;
+  const lines = wrapLines(ctx, title, W - 70).slice(0, 4);
+  for (const line of lines) {
+    y += 70;
+    ctx.fillText(line, W / 2, y);
+  }
+  if (subtitle) {
+    ctx.fillStyle = soft;
+    ctx.font = `italic 36px ${FONT.serif}`;
+    for (const line of wrapLines(ctx, subtitle, W - 90).slice(0, 2)) {
+      y += 46;
+      ctx.fillText(line, W / 2, y);
+    }
+  }
+  if (image?.width) {
+    const top = Math.max(y + 60, 640);
+    const box = { x: 44, y: top, w: W - 88, h: Math.min(H - 240 - top, 720) };
+    const s = Math.max(box.w / image.width, box.h / image.height);
+    const sw = box.w / s;
+    const sh = box.h / s;
+    ctx.fillStyle = ink;
+    ctx.fillRect(box.x - 6, box.y - 6, box.w + 12, box.h + 12);
+    ctx.drawImage(image, (image.width - sw) / 2, (image.height - sh) / 2, sw, sh, box.x, box.y, box.w, box.h);
+  }
+  return toTexture(c);
 }

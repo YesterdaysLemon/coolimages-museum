@@ -344,8 +344,10 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
         new THREE.PlaneGeometry(decal.width, decal.height),
         new THREE.MeshBasicMaterial({ map: decal.texture, transparent: true, opacity: 0, depthWrite: false, toneMapped: false }),
       );
-      decalMesh.position.z = 0.022;
-      decalMesh.renderOrder = 2;
+      // In front of the deepest frame; main.js also lifts it over the room
+      // while you look at the work, so frames and walls never cut it.
+      decalMesh.position.z = 0.11;
+      decalMesh.renderOrder = 10;
       decalMesh.visible = false;
       g.add(decalMesh);
     }
@@ -512,148 +514,12 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     return res;
   }
 
-  // ------------------------------------------------------------ Rotundas
-  function rotundaShell(room, { cx, cz, R, H, inscription }) {
-    const g = room.group;
-    const floor = new THREE.Mesh(
-      new THREE.CircleGeometry(R, 96),
-      new THREE.MeshStandardMaterial({ map: TX.lobbyFloor(R, inscription), roughness: 0.32 }),
-    );
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.set(cx, 0, cz);
-    g.add(floor);
-    const wall = new THREE.Mesh(
-      new THREE.CylinderGeometry(R, R, H, 128, 1, true),
-      new THREE.MeshStandardMaterial({ color: 0xe9e3d7, roughness: 0.95, side: THREE.BackSide }),
-    );
-    wall.position.set(cx, H / 2, cz);
-    g.add(wall);
-    const pilasterMat = new THREE.MeshStandardMaterial({ color: 0xf3efe7, roughness: 0.85 });
-    for (let i = 0; i < 8; i++) {
-      const a = Math.PI / 8 + (i * Math.PI) / 4;
-      const pilaster = new THREE.Mesh(new THREE.BoxGeometry(0.55, H, 0.28), pilasterMat);
-      pilaster.position.set(cx + Math.sin(a) * (R - 0.1), H / 2, cz - Math.cos(a) * (R - 0.1));
-      pilaster.rotation.y = Math.atan2(-Math.sin(a), Math.cos(a));
-      g.add(pilaster);
-    }
-    const skirting = new THREE.Mesh(
-      new THREE.CylinderGeometry(R - 0.02, R - 0.02, 0.22, 128, 1, true),
-      new THREE.MeshStandardMaterial({ color: 0xd8d0c2, roughness: 0.8, side: THREE.BackSide }),
-    );
-    skirting.position.set(cx, 0.11, cz);
-    g.add(skirting);
-    for (const [y, tube] of [[H, 0.14], [H - 0.6, 0.04]]) {
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(R - 0.05, tube, 12, 128), M.slab);
-      ring.rotation.x = Math.PI / 2;
-      ring.position.set(cx, y, cz);
-      g.add(ring);
-    }
-    const dome = new THREE.Mesh(
-      new THREE.SphereGeometry(R, 64, 24, 0, Math.PI * 2, 0, Math.PI / 2),
-      new THREE.MeshStandardMaterial({ color: 0xf7f4ee, roughness: 1, side: THREE.BackSide }),
-    );
-    dome.scale.y = 0.55;
-    dome.position.set(cx, H, cz);
-    g.add(dome);
-    const top = H + R * 0.55;
-    const oculus = new THREE.Mesh(new THREE.CircleGeometry(1.45, 48), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
-    oculus.rotation.x = Math.PI / 2;
-    oculus.position.set(cx, top - 0.08, cz);
-    g.add(oculus);
-    const shaft = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.35, 2.3, top - 0.1, 48, 1, true),
-      new THREE.MeshBasicMaterial({ map: beamTex, color: 0xfff1d4, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
-    );
-    shaft.position.set(cx, (top - 0.1) / 2, cz);
-    g.add(shaft);
-    const r = TX.rng(8);
-    const pts = [];
-    for (let i = 0; i < 380; i++) {
-      const a = r() * Math.PI * 2;
-      const rr = Math.sqrt(r()) * 2.1;
-      pts.push(Math.cos(a) * rr, 0.3 + r() * (top - 1.5), Math.sin(a) * rr);
-    }
-    const dustGeo = new THREE.BufferGeometry();
-    dustGeo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-    const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ map: glowTex, size: 0.06, color: 0xc9b58f, transparent: true, opacity: 0.55, depthWrite: false }));
-    dust.position.set(cx, 0, cz);
-    g.add(dust);
-    animate(room, (t) => {
-      dust.rotation.y = t * 0.02;
-      dust.position.y = Math.sin(t * 0.2) * 0.15;
-    });
-    addLights(room, [0xfffaf2, 0xb9ad99, 1.05], [
-      [cx, H + 2, cz, 0xfff1d8, 45, 30],
-      [cx, 3.2, cz + 3.5, 0xffffff, 12, 16],
-    ]);
-
-  }
-
-  // A freestanding display wall inside a rotunda, at angle a (0 = north).
-  function rotundaSlab(room, cx, cz, a, { w = 6.4, h = 4.6, rr = 7.95 } = {}) {
-    const d = V3(Math.sin(a), 0, -Math.cos(a));
-    const n = d.clone().negate();
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.2), M.slab);
-    m.position.set(cx + d.x * rr, h / 2, cz + d.z * rr);
-    m.rotation.y = facing(n);
-    room.group.add(m);
-    room.obstacles.push({ type: 'sector', x: cx, z: cz, r0: rr - 0.3, r1: 50, a, half: Math.atan((w / 2 + 0.25) / rr) });
-    const front = V3(cx + d.x * (rr - 0.11), 0, cz + d.z * (rr - 0.11));
-    const right = V3(n.z, 0, -n.x);
-    return { n, at: (dx, y) => V3(front.x + right.x * dx, y, front.z + right.z * dx) };
-  }
-
-  function buildLobby() {
-    const R = 9;
-    const H = 7;
-    const room = makeRoom('lobby', { type: 'circle', x: 0, z: 0, r: R }, 'marble', {
-      bg: '#f2efe9',
-      fog: { type: 'linear', color: '#f2efe9', near: 24, far: 90 },
-      envI: 0.5,
-    });
-    rotundaShell(room, { cx: 0, cz: 0, R, H, inscription: 'COOLIMAGES \u00b7 A MUSEUM OF THINGS THAT STARE BACK \u00b7 ' });
-    const g = room.group;
-
-    const P = R - 0.2;
-    addPortal(room, { pos: V3(0, 0, -P), dir: V3(0, 0, 1), dest: 'gallery' });
-    addPortal(room, { pos: V3(P, 0, 0), dir: V3(-1, 0, 0), dest: 'eyes' });
-    addPortal(room, { pos: V3(0, 0, P), dir: V3(0, 0, -1), dest: 'familiars', entrance: true });
-    addPortal(room, { pos: V3(-P, 0, 0), dir: V3(1, 0, 0), dest: 'bedroom' });
-
-    const slab = (a) => rotundaSlab(room, 0, 0, a);
-    const nw = slab(-Math.PI / 4);
-    addWork(room, 'HRsJtzQWIAA24vx', { pos: nw.at(0, 2.2), dir: nw.n, h: 2.6, frame: 'museum', margin: 1.25 });
-    const ne = slab(Math.PI / 4);
-    addWork(room, 'HS-AHa8a0AAuBEe', { pos: ne.at(0, 2.2), dir: ne.n, h: 2.0, frame: 'museum', margin: 1.25 });
-    const sw = slab((-3 * Math.PI) / 4);
-    addWork(room, 'HRutGhBbUAAc6Zl', { pos: sw.at(0, 2.2), dir: sw.n, h: 2.3, frame: 'museum', margin: 1.35 });
-    const se = slab((3 * Math.PI) / 4);
-    addText(
-      room,
-      {
-        kicker: 'Welcome',
-        title: 'coolimages',
-        subtitle: 'A museum of things that stare back',
-        body: [
-          `${summary.videos ? `${summary.count - summary.videos} images and ${summary.videos} video${summary.videos > 1 ? 's' : ''}` : `${summary.count} images`} saved from X between ${summary.range}, and one afternoon of conversation about why they resonated.`,
-          'The thesis: something sweet on the surface, something enormous and watchful underneath, taken completely seriously and as a joke at the same time.',
-          summary.touch ? 'Tap a door to walk through it, or a picture to look closer.' : 'Walk into a painting to travel. Press E to look closer.',
-        ],
-        width: 3.2,
-      },
-      se.at(-1.45, 2.35),
-      se.n,
-    );
-    if (plan.stairs) {
-      // The door upstairs takes the slab; the exterior moves to the wall
-      // beside the entrance, between the pilaster and the door.
-      addPortal(room, { pos: se.at(1.75, 0), dir: se.n, dest: 'stairhall', w: 2.2, h: 3.2, signW: 2.6, subtitle: 'Upstairs to the new wings' });
-      const a = Math.PI - 0.255;
-      const d = V3(Math.sin(a), 0, -Math.cos(a));
-      addWork(room, 'HSGdkqHWUAI8V2_', { pos: V3(d.x * 8.86, 2.35, d.z * 8.86), dir: d.clone().negate(), h: 1.3, frame: 'museum', plaqueSide: 'below' });
-    } else addWork(room, 'HSGdkqHWUAI8V2_', { pos: se.at(1.75, 2.55), dir: se.n, h: 2.0, frame: 'museum', plaqueSide: 'below' });
-
-    // Vitrine with the reconstructed hat from Fig. 4.1.
+  // ------------------------------------------------------ the hat vitrine
+  // The reconstructed hat from Fig. 4.1, turning slowly under glass.
+  function hatVitrine(room, x, z) {
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    room.group.add(g);
     const plinth = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.0, 1.3), M.slab);
     plinth.position.y = 0.5;
     g.add(plinth);
@@ -688,15 +554,66 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     });
     hatPlaque.position.set(0, 0.62, 0.652);
     g.add(hatPlaque);
-    room.obstacles.push({ type: 'circle', x: 0, z: 0, r: 0.95 });
+    room.obstacles.push({ type: 'circle', x, z, r: 0.95 });
+  }
 
-    // New acquisitions: anything in the folder that isn't catalogued yet.
-    const slots = [[-3.0, 2.4], [3.0, 2.4], [-3.0, -2.4], [3.0, -2.4]];
-    acquisitions.slice(0, slots.length).forEach((id, i) => {
-      const [x, z] = slots[i];
-      easel(room, id, V3(x, 0, z), V3(0, 0, 1), { h: 1.1, frame: 'museum' });
+  // A wing's banner in the Entrance Hall: its name, colour and one of its works.
+  function wingBanner(key, kicker) {
+    const wing = WINGS[key];
+    if (!wing) return null;
+    const own = layout?.wings?.[key]?.works || Object.keys(WORKS).filter((id) => WORKS[id].wing === key && !WORKS[id].generated);
+    const id = own.find((w) => art.has(w));
+    return { key, kicker, title: wing.name, subtitle: wing.subtitle, accent: wing.accent || '#8a6d3b', image: id ? art.get(id).texture.image : null };
+  }
+
+  // ------------------------------------------------------ Entrance Hall
+  // A vestibule behind the front doors, then a long colonnaded hall with a
+  // banner for each wing, its doors, and the way upstairs (architecture.js).
+  function buildEntrance() {
+    const { up = [], down = null, ground: level = [] } = plan.stairs || {};
+    const name = (k) => WINGS[k].name;
+    const works = summary.videos ? `${summary.count - summary.videos} images and ${summary.videos} video${summary.videos > 1 ? 's' : ''}` : `${summary.count} images`;
+    const sides = { west: ['gallery', 'familiars'], east: ['eyes', 'bedroom'] };
+    const kicker = { gallery: 'Wing I', eyes: 'Wing II', familiars: 'Wing III', bedroom: 'Wing IV' };
+    const beyond = [...up.map((k) => [k, 'Upstairs']), ...(down ? [[down, 'Downstairs']] : []), ...level.map((k) => [k, 'Past the stairs'])];
+    return arch.buildEntrance({
+      sides,
+      stairs: !!plan.stairs,
+      doorBanners: Object.fromEntries(Object.keys(kicker).map((k) => [k, wingBanner(k, kicker[k])])),
+      moreBanners: beyond.slice(0, 4).map(([k, label]) => wingBanner(k, label)).filter(Boolean),
+      acquisitions,
+      works: { exterior: 'HSGdkqHWUAI8V2_', bookends: ['HRsJtzQWIAA24vx', 'HS-AHa8a0AAuBEe'], plate: 'HRutGhBbUAAc6Zl' },
+      hatVitrine,
+      text: {
+        visit: {
+          kicker: 'Before you go in',
+          title: 'How to visit',
+          body: summary.touch
+            ? ['Drag on the left side of the screen to walk and on the right to look around.', 'Tap a doorway to walk through it, or a work to look closer.', 'Tap the little map for the whole museum.']
+            : ['Walk with W A S D or the arrow keys, and look around with the mouse.', 'Walk into a gold-framed doorway to go through it. Look at a work to see its labels (L turns them off), and press E to look closer.', 'Tab opens a map of the whole museum.'],
+        },
+        welcome: {
+          kicker: 'Welcome',
+          title: 'coolimages',
+          subtitle: 'A museum of things that stare back',
+          body: [
+            `${works} saved from X between ${summary.range}, and one afternoon of conversation about why they resonated.`,
+            'The thesis: something sweet on the surface, something enormous and watchful underneath, taken completely seriously and as a joke at the same time.',
+          ],
+        },
+        directory: {
+          kicker: 'Directory',
+          title: 'Where to go',
+          body: [
+            `On your left: ${name(sides.west[0])}, then ${name(sides.west[1])}.`,
+            `On your right: ${name(sides.east[0])}, then ${name(sides.east[1])}.`,
+            plan.stairs ? `Straight ahead, the Stair Hall: ${up.length} wing${up.length === 1 ? '' : 's'} upstairs${down ? ' and one downstairs' : ''}.` : '',
+            'Every room has doors to the rooms it reminds us of, so any way you go is the right way.',
+          ].filter(Boolean),
+        },
+        acquisitions: { kicker: 'Just arrived', title: 'New acquisitions', body: 'Saved recently and not yet catalogued. The curator will find them a room.' },
+      },
     });
-    return room;
   }
 
   // ------------------------------------------------------- Grand Gallery
@@ -1221,12 +1138,12 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     return room;
   }
 
-  buildLobby();
+  const arch = makeArchitecture({ M, V3, facing, additive, glowTex, beamTex, makeRoom, addLights, addWork, addPortal, addText, animate, pictureLight, rectRoom, easel, art, withheld, TEMPLATES });
+  buildEntrance();
   buildGallery();
   buildEyes();
   buildFamiliars();
   buildBedroom();
-  const arch = makeArchitecture({ M, V3, facing, additive, glowTex, beamTex, makeRoom, addLights, addWork, addPortal, addText, animate, pictureLight, rectRoom, easel, art, withheld, TEMPLATES });
   if (plan.stairs) {
     const { up, down, ground } = plan.stairs;
     const name = (k) => WINGS[k].name;

@@ -11,7 +11,7 @@ so works withheld at an artist's request are never sent to the API.
 Finds images that nothing covers yet: not in the hand-written catalogue
 (src/catalog.js), the generated catalogue (data/catalog.json) or the exclusion
 list (content-policy.json). Works that
-are "on hold" (catalogued, but waiting on the Rotunda easels for enough company
+are "on hold" (catalogued, but waiting on the Entrance Hall's easels for enough company
 to form a wing) are reconsidered each run.
 
 Claude writes each work's plaque and callouts and decides where it hangs: a new

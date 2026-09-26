@@ -6,7 +6,7 @@ Usage:
 SOURCE_DIR defaults to $COOLIMAGES_DIR, then ~/OneDrive/Pictures/coolimages.
 Outputs downscaled copies to content/art/ and writes content/manifest.json.
 Rerun whenever images are added; uncatalogued images appear on the
-Rotunda's "New Acquisitions" easels. tools/publish_content.py uploads the
+Entrance Hall's "New acquisitions" easels. tools/publish_content.py uploads the
 public subset (see content-policy.json) to the VPS.
 
 Videos (needs ffmpeg and ffprobe on PATH) become a web-friendly H.264 MP4

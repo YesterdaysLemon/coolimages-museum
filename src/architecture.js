@@ -456,8 +456,8 @@ export function makeArchitecture(ctx) {
       [X(-9.4), 1.2, Z(1.4), 0xffc890, 8, 9],
     ]);
 
-    // Doors: in from the Rotunda; up on the balconies; down in the pit.
-    addPortal(room, { pos: V3(X(0), 0, Z(12) - 0.06), dir: V3(0, 0, -1), dest: 'lobby', w: 2.6, h: 3.4, signW: 3.2, entrance: true, subtitle: 'Back to the Rotunda' });
+    // Doors: in from the Entrance Hall; up on the balconies; down in the pit.
+    addPortal(room, { pos: V3(X(0), 0, Z(12) - 0.06), dir: V3(0, 0, -1), dest: 'lobby', w: 2.6, h: 3.4, signW: 3.2, entrance: true, subtitle: 'Back to the Entrance Hall' });
     const upSlots = [
       { pos: V3(X(0), UP, Z(-12) + 0.06), dir: V3(0, 0, 1), w: 2.4, h: 3.2, signW: 2.8 },
       { pos: V3(X(-6.2), UP, Z(-12) + 0.06), dir: V3(0, 0, 1), w: 2.4, h: 3.2, signW: 2.8 },
@@ -1103,5 +1103,236 @@ export function makeArchitecture(ctx) {
     return room;
   }
 
-  return { buildStairHall, buildWing };
+  // ------------------------------------------------------ Entrance Hall
+  // The way in. You start inside the bronze front doors, in a low concrete
+  // vestibule whose front wall is perforated like the building in "The
+  // Museum, Exterior" (which hangs beside you), with a card on how to visit.
+  // An arch opens into a tall colonnaded hall: a runner down the nave, a
+  // banner for each wing (its colour and one of its works), the welcome and
+  // the directory on two stelae, the hat in a shaft of light, the four wings'
+  // doors in the aisles, new acquisitions on easels at the far end, and the
+  // way upstairs between the collection's two bookends.
+  function buildEntrance({ sides, stairs, doorBanners, moreBanners, acquisitions, works, hatVitrine, text }) {
+    const HX = 10; // hall half-width
+    const N = -22; // north wall
+    const S = 13.8; // hall face of the south wall
+    const H = 11;
+    const VX = 3.6; // vestibule half-width
+    const VS = 14.2; // vestibule face of the south wall
+    const VN = 22; // front doors
+    const VH = 5.2;
+    const COLX = 6.2;
+    const COLZ = [10.5, 4.5, -1.5, -7.5, -13.5];
+    const DOORZ = [7.5, -4.5]; // the bays for the near and far doors
+    const MIDZ = [1.5, -10.5];
+    const room = makeRoom('lobby', { type: 'rect', x0: -HX, x1: HX, z0: N, z1: VN }, 'marble', {
+      bg: '#f2ede4',
+      fog: { type: 'linear', color: '#f2ede4', near: 30, far: 95 },
+      envI: 0.5,
+    });
+    room.floors = [
+      { type: 'rect', x0: -HX, x1: HX, z0: N, z1: S, h: 0 },
+      { type: 'rect', x0: -1.6, x1: 1.6, z0: S - 0.1, z1: VS + 0.1, h: 0 },
+      { type: 'rect', x0: -VX, x1: VX, z0: VS, z1: VN, h: 0 },
+    ];
+    room.start = { x: 0, z: 19.6, yaw: 0 };
+    const stone = std(0xefe7da, 0.8);
+    const warm = std(0xe2d6c1, 0.85);
+    const concrete = std(0x8f897f, 0.95);
+    const darkPanel = std(0x2d2721, 0.6);
+    const frameMat = std(0x6b5a44, 0.6);
+
+    // ---- the hall: floor, walls, coffered ceiling with a skylight
+    floorPlane(room, -HX, HX, N, S, 0, new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.tileFloor(), { repeat: [(2 * HX) / 4, (S - N) / 4] }), roughness: 0.35 }));
+    const wallTex = TX.toTexture(TX.plainWall(H, '#ebe0cc', '#c5b595'));
+    wall(room, 2 * HX, H, wallTex, 0, N, V3(0, 0, 1));
+    wall(room, S - N, H, wallTex, -HX, (S + N) / 2, V3(1, 0, 0));
+    wall(room, S - N, H, wallTex, HX, (S + N) / 2, V3(-1, 0, 0));
+    archWall(room, { x: 0, z: S + 0.1, w: 2 * HX, H, aw: 3.2, ah: 3.8, depth: 0.2, mat: stone });
+    ceilingPlane(room, -HX, HX, N, S, H, new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.coffers(), { repeat: [5, 9] }), roughness: 1 }));
+    const sky0 = -13.5;
+    const sky1 = 12;
+    const sky = mesh(room, new THREE.PlaneGeometry(4.4, sky1 - sky0), new THREE.MeshBasicMaterial({ color: 0xfffaf0, toneMapped: false }), 0, H - 0.03, (sky0 + sky1) / 2);
+    sky.rotation.x = Math.PI / 2;
+    for (let z = sky0; z <= sky1 + 0.01; z += 2.55) box(room, 4.5, 0.12, 0.12, 0, H - 0.09, z, warm);
+    for (const sx of [-1, 1]) box(room, 0.16, 0.16, sky1 - sky0, sx * 2.25, H - 0.1, (sky0 + sky1) / 2, warm);
+
+    // Colonnades carrying an entablature, and clerestory windows over the aisles.
+    const colLen = COLZ[0] - COLZ[COLZ.length - 1];
+    const colMid = (COLZ[0] + COLZ[COLZ.length - 1]) / 2;
+    for (const sx of [-1, 1]) {
+      for (const z of COLZ) column(room, sx * COLX, z, 0, 7.2, 0.42, stone);
+      box(room, 1.1, 0.8, colLen + 1.4, sx * COLX, 7.6, colMid, warm);
+      box(room, 1.4, 0.2, colLen + 1.8, sx * COLX, 8.1, colMid, stone);
+      for (const z of [...DOORZ, ...MIDZ, -17.75]) archWindow(room, sx * (HX - 0.04), 8.2, z, V3(-sx, 0, 0), 1.8, 2.3, frameMat);
+    }
+
+    // A runner down the nave, from the arch to the far end.
+    const r0 = S - 0.1;
+    const r1 = COLZ[COLZ.length - 1] - 1;
+    box(room, 2.4, 0.014, r0 - r1, 0, 0.007, (r0 + r1) / 2, std(0x7a1f2b, 1));
+    for (const sx of [-1, 1]) box(room, 0.07, 0.016, r0 - r1, sx * 1.12, 0.008, (r0 + r1) / 2, std(0xc9a24c, 0.5, { metalness: 0.5 }));
+
+    // ---- the vestibule: concrete, a perforated front wall, bronze doors
+    const vestibuleFloor = std(0x5d5850, 0.4);
+    floorPlane(room, -VX, VX, VS, VN, 0, vestibuleFloor);
+    floorPlane(room, -1.6, 1.6, S, VS, 0.001, vestibuleFloor);
+    const conTex = TX.toTexture(TX.concreteWall(VH));
+    wall(room, VN - VS, VH, conTex, -VX, (VS + VN) / 2, V3(1, 0, 0));
+    wall(room, VN - VS, VH, conTex, VX, (VS + VN) / 2, V3(-1, 0, 0));
+    archWall(room, { x: 0, z: VS - 0.1, w: 2 * VX, H: VH, aw: 3.2, ah: 3.8, depth: 0.2, mat: concrete });
+    ceilingPlane(room, -VX, VX, VS, VN, VH, std(0x6e6962, 0.95));
+    const screen = TX.perforatedScreen(2 * VX, VH, { w: 2.9, h: 3.8 });
+    const front = mesh(
+      room,
+      new THREE.PlaneGeometry(2 * VX, VH),
+      new THREE.MeshStandardMaterial({ map: TX.toTexture(screen.map), emissiveMap: TX.toTexture(screen.glow), emissive: 0xfff1d8, roughness: 0.95 }),
+      0,
+      VH / 2,
+      VN,
+    );
+    front.rotation.y = Math.PI;
+    const bronze = std(0x4a3a27, 0.4, { metalness: 0.75 });
+    box(room, 2.9, 0.16, 0.2, 0, 3.66, VN - 0.1, bronze);
+    for (const sx of [-1, 1]) {
+      box(room, 0.14, 3.66, 0.2, sx * 1.38, 1.83, VN - 0.1, bronze);
+      box(room, 1.3, 3.56, 0.08, sx * 0.66, 1.78, VN - 0.06, bronze);
+      for (const y of [0.95, 2.6]) box(room, 0.96, 1.25, 0.03, sx * 0.66, y, VN - 0.11, bronze);
+      mesh(room, new THREE.CylinderGeometry(0.024, 0.024, 1.1, 12), M.brass, sx * 0.13, 1.5, VN - 0.19);
+    }
+    const spill = mesh(room, new THREE.PlaneGeometry(6.8, 3.6), additive(0xfff1d8, 0.14), 0, 0.01, VN - 1.9);
+    spill.rotation.x = -Math.PI / 2;
+    const doormat = mesh(room, new THREE.PlaneGeometry(2.4, 1.2), std(0xffffff, 1, { map: TX.toTexture(TX.doormat()) }), 0, 0.014, VN - 1.15);
+    doormat.rotation.x = -Math.PI / 2;
+    glowPoints(room, [-1.8, VH - 0.06, 16.2, 1.8, VH - 0.06, 16.2, -1.8, VH - 0.06, 19.8, 1.8, VH - 0.06, 19.8], 0xfff0d6, 0.45);
+    // "You are here", and how to visit.
+    pictureLight(addWork(room, works.exterior, { pos: V3(-VX + 0.03, 2.05, 18.2), dir: V3(1, 0, 0), h: 1.5, frame: 'museum', plaqueSide: 'below' }));
+    addText(room, { ...text.visit, width: 2.9 }, V3(VX - 0.03, 2.2, 18.2), V3(-1, 0, 0));
+    const carve = (title, sub, y, z, dir, width, ink) => {
+      const t = TX.inscription(title, sub, { width, ink });
+      const m = mesh(room, new THREE.PlaneGeometry(t.width, t.height), new THREE.MeshBasicMaterial({ map: t.texture, transparent: true, depthWrite: false, toneMapped: false }), 0, y, z);
+      m.rotation.y = facing(dir);
+    };
+    carve('COOLIMAGES', 'A MUSEUM OF THINGS THAT STARE BACK', 4.5, VS + 0.02, V3(0, 0, 1), 4.6, '#4f483f');
+    carve('COOLIMAGES', 'FOUNDED MMXXVI · OPEN WHENEVER YOU ARE', 5.5, S - 0.02, V3(0, 0, -1), 6.4, '#7a6b55');
+
+    // ---- the nave: two stelae, the hat in a shaft of light, benches
+    for (const [spec, sx] of [[text.welcome, -1], [text.directory, 1]]) {
+      const x = sx * 3.5;
+      const z = 9.4;
+      box(room, 2.5, 0.3, 0.6, x, 0.15, z, warm);
+      box(room, 2.3, 3.3, 0.24, x, 1.95, z, darkPanel);
+      addText(room, { ...spec, width: 2.0, style: 'light' }, V3(x, 2.3, z + 0.125), V3(0, 0, 1));
+      room.obstacles.push({ type: 'rect', x0: x - 1.25, x1: x + 1.25, z0: z - 0.3, z1: z + 0.3 });
+    }
+    hatVitrine(room, 0, 1.5);
+    sunbeam(room, 0, 1.5, H);
+    for (const sx of [-1, 1]) {
+      box(room, 0.55, 0.1, 2.4, sx * 2.9, 0.46, -7.5, M.leather);
+      for (const dz of [-1.05, 1.05]) box(room, 0.5, 0.42, 0.06, sx * 2.9, 0.21, -7.5 + dz, M.brass);
+      room.obstacles.push({ type: 'rect', x0: sx * 2.9 - 0.32, x1: sx * 2.9 + 0.32, z0: -8.75, z1: -6.25 });
+    }
+
+    // ---- banners: each wing's hangs by its door; the upstairs wings' between
+    const wire = std(0x2a2622, 0.4, { metalness: 0.6 });
+    const banner = (spec, x, z) => {
+      if (!spec) return;
+      const w = 1.3;
+      const h = 4.1;
+      const top = 10.3;
+      const g = new THREE.Group();
+      g.position.set(x, top, z);
+      room.group.add(g);
+      const mat = new THREE.MeshStandardMaterial({ map: TX.bannerTexture(spec), alphaTest: 0.5, roughness: 0.95 });
+      for (const flip of [0, Math.PI]) {
+        const cloth = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+        cloth.position.y = -h / 2 - 0.06;
+        cloth.rotation.y = flip;
+        g.add(cloth);
+      }
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, w + 0.3, 12), M.brass);
+      rod.rotation.z = Math.PI / 2;
+      g.add(rod);
+      for (const sx of [-1, 1]) beam(room, V3(x + sx * (w / 2 + 0.08), top, z), V3(x + sx * (w / 2 + 0.08), H, z), 0.012, wire);
+      const phase = TX.hash(spec.title) * TAU;
+      animate(room, (t) => {
+        g.rotation.x = Math.sin(t * 0.45 + phase) * 0.018;
+      });
+    };
+
+    // ---- doors: the four wings in the aisles, the Stair Hall at the far end
+    const doorAt = (dest, sx, z, first) => {
+      addPortal(room, { pos: V3(sx * (HX - 0.06), 0, z), dir: V3(-sx, 0, 0), dest, w: 2.6, h: 3.6, signW: 3.2, entrance: first });
+      banner(doorBanners[dest], sx * 4.7, z);
+    };
+    sides.west.forEach((dest, i) => doorAt(dest, -1, DOORZ[i], i === 0));
+    sides.east.forEach((dest, i) => doorAt(dest, 1, DOORZ[i], false));
+    [[-1, MIDZ[0]], [1, MIDZ[0]], [-1, MIDZ[1]], [1, MIDZ[1]]].forEach(([sx, z], i) => banner(moreBanners[i], sx * 4.7, z));
+    const bookend = (id, sx) => pictureLight(addWork(room, id, { pos: V3(sx * 6.4, 2.6, N + 0.03), dir: V3(0, 0, 1), h: 2.5, maxW: 3.4, frame: 'gilded', plaque: 'brass' }));
+    bookend(works.bookends[0], -1);
+    bookend(works.bookends[1], 1);
+    const wallSlots = [[-1, MIDZ[0]], [1, MIDZ[0]], [-1, MIDZ[1]], [1, MIDZ[1]]];
+    const onWall = (id, [sx, z], h = 1.9) => pictureLight(addWork(room, id, { pos: V3(sx * (HX - 0.03), 2.2, z), dir: V3(-sx, 0, 0), h, maxW: 3.2, frame: 'museum' }));
+    if (stairs) {
+      addPortal(room, { pos: V3(0, 0, N + 0.06), dir: V3(0, 0, 1), dest: 'stairhall', w: 3.0, h: 4.2, signW: 3.6, subtitle: 'Upstairs to the new wings' });
+      for (const sx of [-1, 1]) box(room, 0.45, 5.9, 0.3, sx * 2.4, 2.95, N + 0.15, warm);
+      box(room, 5.3, 0.45, 0.4, 0, 6.1, N + 0.2, warm);
+      box(room, 5.7, 0.16, 0.5, 0, 6.4, N + 0.25, stone);
+      onWall(works.plate, wallSlots.shift(), 2.2);
+    } else pictureLight(addWork(room, works.plate, { pos: V3(0, 2.6, N + 0.03), dir: V3(0, 0, 1), h: 2.6, frame: 'gilded', plaque: 'brass' }));
+
+    // ---- new acquisitions: easels at the far end, then the aisle walls
+    const easels = [[-8.1, -15.8, 0.55], [8.1, -15.8, 0.55], [-8.4, -19.3, 0.2], [8.4, -19.3, 0.2]];
+    acquisitions.forEach((id, i) => {
+      if (i < easels.length) {
+        const [x, z, k] = easels[i];
+        easel(room, id, V3(x, 0, z), V3(-Math.sign(x), 0, k).normalize(), { h: 1.1, frame: 'museum' });
+      } else if (wallSlots.length) onWall(id, wallSlots.shift());
+    });
+    if (acquisitions.length) addText(room, { ...text.acquisitions, width: 2.2 }, V3(-HX + 0.03, 3.9, -17.6), V3(1, 0, 0));
+
+    addLights(room, [0xfff4e4, 0x8f806a, 0.85], [
+      [0, 9.4, -2, 0xfff0d8, 80, 42],
+      [0, 4.4, 18.2, 0xffecd2, 7, 10],
+    ]);
+
+    // Walking order for stepping between works: the vestibule, up the west
+    // side, across the far wall, back down the east side.
+    const at = new THREE.Vector3();
+    const lap = (m) => {
+      m.getWorldPosition(at);
+      if (at.z > S) return -100;
+      if (at.z < N + 1) return 50 + at.x / HX;
+      return at.x < 0 ? S - at.z : 100 + (at.z - N);
+    };
+    room.order = room.artworks.map((m) => [lap(m), m]).sort((a, b) => a[0] - b[0]).map(([, m]) => m);
+    return room;
+  }
+
+  // A shaft of daylight from a skylight down to (x, z), with dust in it.
+  function sunbeam(room, x, z, top) {
+    const shaft = mesh(
+      room,
+      new THREE.CylinderGeometry(1.1, 1.9, top - 0.1, 48, 1, true),
+      new THREE.MeshBasicMaterial({ map: beamTex, color: 0xfff1d4, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
+      x,
+      (top - 0.1) / 2,
+      z,
+    );
+    shaft.renderOrder = 1;
+    const r = TX.rng(8);
+    const pts = [];
+    for (let i = 0; i < 300; i++) {
+      const a = r() * TAU;
+      const rr = Math.sqrt(r()) * 1.7;
+      pts.push(x + Math.cos(a) * rr, 0.3 + r() * (top - 1.5), z + Math.sin(a) * rr);
+    }
+    const dust = glowPoints(room, pts, 0xc9b58f, 0.06, 0.55);
+    dust.material.blending = THREE.NormalBlending;
+    animate(room, (t) => {
+      dust.position.y = Math.sin(t * 0.2) * 0.15;
+    });
+  }
+
+  return { buildStairHall, buildWing, buildEntrance };
 }
