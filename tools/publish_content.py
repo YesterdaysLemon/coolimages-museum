@@ -51,7 +51,7 @@ def main():
         (stage / "art").mkdir(parents=True)
         for item in items:
             # Videos also carry an MP4 and the curator's contact sheet.
-            for key in ("file", "video", "sheet"):
+            for key in ("file", "small", "video", "sheet"):
                 if key in item:
                     shutil.copy2(ROOT / item[key], stage / "art" / Path(item[key]).name)
         public = {"built": manifest.get("built"), "count": len(items), "items": items, "withheld": withheld}

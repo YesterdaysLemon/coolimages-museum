@@ -574,7 +574,7 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
         body: [
           `${summary.videos ? `${summary.count - summary.videos} images and ${summary.videos} video${summary.videos > 1 ? 's' : ''}` : `${summary.count} images`} saved from X between ${summary.range}, and one afternoon of conversation about why they resonated.`,
           'The thesis: something sweet on the surface, something enormous and watchful underneath, taken completely seriously and as a joke at the same time.',
-          'Walk into a painting to travel. Press E to look closer.',
+          summary.touch ? 'Tap a door to walk through it, or a picture to look closer.' : 'Walk into a painting to travel. Press E to look closer.',
         ],
         width: 3.2,
       },

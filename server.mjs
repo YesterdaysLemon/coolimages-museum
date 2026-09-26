@@ -37,7 +37,7 @@ const types = {
   '.mp4': 'video/mp4',
   '.svg': 'image/svg+xml',
 };
-const allowed = [/^\/src\/[\w-]+\.js$/, /^\/data\/[\w-]+\.json$/, /^\/content\/[\w-]+\.json$/, /^\/content\/art\/[\w-]+(\.sheet)?\.(jpg|png|mp4)$/, /^\/robots\.txt$/];
+const allowed = [/^\/src\/[\w-]+\.js$/, /^\/data\/[\w-]+\.json$/, /^\/content\/[\w-]+\.json$/, /^\/content\/art\/[\w-]+(\.sheet|\.sm)?\.(jpg|png|mp4)$/, /^\/robots\.txt$/];
 
 http
   .createServer(async (req, res) => {

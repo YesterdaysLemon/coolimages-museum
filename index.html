@@ -36,6 +36,10 @@
       }
       html,
       body {
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+        overscroll-behavior: none;
         margin: 0;
         height: 100%;
         overflow: hidden;
@@ -611,6 +615,238 @@
         font-size: 17px;
       }
 
+      /* museum map */
+      #museum-map {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background: rgba(247, 245, 240, 0.72);
+        backdrop-filter: blur(6px);
+      }
+      #museum-map[hidden] {
+        display: none;
+      }
+      #museum-map .card {
+        width: min(980px, 100%);
+        max-height: calc(100vh - 32px);
+        overflow-y: auto;
+        padding: 20px 24px 16px;
+        border-radius: 6px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        border-top: 5px solid var(--accent);
+      }
+      .map-head,
+      .map-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .map-head h2 {
+        margin: 0;
+        font-weight: 500;
+        font-size: 30px;
+      }
+      #map-close,
+      #map-go {
+        min-height: 44px;
+        padding: 8px 22px;
+        border-radius: 999px;
+        border: 1px solid rgba(29, 26, 22, 0.25);
+        background: #fff;
+        font-size: 17px;
+        color: var(--ink);
+      }
+      #map-go {
+        background: var(--ink);
+        color: var(--paper);
+        border-color: var(--ink);
+      }
+      #map-go:disabled {
+        background: #fff;
+        color: var(--ink-soft);
+        border-style: dashed;
+        cursor: default;
+      }
+      #map-svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        margin: 8px 0;
+      }
+      #map-svg .edge {
+        stroke: rgba(29, 26, 22, 0.22);
+        stroke-width: 2;
+      }
+      #map-svg .edge.hot {
+        stroke: var(--accent);
+        stroke-width: 3.5;
+      }
+      #map-svg .room {
+        cursor: pointer;
+        outline: none;
+      }
+      #map-svg .room rect {
+        fill: #fbfaf6;
+        stroke: rgba(29, 26, 22, 0.55);
+        stroke-width: 1.5;
+        stroke-dasharray: 5 4;
+      }
+      #map-svg .room.visited rect {
+        stroke-dasharray: none;
+      }
+      #map-svg .room.up rect {
+        fill: #efe6d3;
+      }
+      #map-svg .room.down rect {
+        fill: #3a2a2c;
+      }
+      #map-svg .room text {
+        fill: var(--ink);
+        font-style: italic;
+      }
+      #map-svg .level {
+        fill: var(--ink-soft);
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+      #map-svg .room.visited text {
+        font-style: normal;
+      }
+      #map-svg .room.down text {
+        fill: #f4ede4;
+      }
+      #map-svg .room.pick rect,
+      #map-svg .room:focus-visible rect {
+        stroke: var(--accent);
+        stroke-width: 3.5;
+      }
+      #map-svg .room.here rect {
+        stroke: var(--ink);
+        stroke-width: 3.5;
+        stroke-dasharray: none;
+      }
+      #map-svg .you {
+        font-style: normal;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        fill: var(--accent);
+      }
+      #map-info {
+        margin: 0;
+        flex: 1 1 280px;
+        font-size: 17px;
+        line-height: 1.45;
+        color: var(--ink-soft);
+      }
+      .map-key {
+        margin: 10px 0 0;
+        font-size: 14px;
+        color: var(--ink-soft);
+      }
+      .map-key .k {
+        display: inline-block;
+        width: 18px;
+        height: 11px;
+        margin: 0 5px 0 10px;
+        border-radius: 6px;
+        border: 1.5px solid rgba(29, 26, 22, 0.55);
+        vertical-align: -1px;
+      }
+      .map-key .k:first-child {
+        margin-left: 0;
+      }
+      .map-key .ground {
+        background: #fbfaf6;
+      }
+      .map-key .up {
+        background: #efe6d3;
+      }
+      .map-key .down {
+        background: #3a2a2c;
+      }
+      .map-key .unseen {
+        background: #fbfaf6;
+        border-style: dashed;
+      }
+
+      /* caption: next and previous */
+      #caption .nav {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      #caption .nav[hidden] {
+        display: none;
+      }
+      #caption .nav button {
+        flex: 1;
+        min-height: 44px;
+        border-radius: 999px;
+        border: 1px solid rgba(29, 26, 22, 0.25);
+        background: #fff;
+        font-size: 17px;
+        color: var(--ink);
+      }
+
+      /* touch: menu, legend */
+      #menu {
+        position: fixed;
+        left: 16px;
+        top: 16px;
+        min-height: 44px;
+        padding: 8px 18px;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(251, 250, 247, 0.9);
+        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.12);
+        font-size: 16px;
+        color: var(--ink);
+        z-index: 5;
+      }
+      body.inspecting #menu {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #touch-legend {
+        position: fixed;
+        left: 50%;
+        bottom: calc(214px + env(safe-area-inset-bottom, 0px));
+        transform: translateX(-50%);
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 4px 14px;
+        width: max-content;
+        max-width: calc(100vw - 32px);
+        padding: 10px 16px;
+        border-radius: 14px;
+        background: rgba(251, 250, 247, 0.92);
+        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.12);
+        font-size: 15px;
+        text-align: center;
+        opacity: 0;
+        transition: opacity 0.8s;
+        z-index: 5;
+        pointer-events: none;
+      }
+      #touch-legend.show {
+        opacity: 1;
+      }
+      #minimap {
+        pointer-events: auto;
+        cursor: pointer;
+      }
+      button {
+        touch-action: manipulation;
+      }
+
       /* touch joystick */
       #stick {
         position: fixed;
@@ -630,6 +866,10 @@
       #stick.show {
         display: flex;
       }
+      #stick.ghost {
+        opacity: 0.55;
+        transition: opacity 0.6s;
+      }
       #stick span {
         width: 48px;
         height: 48px;
@@ -637,7 +877,9 @@
         background: rgba(251, 250, 247, 0.92);
       }
 
-      @media (max-width: 819px) {
+      /* Portrait phones: the caption is a sheet under the work. Landscape
+         phones keep it beside the work, like the desktop. */
+      @media (max-width: 819px) and (max-aspect-ratio: 6/5) {
         #caption {
           top: auto;
           left: 12px;
@@ -651,6 +893,38 @@
         #caption .note {
           font-size: 18px;
         }
+      }
+      @media (max-width: 819px) and (min-aspect-ratio: 6/5) {
+        #caption {
+          top: 10px;
+          right: 10px;
+          bottom: 10px;
+          width: 42vw;
+          padding: 18px 20px 14px;
+        }
+        #caption h2 {
+          font-size: 24px;
+        }
+        #caption .note {
+          font-size: 16px;
+        }
+      }
+      @media (max-width: 819px) {
+        #banner {
+          top: 150px;
+        }
+        #banner h2 {
+          font-size: 24px;
+          letter-spacing: 0.12em;
+        }
+        #intro h1 {
+          letter-spacing: 0.2em;
+          padding-left: 0.2em;
+        }
+        .map-head h2 {
+          font-size: 24px;
+        }
+
         #mapbox,
         #minimap {
           width: 104px;
@@ -693,10 +967,15 @@
       <span><kbd>Shift</kbd> stroll faster</span>
       <span><kbd>E</kbd> look closer</span>
       <span>Walk into a painting to travel</span>
+      <span><kbd>Tab</kbd> map</span>
       <span><kbd>C</kbd> credits</span>
       <span><kbd>Esc</kbd> pause</span>
     </div>
+    <div id="touch-legend" class="touch-only" aria-hidden="true">
+      <span>Left thumb: walk</span><span>Right thumb: look</span><span>Tap a door, a picture, or the floor</span>
+    </div>
     <button id="mute" type="button" aria-pressed="true">Sound on</button>
+    <button id="menu" class="touch-only" type="button">Menu</button>
     <div id="stick"><span></span></div>
 
     <aside id="caption" aria-hidden="true">
@@ -709,6 +988,10 @@
       <hr />
       <p class="note"></p>
       <p class="back"></p>
+      <div class="nav">
+        <button class="prev" type="button" aria-label="Previous work">&lsaquo; Previous</button>
+        <button class="next" type="button" aria-label="Next work">Next &rsaquo;</button>
+      </div>
     </aside>
 
     <div id="fade"></div>
@@ -748,13 +1031,14 @@
         <li><kbd>Shift</kbd> stroll faster</li>
         <li><kbd>E</kbd> look closer</li>
         <li>Walk into a painting to travel</li>
+        <li><kbd>Tab</kbd> map</li>
         <li><kbd>M</kbd> sound</li>
       </ul>
       <ul class="keys touch-only">
         <li>Left thumb: walk</li>
         <li>Right thumb: look</li>
-        <li>Tap a work to look closer</li>
-        <li>Walk into a painting to travel</li>
+        <li>Tap the floor to walk there</li>
+        <li>Tap a door to go through, a picture to look closer</li>
       </ul>
       <p class="fine">Best with headphones. The music is generated live, so it never repeats exactly.</p>
       <button class="text-button" type="button" data-open-credits>Credits &amp; removal requests</button>
@@ -763,16 +1047,38 @@
     <section id="pause" hidden>
       <div class="card">
         <h2>Paused</h2>
-        <ul class="keys">
+        <ul class="keys desk-only">
           <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk</li>
           <li><kbd>E</kbd> look closer</li>
+          <li><kbd>Tab</kbd> map</li>
           <li><kbd>M</kbd> sound</li>
+        </ul>
+        <ul class="keys touch-only">
+          <li>Left thumb: walk · Right thumb: look</li>
+          <li>Tap the floor, a door, or a picture</li>
+          <li>Swipe while looking closer for the next work</li>
         </ul>
         <div class="actions">
           <button id="resume" type="button">Resume</button>
+          <button type="button" data-open-map>Map</button>
           <button id="pause-mute" type="button">Turn sound off</button>
           <button type="button" data-open-credits>Credits</button>
         </div>
+      </div>
+    </section>
+
+    <section id="museum-map" hidden aria-labelledby="map-title">
+      <div class="card">
+        <div class="map-head">
+          <h2 id="map-title">Museum map</h2>
+          <button id="map-close" type="button">Close</button>
+        </div>
+        <svg id="map-svg" viewBox="0 0 1000 670" role="group" aria-label="Rooms and the doors between them"></svg>
+        <div class="map-foot">
+          <p id="map-info" aria-live="polite"></p>
+          <button id="map-go" type="button" hidden>Go</button>
+        </div>
+        <p class="map-key"><span class="k ground"></span>Ground floor <span class="k up"></span>Upstairs <span class="k down"></span>Basement <span class="k unseen"></span>Not visited yet</p>
       </div>
     </section>
 

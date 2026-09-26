@@ -11,7 +11,16 @@ const params = new URLSearchParams(location.search);
 const TEST = params.has('test');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const touchFirst = matchMedia('(pointer: coarse)').matches;
-const BASE_FOV = 72;
+// Phones and small-memory devices get a lower render scale and smaller textures.
+const lowPower = touchFirst || (navigator.deviceMemory || 8) <= 4;
+const MAX_TEXTURE = lowPower ? 1024 : 2048;
+// Portrait screens get a taller field of view, so a room isn't a keyhole.
+function fovFor(aspect) {
+  if (aspect >= 1) return 72;
+  const h = THREE.MathUtils.degToRad(64);
+  return Math.min(100, Math.max(72, THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(h / 2) / aspect))));
+}
+let baseFov = fovFor(innerWidth / innerHeight);
 const SENSITIVITY = 0.0022;
 const ACCENT = { lobby: '#8a6d3b', gallery: '#9a2f2f', eyes: '#6c5ce7', familiars: '#1f7a8c', bedroom: '#d4679a' };
 const accentFor = (id) => WINGS[id]?.accent || ACCENT[id] || ACCENT.lobby;
@@ -21,7 +30,7 @@ const moodFor = (id) => (WINGS[id]?.template ? TEMPLATES[WINGS[id].template]?.mo
 // ---------------------------------------------------------------- renderer
 const canvas = $('#scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+renderer.setPixelRatio(Math.min(devicePixelRatio, lowPower ? 1.5 : 1.75));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -31,7 +40,7 @@ TX.setAnisotropy(Math.min(8, renderer.capabilities.getMaxAnisotropy()));
 const scene = new THREE.Scene();
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-const camera = new THREE.PerspectiveCamera(BASE_FOV, innerWidth / innerHeight, 0.05, 140);
+const camera = new THREE.PerspectiveCamera(baseFov, innerWidth / innerHeight, 0.05, 140);
 
 const audio = new MuseumAudio();
 if (params.has('mute')) audio.muted = true;
@@ -101,6 +110,15 @@ function ovalMask(img) {
   return c;
 }
 
+// Downscale anything larger than this device should hold on the GPU.
+function fitTexture(img) {
+  const s = MAX_TEXTURE / Math.max(img.width, img.height);
+  if (s >= 1) return img;
+  const c = TX.makeCanvas(Math.round(img.width * s), Math.round(img.height * s));
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+
 async function loadArt(items) {
   const art = new Map();
   let done = 0;
@@ -108,9 +126,9 @@ async function loadArt(items) {
   await Promise.all(
     items.map(async (item) => {
       try {
-        const img = await loadImage(item.file);
+        const img = await loadImage(lowPower && item.small ? item.small : item.file);
         const work = WORKS[item.id] || null;
-        const texture = new THREE.Texture(work?.oval ? ovalMask(img) : img);
+        const texture = new THREE.Texture(work?.oval ? ovalMask(fitTexture(img)) : fitTexture(img));
         texture.colorSpace = THREE.SRGBColorSpace;
         texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
         if (work?.pixel) texture.magFilter = THREE.NearestFilter;
@@ -185,6 +203,7 @@ async function boot() {
     summary: {
       count: manifest.items.length + withheld.size,
       videos: manifest.items.filter((i) => i.video).length,
+      touch: touchFirst,
       range: dateRange(manifest.items),
     },
   });
@@ -213,6 +232,8 @@ function applyRoom(id) {
 
 function enterRoom(id) {
   player.room = id;
+  autoWalk = null;
+  markVisited(id);
   applyRoom(id);
   syncVideos();
   document.documentElement.style.setProperty('--accent', accentFor(id));
@@ -378,25 +399,47 @@ function walkUpdate(dt) {
   let ix = 0;
   let iz = 0;
   const len = Math.hypot(f, s);
+  if (len > 0.05 || turn) autoWalk = null;
   if (len > 0.05) {
     const sin = Math.sin(player.yaw);
     const cos = Math.cos(player.yaw);
     const n = Math.max(1, len);
     ix = (-sin * f + cos * s) / n;
     iz = (-cos * f - sin * s) / n;
+  } else if (autoWalk) {
+    // Tap-to-walk: head for the spot, turning to face it; give up if blocked.
+    const dx = autoWalk.x - player.x;
+    const dz = autoWalk.z - player.z;
+    const dist = Math.hypot(dx, dz);
+    autoWalk.t += dt;
+    if (autoWalk.t > 0.7) {
+      if (Math.hypot(player.x - autoWalk.px, player.z - autoWalk.pz) < 0.15) autoWalk = null;
+      else Object.assign(autoWalk, { t: 0, px: player.x, pz: player.z });
+    }
+    if (autoWalk && dist < 0.3 && !autoWalk.door) autoWalk = null;
+    if (autoWalk) {
+      const ease = autoWalk.door ? 1 : Math.min(1, dist / 1.2 + 0.25);
+      ix = (dx / dist) * ease;
+      iz = (dz / dist) * ease;
+      player.yaw = lerpAngle(player.yaw, Math.atan2(-dx, -dz), Math.min(1, dt * 3.5));
+    }
   }
   const k = 1 - Math.exp(-dt * 10);
   player.vx += (ix * speed - player.vx) * k;
   player.vz += (iz * speed - player.vz) * k;
   const room = world.rooms[player.room];
+  // If you ever end up somewhere you couldn't have walked to, any step onto
+  // floor is allowed until you're clear again.
+  const stuck = walkable(room, player.x, player.z, 0.38, player.y) === null;
+  const step = (x, z) => walkable(room, x, z, 0.38, player.y) ?? (stuck ? ground(room, x, z, player.y) : null);
   const nx = player.x + player.vx * dt;
-  const hx = walkable(room, nx, player.z, 0.38, player.y);
+  const hx = step(nx, player.z);
   if (hx !== null) {
     player.x = nx;
     player.y = hx;
   } else player.vx = 0;
   const nz = player.z + player.vz * dt;
-  const hz = walkable(room, player.x, nz, 0.38, player.y);
+  const hz = step(player.x, nz);
   if (hz !== null) {
     player.z = nz;
     player.y = hz;
@@ -437,7 +480,7 @@ function updateHover() {
   if (hovered) {
     const work = hovered.userData.work;
     const listen = hovered.userData.entry.audio && !audio.muted ? ' and listen' : '';
-    hint = `<b>${escapeHtml(work?.title || 'New acquisition')}</b><span>${touchFirst ? 'Tap' : 'Press <kbd>E</kbd>'} to look closer${listen}</span>`;
+    hint = `<b>${escapeHtml(work?.title || 'New acquisition')}</b><span>${usingTouch ? 'Tap it' : 'Press <kbd>E</kbd>'} to look closer${listen}</span>`;
   } else {
     for (const p of room.portals) {
       const dx = player.x - p.pos.x;
@@ -446,7 +489,7 @@ function updateHover() {
       const lateral = Math.abs(dx * p.normal.z - dz * p.normal.x);
       const facingIt = -(-Math.sin(player.yaw) * p.normal.x - Math.cos(player.yaw) * p.normal.z);
       if (along > 0 && along < 4.5 && lateral < p.w && facingIt > 0.6 && Math.abs(player.y - p.pos.y) < 1.2) {
-        hint = `<span>Walk into the painting to enter</span><b>${escapeHtml(WINGS[p.dest].name)}</b>`;
+        hint = `<span>${usingTouch ? 'Tap the door or walk in' : 'Walk into the painting to enter'}</span><b>${escapeHtml(WINGS[p.dest].name)}</b>`;
         break;
       }
     }
@@ -471,6 +514,7 @@ function escapeHtml(s) {
 function startPortal(portal) {
   const arrival = arrivalFor(portal);
   if (!arrival) return;
+  autoWalk = null;
   state = 'transition';
   setHint('');
   audio.whoosh();
@@ -488,7 +532,7 @@ function startPortal(portal) {
     player.pitch = lerp(from.pitch, 0, smooth(t));
     if (roll) {
       player.roll = sign * (Math.PI / 2) * smoother(t);
-      camera.fov = BASE_FOV + 24 * e;
+      camera.fov = baseFov + 24 * e;
     }
     setFade(smoothstep(0.55, 0.97, t));
   }, () => {
@@ -509,12 +553,12 @@ function startPortal(portal) {
       player.ey = player.y;
       if (roll) {
         player.roll = -sign * (Math.PI / 2) * (1 - smoother(t));
-        camera.fov = BASE_FOV + 24 * (1 - e);
+        camera.fov = baseFov + 24 * (1 - e);
       }
       setFade(1 - smoothstep(0, 0.55, t));
     }, () => {
       player.roll = 0;
-      camera.fov = BASE_FOV;
+      camera.fov = baseFov;
       setFade(0);
       state = 'walk';
       showBanner(portal.dest);
@@ -535,16 +579,20 @@ function showBanner(id) {
 }
 
 // ---------------------------------------------------------------- inspect
+// The caption sits beside the work on wide or landscape screens, below it on
+// portrait phones (matches the CSS media queries).
+const sideCaption = () => innerWidth >= 820 || innerWidth > innerHeight * 1.2;
+
 function inspectPose(mesh) {
   const ud = mesh.userData;
   const n = new THREE.Vector3();
   mesh.getWorldDirection(n);
   const c = new THREE.Vector3();
   mesh.getWorldPosition(c);
-  const side = innerWidth >= 820;
+  const side = sideCaption();
   const regionW = side ? 0.58 : 0.94;
   const regionH = side ? 0.84 : 0.5;
-  const tanH = Math.tan(THREE.MathUtils.degToRad(BASE_FOV) / 2);
+  const tanH = Math.tan(THREE.MathUtils.degToRad(baseFov) / 2);
   const aspect = innerWidth / innerHeight;
   const d = Math.max(ud.viewH / (2 * tanH * regionH), ud.viewW / (2 * tanH * aspect * regionW), 0.6);
   const visH = 2 * d * tanH;
@@ -589,6 +637,42 @@ function startInspect(mesh) {
   });
 }
 
+// Next or previous work in the same room, in walking order.
+function roomOrder(roomId) {
+  const room = world.rooms[roomId];
+  if (room.order) return room.order;
+  const b = room.bounds;
+  const cx = b.type === 'circle' ? b.x : (b.x0 + b.x1) / 2;
+  const cz = b.type === 'circle' ? b.z : (b.z0 + b.z1) / 2;
+  const spiral = room.floors.some((f) => f.type === 'helix');
+  const key = (m) => {
+    m.getWorldPosition(tmpV);
+    return spiral ? tmpV.y : Math.atan2(tmpV.x - cx, tmpV.z - cz);
+  };
+  room.order = [...room.artworks].map((m) => [key(m), m]).sort((a, c) => a[0] - c[0]).map(([, m]) => m);
+  return room.order;
+}
+
+function inspectStep(dir) {
+  if (state !== 'inspect' || !inspect) return;
+  const list = roomOrder(inspect.mesh.userData.room);
+  if (list.length < 2) return;
+  const next = list[(list.indexOf(inspect.mesh) + dir + list.length) % list.length];
+  videoSound(inspect.mesh, false);
+  const from = { ...camPose };
+  const to = inspectPose(next);
+  inspect.mesh = next;
+  showCaption(next.userData);
+  videoSound(next, true);
+  audio.chime();
+  state = 'transition';
+  runAnim(reducedMotion ? 0.2 : 0.9, (t) => {
+    camPose = lerpPose(from, to, smoother(t));
+  }, () => {
+    state = 'inspect';
+  });
+}
+
 function endInspect(immediate = false, relock = true) {
   if (!inspect) return;
   hideCaption();
@@ -608,7 +692,7 @@ function endInspect(immediate = false, relock = true) {
   }, () => {
     camPose = null;
     state = 'walk';
-    if (!locked && !dragLook && !touchFirst) showPause();
+    if (!locked && !dragLook && !usingTouch) showPause();
   });
 }
 
@@ -620,14 +704,18 @@ function showCaption(ud) {
   panel.querySelector('.artist').textContent = work?.artist || 'Curatorial notes pending';
   panel.querySelector('.medium').textContent = work?.medium || '';
   const { entry } = ud;
-  const sound = entry.audio ? (audio.muted ? ', sound off (press M)' : ', with sound') : '';
+  const sound = entry.audio ? (audio.muted ? `, sound off${usingTouch ? '' : ' (press M)'}` : ', with sound') : '';
   panel.querySelector('.saved').textContent = entry.video
     ? `${formatSaved(entry.saved)} · Moving image, ${clockTime(entry.duration || 0)}${sound}`
     : formatSaved(entry.saved);
   renderCaptionCredit(panel.querySelector('.credit'), work);
   panel.querySelector('.note').textContent =
     work?.note || 'This image arrived after the catalogue was written. The curator is still deciding why it resonates.';
-  panel.querySelector('.back').innerHTML = touchFirst ? 'Tap anywhere to step back' : 'Press <kbd>E</kbd> or move to step back';
+  panel.querySelector('.back').innerHTML = usingTouch
+    ? 'Swipe for the next work · tap the picture to step back'
+    : '<kbd>&larr;</kbd><kbd>&rarr;</kbd> next work · <kbd>E</kbd> or <kbd>W</kbd> to step back';
+  const many = roomOrder(ud.room).length > 1;
+  panel.querySelector('.nav').hidden = !many;
   panel.classList.add('show');
   panel.setAttribute('aria-hidden', 'false');
   document.body.classList.add('inspecting');
@@ -729,7 +817,7 @@ function lockFailed() {
 }
 
 function requestLock() {
-  if (touchFirst || dragLook) return;
+  if (usingTouch || dragLook) return;
   if (!canvas.requestPointerLock) {
     enableDragLook();
     return;
@@ -744,7 +832,7 @@ function requestLock() {
 document.addEventListener('pointerlockerror', lockFailed);
 
 canvas.addEventListener('mousedown', (e) => {
-  if (locked || touchFirst || e.button !== 0) return;
+  if (locked || usingTouch || e.button !== 0) return;
   drag = { x: e.clientX, y: e.clientY, moved: 0 };
 });
 addEventListener('mousemove', (e) => {
@@ -776,6 +864,18 @@ function begin() {
   showBanner('lobby');
   $('#legend').classList.add('show');
   setTimeout(() => $('#legend').classList.remove('show'), 9000);
+  if (usingTouch) {
+    // A ghost joystick shows where the left thumb goes, until it's used.
+    const stick = $('#stick');
+    stick.style.transform = `translate(28px, ${innerHeight - 190}px)`;
+    stick.classList.add('show', 'ghost');
+    $('#touch-legend').classList.add('show');
+    setTimeout(() => {
+      stick.classList.remove('ghost');
+      if (!touchMove.x && !touchMove.y) stick.classList.remove('show');
+      $('#touch-legend').classList.remove('show');
+    }, 7000);
+  }
 }
 
 function showPause(message = 'Paused') {
@@ -801,6 +901,208 @@ function toggleMute() {
     showCaption(inspect.mesh.userData);
   }
 }
+
+// ------------------------------------------------------------------- map
+// A map of every room and door, laid out once by a small force simulation.
+// Rooms you've been to can be revisited straight from it.
+const visited = new Set(['lobby']);
+try {
+  for (const id of JSON.parse(localStorage.getItem('coolimages.visited') || '[]')) visited.add(id);
+} catch {}
+function markVisited(id) {
+  if (visited.has(id)) return;
+  visited.add(id);
+  try {
+    localStorage.setItem('coolimages.visited', JSON.stringify([...visited]));
+  } catch {}
+}
+
+let mapLayout = null;
+let mapPick = null;
+// Floors as bands: upstairs on top, the ground floor, the basement below.
+// Within a floor, rooms are ordered by where their neighbours sit (a few
+// barycentre passes), then wrapped into rows that fit the screen.
+function layoutMap() {
+  const portrait = innerWidth < innerHeight;
+  const W = portrait ? 600 : 1000;
+  const perRow = portrait ? 3 : 5;
+  const font = portrait ? 25 : 17;
+  const rowGap = portrait ? 132 : 104;
+  const ids = Object.keys(world.rooms);
+  const edges = [];
+  const seen = new Set();
+  for (const p of world.portals) {
+    const k = [p.room, p.dest].sort().join('|');
+    if (!seen.has(k)) {
+      seen.add(k);
+      edges.push([p.room, p.dest]);
+    }
+  }
+  const floor = (id) => (world.plan?.stairs?.down === id ? 'down' : WINGS[id]?.generated ? 'up' : 'ground');
+  const neighbours = Object.fromEntries(ids.map((id) => [id, []]));
+  for (const [a, b] of edges) {
+    neighbours[a].push(b);
+    neighbours[b].push(a);
+  }
+  const levels = ['up', 'ground', 'down'].map((f) => ids.filter((id) => floor(id) === f)).filter((l) => l.length);
+  const x = Object.fromEntries(ids.map((id, i) => [id, i]));
+  const place = (level) => {
+    const rows = [];
+    for (let i = 0; i < level.length; i += perRow) rows.push(level.slice(i, i + perRow));
+    for (const row of rows) row.forEach((id, i) => (x[id] = W / 2 + (i - (row.length - 1) / 2) * (W / perRow)));
+    return rows;
+  };
+  let rows = [];
+  for (let pass = 0; pass < 8; pass++) {
+    rows = [];
+    for (const level of levels) {
+      const bary = (id) => (neighbours[id].length ? neighbours[id].reduce((sum, n) => sum + x[n], 0) / neighbours[id].length : x[id]);
+      level.sort((a, b) => bary(a) - bary(b));
+      rows.push(...place(level).map((row) => ({ row, level: floor(row[0]) })));
+    }
+  }
+  const pos = {};
+  const labels = [];
+  let y = 64;
+  let lastLevel = null;
+  for (const { row, level } of rows) {
+    if (level !== lastLevel) {
+      labels.push({ y: y - (portrait ? 44 : 34), text: { up: 'Upstairs', ground: 'Ground floor', down: 'Basement' }[level] });
+      lastLevel = level;
+    }
+    for (const id of row) pos[id] = { x: x[id], y };
+    y += rowGap;
+  }
+  return { pos, edges, floor, labels, font, W, H: y - rowGap + 60, portrait, maxW: W / perRow - 16 };
+}
+
+// Long names break over two lines.
+function mapLines(name, max = 16) {
+  if (name.length <= max) return [name];
+  const mid = name.length / 2;
+  let cut = -1;
+  for (let i = 0; i < name.length; i++) if (name[i] === ' ' && (cut < 0 || Math.abs(i - mid) < Math.abs(cut - mid))) cut = i;
+  return cut < 0 ? [name] : [name.slice(0, cut), name.slice(cut + 1)];
+}
+
+function drawMap() {
+  const portrait = innerWidth < innerHeight;
+  if (!mapLayout || mapLayout.portrait !== portrait) mapLayout = layoutMap();
+  const { pos, edges, floor, labels, font, W, H, maxW } = mapLayout;
+  const svg = $('#map-svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const ns = 'http://www.w3.org/2000/svg';
+  const mk = (tag, attrs, text) => {
+    const n = document.createElementNS(ns, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (text) n.textContent = text;
+    return n;
+  };
+  svg.replaceChildren();
+  const pick = mapPick || player.room;
+  for (const l of labels) svg.append(mk('text', { x: 14, y: l.y, class: 'level', style: `font-size:${font * 0.7}px` }, l.text));
+  for (const [a, b] of edges) {
+    const hot = a === pick || b === pick;
+    svg.append(mk('line', { x1: pos[a].x, y1: pos[a].y, x2: pos[b].x, y2: pos[b].y, class: hot ? 'edge hot' : 'edge' }));
+  }
+  for (const id of Object.keys(pos)) {
+    const { x, y } = pos[id];
+    const lines = mapLines(WINGS[id].name, mapLayout.portrait ? 12 : 16);
+    const w = Math.min(maxW, Math.max(...lines.map((t) => t.length)) * font * 0.52 + font * 1.4);
+    const h = font * (lines.length === 1 ? 2 : 2.9);
+    const g = mk('g', { class: `room ${floor(id)}${visited.has(id) ? ' visited' : ''}${id === player.room ? ' here' : ''}${id === pick ? ' pick' : ''}`, 'data-id': id, tabindex: 0, role: 'button', 'aria-label': WINGS[id].name });
+    g.append(mk('rect', { x: x - w / 2, y: y - h / 2, width: w, height: h, rx: Math.min(h / 2, 22) }));
+    lines.forEach((t, i) => g.append(mk('text', { x, y: y + font * 0.35 + (i - (lines.length - 1) / 2) * font * 1.05, 'text-anchor': 'middle', style: `font-size:${font}px` }, t)));
+    if (id === player.room) g.append(mk('text', { x, y: y + h / 2 + font * 0.85, 'text-anchor': 'middle', class: 'you', style: `font-size:${font * 0.62}px` }, 'You are here'));
+    svg.append(g);
+  }
+  const info = $('#map-info');
+  const doors = world.rooms[pick].portals.map((p) => WINGS[p.dest].name);
+  const where = { ground: 'Ground floor', up: 'Upstairs', down: 'Basement' }[floor(pick)];
+  info.textContent = `${WINGS[pick].name} \u00b7 ${where}. Doors to ${[...new Set(doors)].join(', ')}.`;
+  const go = $('#map-go');
+  go.hidden = pick === player.room;
+  go.disabled = !visited.has(pick);
+  go.textContent = visited.has(pick) ? `Go to ${WINGS[pick].name}` : 'Not visited yet: find a door that leads here';
+}
+
+function openMap() {
+  if (state === 'transition' || state === 'loading' || state === 'ready') return;
+  if (inspect) endInspect(true);
+  if (locked) {
+    freeingPointer = true;
+    document.exitPointerLock();
+  }
+  $('#pause').setAttribute('hidden', '');
+  state = 'map';
+  autoWalk = null;
+  mapPick = null;
+  drawMap();
+  $('#museum-map').removeAttribute('hidden');
+  $('#map-close').focus({ preventScroll: true });
+}
+
+function closeMap(relock = true) {
+  $('#museum-map').setAttribute('hidden', '');
+  if (state === 'map') state = 'walk';
+  if (relock) requestLock();
+}
+
+// Revisit a room: fade out, arrive at its entrance, fade in.
+function travelTo(id) {
+  closeMap(false);
+  requestLock();
+  const room = world.rooms[id];
+  const arrival = room.portals.find((p) => p.entrance) || room.landing || room.portals[0];
+  state = 'transition';
+  audio.whoosh();
+  runAnim(reducedMotion ? 0.2 : 0.5, (t) => setFade(smooth(t)), () => {
+    enterRoom(id);
+    const s = spawnFrom(arrival);
+    Object.assign(player, { x: s.x, z: s.z, y: s.y, ey: s.y, yaw: s.yaw, pitch: 0, vx: 0, vz: 0 });
+    settle(id);
+    player.ey = player.y;
+    runAnim(reducedMotion ? 0.2 : 0.6, (t) => setFade(1 - smooth(t)), () => {
+      state = 'walk';
+      showBanner(id);
+    });
+  });
+}
+
+$('#map-svg').addEventListener('click', (e) => {
+  const g = e.target.closest('[data-id]');
+  if (!g) return;
+  mapPick = g.dataset.id;
+  drawMap();
+});
+$('#map-svg').addEventListener('keydown', (e) => {
+  const g = e.target.closest('[data-id]');
+  if (!g || (e.key !== 'Enter' && e.key !== ' ')) return;
+  e.preventDefault();
+  mapPick = g.dataset.id;
+  drawMap();
+  $('#map-go').focus();
+});
+$('#map-go').addEventListener('click', () => {
+  if (mapPick && visited.has(mapPick) && mapPick !== player.room) travelTo(mapPick);
+});
+$('#map-close').addEventListener('click', () => closeMap());
+$('#museum-map').addEventListener('click', (e) => {
+  if (e.target.id === 'museum-map') closeMap();
+});
+$('#minimap').addEventListener('click', openMap);
+for (const el of document.querySelectorAll('[data-open-map]')) el.addEventListener('click', openMap);
+$('#menu').addEventListener('click', () => {
+  if (state === 'walk' || state === 'inspect') showPause('Menu');
+});
+$('#caption').querySelector('.prev').addEventListener('click', (e) => {
+  e.stopPropagation();
+  inspectStep(-1);
+});
+$('#caption').querySelector('.next').addEventListener('click', (e) => {
+  e.stopPropagation();
+  inspectStep(1);
+});
 
 $('#enter').addEventListener('click', begin);
 $('#resume').addEventListener('click', resume);
@@ -829,14 +1131,19 @@ document.addEventListener('mousemove', (e) => {
   player.pitch = clamp(player.pitch - clamp(e.movementY, -250, 250) * SENSITIVITY, -1.35, 1.35);
 });
 
-canvas.addEventListener('click', () => {
-  if (touchFirst) return;
+canvas.addEventListener('click', (e) => {
+  if (usingTouch && e.sourceCapabilities?.firesTouchEvents) return;
   if (lastDragMoved > 6) {
     lastDragMoved = 0;
     return;
   }
   if (!locked && !dragLook && (state === 'walk' || state === 'paused')) {
     resume();
+    return;
+  }
+  // Without pointer lock, a click acts where it lands, like a tap.
+  if (dragLook && !locked) {
+    tapAt(e.clientX, e.clientY);
     return;
   }
   if (state === 'walk' && hovered) startInspect(hovered);
@@ -856,17 +1163,31 @@ addEventListener('keydown', (e) => {
   }
   if (e.code === 'KeyM' && state !== 'loading') toggleMute();
   if (e.code === 'KeyC' && state !== 'loading') openCredits();
+  if (e.code === 'Tab' && (state === 'walk' || state === 'inspect') && $('#credits').hasAttribute('hidden')) {
+    e.preventDefault();
+    openMap();
+    return;
+  }
+  if (e.code === 'Escape' && !$('#museum-map').hasAttribute('hidden')) {
+    closeMap();
+    return;
+  }
   if (e.code === 'Escape' && !$('#credits').hasAttribute('hidden')) closeCredits();
-  if (state === 'inspect' && MOVE_KEYS.has(e.code)) endInspect();
+  if (state === 'inspect' && (e.code === 'ArrowLeft' || e.code === 'KeyA')) inspectStep(-1);
+  else if (state === 'inspect' && (e.code === 'ArrowRight' || e.code === 'KeyD')) inspectStep(1);
+  else if (state === 'inspect' && MOVE_KEYS.has(e.code)) endInspect();
   if (e.code === 'Escape' && state === 'inspect') endInspect(false, false);
   if (MOVE_KEYS.has(e.code) || e.code === 'Space') e.preventDefault();
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
 addEventListener('blur', () => keys.clear());
 
-// Touch: left side is a joystick, right side looks around, tap to inspect.
-if (touchFirst) {
-  document.body.classList.add('touch');
+// Touch: the left thumb is a joystick, the right thumb looks around, and a
+// quick tap acts on what it lands on (see tapAt). Hybrid devices switch to
+// touch mode on their first touch.
+let usingTouch = touchFirst;
+if (touchFirst) document.body.classList.add('touch');
+{
   const stick = $('#stick');
   const knob = stick.querySelector('span');
   let stickId = null;
@@ -874,11 +1195,20 @@ if (touchFirst) {
   let origin = null;
   let last = null;
   let tap = null;
+  let swipe = null;
   canvas.addEventListener('touchstart', (e) => {
+    if (!usingTouch) {
+      usingTouch = true;
+      document.body.classList.add('touch');
+    }
     for (const t of e.changedTouches) {
-      if (t.clientX < innerWidth * 0.42 && stickId === null && state === 'walk') {
+      if (state === 'inspect') {
+        swipe = { id: t.identifier, x: t.clientX, y: t.clientY, time: performance.now() };
+      } else if (t.clientX < innerWidth * 0.42 && stickId === null && state === 'walk') {
         stickId = t.identifier;
+        autoWalk = null;
         origin = { x: t.clientX, y: t.clientY };
+        stick.classList.remove('ghost');
         stick.style.transform = `translate(${origin.x - 60}px, ${origin.y - 60}px)`;
         stick.classList.add('show');
       } else if (lookId === null) {
@@ -907,7 +1237,14 @@ if (touchFirst) {
   }, { passive: false });
   const end = (e) => {
     for (const t of e.changedTouches) {
-      if (t.identifier === stickId) {
+      if (swipe && t.identifier === swipe.id) {
+        const dx = t.clientX - swipe.x;
+        const dy = t.clientY - swipe.y;
+        const quick = performance.now() - swipe.time < 600;
+        if (quick && Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.3) inspectStep(dx < 0 ? 1 : -1);
+        else if (Math.hypot(dx, dy) < 12) endInspect();
+        swipe = null;
+      } else if (t.identifier === stickId) {
         stickId = null;
         touchMove.x = touchMove.y = 0;
         knob.style.transform = '';
@@ -915,22 +1252,73 @@ if (touchFirst) {
       } else if (t.identifier === lookId) {
         lookId = null;
         const quick = tap && performance.now() - tap.time < 280 && Math.hypot(t.clientX - tap.x, t.clientY - tap.y) < 12;
-        if (quick) {
-          if (state === 'walk' && hovered) startInspect(hovered);
-          else if (state === 'inspect') endInspect();
-        }
+        if (quick) tapAt(t.clientX, t.clientY);
       }
     }
   };
   canvas.addEventListener('touchend', end);
   canvas.addEventListener('touchcancel', end);
-  $('#caption').addEventListener('click', (e) => {
-    if (!e.target.closest('a') && state === 'inspect') endInspect();
-  });
+}
+
+// A tap (or a click without pointer lock) acts on what it lands on: a
+// picture to look closer, a door to walk through, the floor to walk to.
+let autoWalk = null;
+const tapRay = new THREE.Raycaster();
+const tapNdc = new THREE.Vector2();
+const tapNormal = new THREE.Vector3();
+const marker = new THREE.Mesh(
+  new THREE.RingGeometry(0.22, 0.3, 40).rotateX(-Math.PI / 2),
+  new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, toneMapped: false }),
+);
+marker.renderOrder = 5;
+scene.add(marker);
+function tapAt(clientX, clientY) {
+  if (state === 'inspect') {
+    endInspect();
+    return;
+  }
+  if (state !== 'walk') return;
+  const room = world.rooms[player.room];
+  tapNdc.set((clientX / innerWidth) * 2 - 1, -(clientY / innerHeight) * 2 + 1);
+  tapRay.setFromCamera(tapNdc, camera);
+  tapRay.far = 45;
+  const doors = new Map(room.portals.map((p) => [p.surface, p]));
+  const hit = tapRay
+    .intersectObject(room.group, true)
+    .find((h) => h.object.isMesh && (room.artworks.includes(h.object) || doors.has(h.object) || !h.object.material.transparent));
+  if (!hit) return;
+  if (room.artworks.includes(hit.object) && hit.distance < 16) {
+    startInspect(hit.object);
+    return;
+  }
+  const door = doors.get(hit.object);
+  if (door && Math.abs(door.pos.y - player.y) < 1.2) {
+    autoWalk = { x: door.pos.x - door.normal.x * 0.4, z: door.pos.z - door.normal.z * 0.4, door: true, t: 0, px: player.x, pz: player.z };
+    showMarker(door.pos.x + door.normal.x * 0.5, door.pos.y, door.pos.z + door.normal.z * 0.5);
+    return;
+  }
+  if (!hit.face) return;
+  tapNormal.copy(hit.face.normal).transformDirection(hit.object.matrixWorld);
+  if (tapNormal.y < 0.6 || Math.abs(hit.point.y - player.y) > 2.6) return;
+  autoWalk = { x: hit.point.x, z: hit.point.z, door: false, t: 0, px: player.x, pz: player.z };
+  showMarker(hit.point.x, hit.point.y, hit.point.z);
+}
+let markerT = 1;
+function showMarker(x, y, z) {
+  marker.position.set(x, y + 0.03, z);
+  markerT = 0;
+}
+function updateMarker(dt) {
+  if (markerT >= 1) return;
+  markerT = Math.min(1, markerT + dt / 0.9);
+  marker.material.opacity = 0.9 * (1 - markerT);
+  marker.scale.setScalar(1 + markerT * 0.8);
 }
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
+  baseFov = fovFor(camera.aspect);
+  if (state !== 'transition') camera.fov = baseFov;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   sizeMinimap();
@@ -1046,10 +1434,7 @@ function drawMinimap() {
 const clock = new THREE.Clock();
 let elapsed = 0;
 let miniTimer = 0;
-function frame() {
-  requestAnimationFrame(frame);
-  const dt = Math.min(clock.getDelta(), 0.05);
-  if (!world) return;
+function simulate(dt) {
   elapsed += dt;
   stepAnim(dt);
   if (state === 'walk') walkUpdate(dt);
@@ -1061,6 +1446,14 @@ function frame() {
   runAnimators(player.room, elapsed, dt, camera);
   if (state === 'walk') updateHover();
   else if (state !== 'inspect') setHint('');
+  updateMarker(dt);
+}
+
+function frame() {
+  requestAnimationFrame(frame);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if (!world) return;
+  simulate(dt);
   renderer.render(scene, camera);
   miniTimer += dt;
   if (miniTimer > 0.066) {
@@ -1088,7 +1481,7 @@ window.museum = {
     return hovered?.userData.id || null;
   },
   get portals() {
-    return world.portals.map((p) => ({ room: p.room, dest: p.dest, entrance: !!p.entrance, y: p.pos.y, subtitle: p.subtitle, arrives: arrivalFor(p)?.room === p.dest }));
+    return world.portals.map((p) => ({ room: p.room, dest: p.dest, entrance: !!p.entrance, x: p.pos.x, y: p.pos.y, z: p.pos.z, nx: p.normal.x, nz: p.normal.z, subtitle: p.subtitle, arrives: arrivalFor(p)?.room === p.dest }));
   },
   start: begin,
   teleport(roomId, dist = 2.4) {
@@ -1106,6 +1499,19 @@ window.museum = {
     player.ey = player.y;
   },
   walkable: (x, z, y) => walkable(world.rooms[player.room], x, z, 0.38, y),
+  tap: (x, y) => tapAt(x, y),
+  // Advance the simulation without waiting for frames (for scripted checks).
+  tick(seconds = 1) {
+    for (let t = 0; t < seconds; t += 1 / 60) simulate(1 / 60);
+    renderer.render(scene, camera);
+  },
+  press(code, down = true) {
+    if (down) keys.add(code);
+    else keys.delete(code);
+  },
+  map: () => openMap(),
+  travel: (id) => travelTo(id),
+  step: (dir) => inspectStep(dir),
   get plan() {
     return world.plan;
   },

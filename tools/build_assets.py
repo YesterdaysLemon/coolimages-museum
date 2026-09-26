@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SRC = Path.home() / "OneDrive" / "Pictures" / "coolimages"
 OUT = ROOT / "content" / "art"
 MAX_EDGE = 1536
+SMALL_EDGE = 800  # phones load <id>.sm.* instead
 EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".m4v", ".webm"}
 VIDEO_EDGE = 960
@@ -109,22 +110,29 @@ def main():
         if scale < 1.0:
             im = im.resize((round(width * scale), round(height * scale)), Image.LANCZOS)
         # PNG sources are mostly screenshots and pixel art: keep them lossless.
+        small = im.copy()
+        small.thumbnail((SMALL_EDGE, SMALL_EDGE), Image.LANCZOS)
         if path.suffix.lower() == ".png":
             out = OUT / f"{path.stem}.png"
+            sm = OUT / f"{path.stem}.sm.png"
             im.save(out, optimize=True)
+            small.save(sm, optimize=True)
         else:
             out = OUT / f"{path.stem}.jpg"
+            sm = OUT / f"{path.stem}.sm.jpg"
             im.save(out, quality=88, optimize=True, progressive=True)
+            small.save(sm, quality=84, optimize=True, progressive=True)
         items.append({
             "id": path.stem,
             "file": f"content/art/{out.name}",
+            "small": f"content/art/{sm.name}",
             "width": width,
             "height": height,
             "saved": saved,
         })
 
     items.sort(key=lambda item: item["saved"])
-    keep = {Path(item[key]).name for item in items for key in ("file", "video", "sheet") if key in item}
+    keep = {Path(item[key]).name for item in items for key in ("file", "small", "video", "sheet") if key in item}
     for stale in OUT.iterdir():
         if stale.name not in keep:
             stale.unlink()
