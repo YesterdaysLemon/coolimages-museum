@@ -1198,5 +1198,31 @@
     ],
     "curatedAt": "2026-09-25T08:12",
     "wing": "wing-spare-parts"
+  },
+  "N6lBq0Nrkb3xlLNa": {
+    "title": "Clear Case, Full Cycle",
+    "artist": "Almost certainly a model",
+    "medium": "AI-generated video, 15 seconds, with sound",
+    "note": "A wall-mounted machine in translucent housing runs through fifteen seconds of its own business: a teal tank bubbles around a ribbed white core, an orange tube pulses, and a small backlit screen cycles through three or four diagrams that never quite become a readout. Over the loop a thermal printer at the lower right extrudes a slip of paper, curls it, and starts again. It is built entirely from late-nineties clear-plastic gadget nostalgia — the purple buttons, the fan grille, the tiny LEDs going off in no particular order — and it is completely unclear what it does, which is the point. Nothing fails, nothing alarms; it simply performs competence at you until the loop restarts.",
+    "callouts": [
+      {
+        "u": 0.27,
+        "v": 0.4,
+        "t": "Teal tank (purpose: unstated)"
+      },
+      {
+        "u": 0.62,
+        "v": 0.18,
+        "t": "Screen changing its mind"
+      },
+      {
+        "u": 0.93,
+        "v": 0.14,
+        "t": "Orange dial, never turned"
+      }
+    ],
+    "curatedAt": "2026-09-26T01:02",
+    "wing": "lobby",
+    "hold": true
   }
 }
