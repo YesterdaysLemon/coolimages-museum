@@ -1222,7 +1222,386 @@
       }
     ],
     "curatedAt": "2026-09-26T01:02",
+    "wing": "wing-plain-evidence"
+  },
+  "HTEiGtca0AAu2S9": {
+    "title": "Elevator, Fully Occupied",
+    "artist": "なたり (@natari_illust)",
+    "medium": "Digital painting",
+    "note": "A pale girl in a white camisole and pleated skirt stands in a lift, and at least eight arms fan out behind her, each hand caught mid-mudra. The floor indicator glows on the right, the up-arrow is lit in red, and her shadow on the tiled floor has just as many fingers as she does. What sells it is the ordinariness of the setting: nothing is happening except that she is going up a building, and the deity part is simply how she is.",
+    "callouts": [
+      {
+        "u": 0.86,
+        "v": 0.18,
+        "t": "Up arrow (lit)"
+      },
+      {
+        "u": 0.5,
+        "v": 0.08,
+        "t": "Hands, still counting"
+      },
+      {
+        "u": 0.41,
+        "v": 0.27,
+        "t": "One eye left visible"
+      },
+      {
+        "u": 0.72,
+        "v": 0.96,
+        "t": "Shadow, fully attended"
+      }
+    ],
+    "curatedAt": "2026-09-26T23:38",
+    "wing": "wing-too-many-hands"
+  },
+  "HTEiGtia0AAShS7": {
+    "title": "Seated, With Extras",
+    "artist": "なたり (@natari_illust)",
+    "medium": "Digital painting",
+    "note": "On flat black, a girl in a white slip sits with knees up while a spray of arms grows out of her back and opens into a fan of long-fingered hands. Her own two hands are held quietly against her chest and one raised palm; her face is doing almost nothing. The green-grey skin and pink fingertips make the extra limbs look less like horror and more like a plant reaching for light.",
+    "callouts": [
+      {
+        "u": 0.55,
+        "v": 0.15,
+        "t": "Hands, branching upward"
+      },
+      {
+        "u": 0.22,
+        "v": 0.47,
+        "t": "Expression: mild"
+      },
+      {
+        "u": 0.27,
+        "v": 0.55,
+        "t": "Small black bar"
+      }
+    ],
+    "curatedAt": "2026-09-26T23:38",
+    "wing": "wing-too-many-hands"
+  },
+  "HTEiGtXbMAAXTHk": {
+    "title": "Behind the Tennis Court",
+    "artist": "なたり (@natari_illust)",
+    "medium": "Digital painting",
+    "note": "In profile against a green chain-link fence at night, she is being groomed and held by her own surplus arms: one smooths her hair, one rests at her hip, one hovers near her mouth, and the lowest reaches down out of frame. A small red sign hangs on the fence behind her, the only warm thing in the picture. The arrangement reads as a statue pose someone has caught mid-adjustment.",
+    "callouts": [
+      {
+        "u": 0.4,
+        "v": 0.13,
+        "t": "Hand, tidying hair"
+      },
+      {
+        "u": 0.24,
+        "v": 0.21,
+        "t": "Red sign (unread)"
+      },
+      {
+        "u": 0.76,
+        "v": 0.23,
+        "t": "Palm raised, no blessing"
+      },
+      {
+        "u": 0.82,
+        "v": 0.93,
+        "t": "Lowest hand, drifting"
+      }
+    ],
+    "curatedAt": "2026-09-26T23:38",
+    "wing": "wing-too-many-hands"
+  },
+  "HTGgACfbEAAugyO": {
+    "title": "Structure 773, Subdividing",
+    "artist": "Enzo Mari",
+    "medium": "Ink drawing, 1963",
+    "note": "A square divided into cells that halve, and halve again, from left to right until the lines stop being lines and turn into grey. On the left you can count the shapes; two-thirds across, the eye gives up and a moiré blooms in the lower right that nobody drew on purpose. It is a rule applied honestly until the rule outruns human eyesight.",
+    "callouts": [
+      {
+        "u": 0.1,
+        "v": 0.16,
+        "t": "One cell, still legible"
+      },
+      {
+        "u": 0.87,
+        "v": 0.5,
+        "t": "Same rule, later"
+      },
+      {
+        "u": 0.82,
+        "v": 0.72,
+        "t": "Moiré (uninvited)"
+      }
+    ],
+    "curatedAt": "2026-09-26T23:38",
+    "wing": "wing-fine-grain"
+  },
+  "HTBEiqUWUAA9TiG": {
+    "title": "Plate LXII: Capillaries",
+    "artist": "C. Clubbe (del.), E. C. Kellogg (lith.)",
+    "medium": "Hand-coloured lithograph, 1869",
+    "note": "Five numbered panels of blood vessels and tissue, the red ones printed hot against cream, the middle one left in grey ink like a field of sausages. Panel four puts a coral-like vessel tree on black, which is a strange and beautiful decision for a medical plate. Under magnification the body turns out to be built from the same branching mesh as everything else, and the engraver clearly enjoyed that.",
+    "callouts": [
+      {
+        "u": 0.87,
+        "v": 0.035,
+        "t": "Plate LXII"
+      },
+      {
+        "u": 0.5,
+        "v": 0.6,
+        "t": "Black ground (dramatic)"
+      },
+      {
+        "u": 0.78,
+        "v": 0.86,
+        "t": "Mesh resolving into rows"
+      },
+      {
+        "u": 0.13,
+        "v": 0.965,
+        "t": "Credit, very small"
+      }
+    ],
+    "curatedAt": "2026-09-26T23:38",
+    "wing": "wing-fine-grain"
+  },
+  "oiL9Q7cWHNxhL-cp": {
+    "title": "Fin",
+    "artist": "Unknown photographer (faint corner watermark)",
+    "medium": "Stop-motion video, 15 seconds",
+    "note": "Two Blythe dolls in knitwear stand shoulder to shoulder while one holds a tiny phone; over the clip their eyes flick left, right and shut, and an arm comes up to the hair clip. The last frame zooms in on both faces mid-blink with the word \"Fin\" scrolled across them in script. Fifteen seconds of very small gestures, edited with total seriousness, which is why it works.",
+    "callouts": [
+      {
+        "u": 0.75,
+        "v": 0.25,
+        "t": "Pink clip (matching)"
+      },
+      {
+        "u": 0.28,
+        "v": 0.22,
+        "t": "Black clip (matching)"
+      }
+    ],
+    "curatedAt": "2026-09-26T23:38",
     "wing": "lobby",
     "hold": true
+  },
+  "HTEOLaTbkAA0_nS": {
+    "title": "Mall With Night Sky",
+    "artist": "Almost certainly a model",
+    "medium": "AI-generated image",
+    "note": "A multi-storey shopping atrium in mint green and chrome, palm trees on every balcony, escalators crossing in the middle, and a hole in the roof showing deep purple stars. The floor tiles glow slightly, the magazine racks are full, and every sign is confident lettering that resolves into nothing. There are no people, and the lighting insists it is still open.",
+    "callouts": [
+      {
+        "u": 0.4,
+        "v": 0.05,
+        "t": "Night sky, indoors"
+      },
+      {
+        "u": 0.09,
+        "v": 0.3,
+        "t": "Signage (unreadable)"
+      },
+      {
+        "u": 0.46,
+        "v": 0.45,
+        "t": "Escalators, crossing"
+      },
+      {
+        "u": 0.5,
+        "v": 0.63,
+        "t": "Flowers, freshly restocked"
+      }
+    ],
+    "curatedAt": "2026-09-26T23:38",
+    "wing": "wing-somewhere-to-stand"
+  },
+  "HTHAGQhWYAEyRg-": {
+    "title": "How to Fry a Circuit Board",
+    "artist": "cap'n (@xicojam)",
+    "medium": "Glitch video, looping",
+    "note": "A dense black field of corrupted circuitry, tiled and scrolling, with recurring motifs: a dithered grey rectangle like a dead screen, a dark blue disc, a speckled sphere up in the corner. Over the loop the red and white traces jitter sideways by a pixel or two, enough to keep the whole board alive without ever changing. It looks less like damage than like a board that has learned to hum to itself.",
+    "callouts": [
+      {
+        "u": 0.45,
+        "v": 0.4,
+        "t": "Screen within screen"
+      },
+      {
+        "u": 0.16,
+        "v": 0.85,
+        "t": "Blue disc, holding"
+      }
+    ],
+    "curatedAt": "2026-09-26T23:38",
+    "wing": "wing-fine-grain"
+  },
+  "HTFqtUXW4AAisX7": {
+    "title": "Divine Messenger, Potted",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, gravel yard",
+    "note": "An enormous crested peyote fills a shallow brown bowl, its pale green ribs folded over each other like brain coral, tan crowns splitting along the ridges. Around it are three or four pairs of shoes on packed dirt — hiking boots, white sneakers, one red canvas high-top — which are the only reason you can judge how large it is. The photograph is entirely ordinary and the thing in it is entirely not.",
+    "callouts": [
+      {
+        "u": 0.82,
+        "v": 0.11,
+        "t": "Red sneaker (for scale)"
+      },
+      {
+        "u": 0.5,
+        "v": 0.4,
+        "t": "Ribs, folding inward"
+      },
+      {
+        "u": 0.52,
+        "v": 0.86,
+        "t": "Bowl, at capacity"
+      }
+    ],
+    "curatedAt": "2026-09-26T23:38",
+    "wing": "wing-plain-evidence"
+  },
+  "HTGEbbna0AARRlb": {
+    "title": "The End",
+    "artist": "Unknown illustrator",
+    "medium": "Ink illustration, book endpaper",
+    "note": "Two bare feet stand on a dark floor beside a bed, and a scaly clawed hand has closed around one ankle from the shadow underneath. The crosshatching is careful and old-fashioned; the caption below, in a plain serif, reads \"The End\". Placing that phrase under this particular image is the whole joke and the whole threat at once.",
+    "callouts": [
+      {
+        "u": 0.52,
+        "v": 0.5,
+        "t": "Grip (established)"
+      },
+      {
+        "u": 0.28,
+        "v": 0.73,
+        "t": "Toes, unaware"
+      },
+      {
+        "u": 0.5,
+        "v": 0.95,
+        "t": "Caption: The End"
+      }
+    ],
+    "curatedAt": "2026-09-26T23:38",
+    "wing": "wing-too-many-hands"
+  },
+  "HTEpzyUW4AAOSuO": {
+    "title": "Rare Gold",
+    "artist": "S@{I-I{00 (@Sachcoo_thearty)",
+    "medium": "Video collage, 3 seconds, looping",
+    "note": "Thousands of photographs of gold-contact circuit boards tiled edge to edge into one continuous brassy field, with black chips punched through it like missing teeth. Over three seconds the tiles shuffle just enough that the surface breathes. Scrapped electronics are the source of most recovered gold, and here the pile has been arranged into something that genuinely looks like treasure.",
+    "callouts": [],
+    "curatedAt": "2026-09-26T23:38",
+    "wing": "wing-fine-grain"
+  },
+  "HTGT6g5bgAAj0op": {
+    "title": "Excalibur, 3310",
+    "artist": "Unknown artist (illegible watermark)",
+    "medium": "Digital composite",
+    "note": "A silver broadsword hangs point-down against a blue gradient sky, and a blue Nokia candybar phone is skewered halfway down the blade like a hilt guard that has slipped. Both objects are rendered with the glossy reverence of a catalogue product shot. The pairing is funny because the two are equally mythologised objects, and the phone looks like it would survive it.",
+    "callouts": [
+      {
+        "u": 0.55,
+        "v": 0.1,
+        "t": "Ornate hilt (serious)"
+      },
+      {
+        "u": 0.42,
+        "v": 0.72,
+        "t": "Keypad, undamaged"
+      },
+      {
+        "u": 0.35,
+        "v": 0.95,
+        "t": "Point, still sharp"
+      }
+    ],
+    "curatedAt": "2026-09-26T23:38",
+    "wing": "wing-anachronism"
+  },
+  "HTCqiMSaUAA_R9M": {
+    "title": "City From Below the Pipes",
+    "artist": "Unknown artist",
+    "medium": "Ink and watercolour illustration",
+    "note": "A slim figure in a peeled-down blue wrap stands on a tangle of enormous cables and ducts, looking up at leaning towers of red, ochre and violet, with a wedge of yellow sky between them. Every surface is built from patient hatching, so the pink buildings have the texture of woven cloth. Far off to the right another small figure balances on the same pipework, which turns a portrait into a whole inhabited world.",
+    "callouts": [
+      {
+        "u": 0.5,
+        "v": 0.12,
+        "t": "Sky (one wedge, allotted)"
+      },
+      {
+        "u": 0.86,
+        "v": 0.35,
+        "t": "Second figure, distant"
+      },
+      {
+        "u": 0.6,
+        "v": 0.86,
+        "t": "Cables, load-bearing"
+      }
+    ],
+    "curatedAt": "2026-09-26T23:38",
+    "wing": "wing-somewhere-to-stand"
+  },
+  "HTFCnkzWEAAZXd1": {
+    "title": "RE-ANIMA:710N",
+    "artist": "cap'n (@xicojam)",
+    "medium": "Pixel-art video, looping",
+    "note": "A low-res sci-fi tableau in hot orange, purple and red: a huge planet rising behind a station platform, a red ladder, a framed picture of a crescent moon on the wall, a potted green sprout, and a white spacesuited figure standing alone. Across the loop only the dither pattern and a few scanline flickers move; the astronaut never goes anywhere. It's a screensaver with a plot it refuses to start.",
+    "callouts": [
+      {
+        "u": 0.13,
+        "v": 0.63,
+        "t": "Astronaut, waiting"
+      },
+      {
+        "u": 0.62,
+        "v": 0.25,
+        "t": "Ladder (unused)"
+      }
+    ],
+    "curatedAt": "2026-09-26T23:38",
+    "wing": "wing-somewhere-to-stand"
+  },
+  "ifek9I9M0u2-19cQ": {
+    "title": "Suffering Column, Available",
+    "artist": "Almost certainly a model",
+    "medium": "AI-generated video, 9 seconds, with sound",
+    "note": "A concrete tower block whose facade is stacked faces, each one mostly gums and human teeth, filmed in grainy handheld night footage with real windows and cables still visible behind it. Over nine seconds two small eyes light up and the middle mouth slowly opens, and keeps opening. A blue banner sits across the whole thing offering the column for $4389563487443645654437856, which somehow settles the tone completely.",
+    "callouts": [
+      {
+        "u": 0.5,
+        "v": 0.35,
+        "t": "Price (non-negotiable)"
+      }
+    ],
+    "curatedAt": "2026-09-26T23:38",
+    "wing": "wing-escalation"
+  },
+  "HTBiODgasAARt5B": {
+    "title": "Red Square, Single Eye",
+    "artist": "BLΛC (@blac_ai)",
+    "medium": "Digital image, halftone",
+    "note": "A veiled figure sits frontally in the dark, her face printed in flat red with a small black triangle on the forehead and her eyes blanked to white. Her pale hands rest on her knees exactly where a saint's would, and a hard-edged red square floats over her lap containing one enormous half-closed eye. The pose is straight out of devotional portraiture; the square is a graphic designer's intrusion, and the two hold each other steady.",
+    "callouts": [
+      {
+        "u": 0.5,
+        "v": 0.21,
+        "t": "Triangle, small and certain"
+      },
+      {
+        "u": 0.5,
+        "v": 0.62,
+        "t": "Eye (issued separately)"
+      },
+      {
+        "u": 0.27,
+        "v": 0.85,
+        "t": "Hands, correctly placed"
+      }
+    ],
+    "curatedAt": "2026-09-26T23:38",
+    "wing": "wing-devotional-diagrams"
   }
 }

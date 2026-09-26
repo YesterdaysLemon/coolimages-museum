@@ -78,7 +78,8 @@
         "HTCIQ_LW8AA3FyE",
         "HSn10KgaoAAt_da",
         "HTAOkRCW0AArXJi",
-        "HRkwmJAbAAE048c"
+        "HRkwmJAbAAE048c",
+        "HTGT6g5bgAAj0op"
       ],
       "form": "basilica"
     },
@@ -93,7 +94,9 @@
         "HTAao31WcAAofvn",
         "HSB8KRpX0AsxGry",
         "HRq4SQlXQAAYMFM",
-        "HRrpvM-bYAAIMe9"
+        "HRrpvM-bYAAIMe9",
+        "HTFqtUXW4AAisX7",
+        "N6lBq0Nrkb3xlLNa"
       ],
       "form": "void"
     },
@@ -135,7 +138,8 @@
       "works": [
         "2LdDj-0F47hPX7yX",
         "-ONBNTxZyM0QjSsb",
-        "4AzNhblWcUyL7tsq"
+        "4AzNhblWcUyL7tsq",
+        "ifek9I9M0u2-19cQ"
       ],
       "form": "cinema"
     },
@@ -149,9 +153,54 @@
       "works": [
         "HQKM3TwWAAADdcT",
         "HRdS7DDbIAAKc57",
-        "HSmTvYSXgAAGE61"
+        "HSmTvYSXgAAGE61",
+        "HTBiODgasAARt5B"
       ],
       "form": "octagon"
+    },
+    "wing-too-many-hands": {
+      "name": "The Wrong Number of Hands",
+      "subtitle": "Reaching, Uninvited",
+      "statement": "Three paintings of a girl who has more arms than the situation requires, and one old book illustration where a single extra hand is more than enough. In the paintings the surplus is calm, decorative, almost bored; in the illustration it has hold of an ankle. Between them sits the whole question of whether a hand arriving from nowhere is a blessing or a grab.",
+      "template": "night",
+      "accent": "#7fa89a",
+      "created": "2026-09-26T23:38",
+      "works": [
+        "HTEiGtca0AAu2S9",
+        "HTEiGtia0AAShS7",
+        "HTEiGtXbMAAXTHk",
+        "HTGEbbna0AARRlb"
+      ],
+      "form": "iron"
+    },
+    "wing-fine-grain": {
+      "name": "The Fine Grain",
+      "subtitle": "Detail Past Reading",
+      "statement": "Four images that keep subdividing until the eye hands in its notice: a 1963 drawing halving its own squares into grey, an 1869 plate of capillaries branching into mesh, a field of gold circuit boards tiled to the horizon, and a corrupted board humming in place. Each starts legible on one side and ends as texture on the other. Stand close and then stand back; they are different pictures from each distance.",
+      "template": "white",
+      "accent": "#b8842c",
+      "created": "2026-09-26T23:38",
+      "works": [
+        "HTGgACfbEAAugyO",
+        "HTBEiqUWUAA9TiG",
+        "HTHAGQhWYAEyRg-",
+        "HTEpzyUW4AAOSuO"
+      ],
+      "form": "spiral"
+    },
+    "wing-somewhere-to-stand": {
+      "name": "Somewhere to Stand",
+      "subtitle": "Invented Architecture",
+      "statement": "A shopping atrium with stars in the ceiling, a hatched city seen from the pipework below it, and a pixel station platform with a planet parked outside. All three are interiors built for someone, and in each the population has been reduced to one figure or none. The lights are on, the escalators are running, and nobody is coming.",
+      "template": "night",
+      "accent": "#4de0c8",
+      "created": "2026-09-26T23:38",
+      "works": [
+        "HTEOLaTbkAA0_nS",
+        "HTCqiMSaUAA_R9M",
+        "HTFCnkzWEAAZXd1"
+      ],
+      "form": "crypt"
     }
   },
   "links": [
@@ -224,6 +273,21 @@
       "wing-spare-parts",
       "wing-plain-evidence",
       "Insides, revealed"
+    ],
+    [
+      "wing-fine-grain",
+      "wing-signal-loss",
+      "Detail past repair"
+    ],
+    [
+      "wing-somewhere-to-stand",
+      "wing-wrong-size",
+      "Rooms far too large"
+    ],
+    [
+      "wing-somewhere-to-stand",
+      "wing-anachronism",
+      "Eras, built to scale"
     ]
   ],
   "stairs": {
