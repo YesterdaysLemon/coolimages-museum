@@ -70,12 +70,28 @@ async function writeSidecar(id, data) {
   await chrome.downloads.download({ url, filename: `${INBOX}/${id}.json`, conflictAction: 'overwrite', saveAs: false });
 }
 
+// A small note on the X page itself, so you know what a save did.
+async function toast(tabId, t) {
+  if (tabId == null) {
+    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    tabId = tab?.id;
+  }
+  if (tabId == null) return;
+  chrome.tabs.sendMessage(tabId, { type: 'toast', ...t }).catch(() => {});
+}
+
+function fromLine(post, match) {
+  if (!post) return 'Couldn\u2019t find the post it came from';
+  if (match === 'exact' || match === 'page') return `From @${post.author.handle}\u2019s post`;
+  return `Probably from @${post.author.handle}\u2019s post (not confirmed)`;
+}
+
 async function logSave(entry) {
   const { log = [] } = await chrome.storage.local.get('log');
   log.unshift(entry);
   await chrome.storage.local.set({ log: log.slice(0, 30) });
-  chrome.action.setBadgeBackgroundColor({ color: '#1f7a52' });
-  chrome.action.setBadgeText({ text: entry.match === 'exact' ? '✓' : '?' });
+  chrome.action.setBadgeBackgroundColor({ color: entry.dup ? '#a8661c' : '#1f7a52' });
+  chrome.action.setBadgeText({ text: entry.dup ? '=' : entry.match === 'exact' ? '✓' : '?' });
   setTimeout(() => chrome.action.setBadgeText({ text: '' }), 4000);
 }
 
@@ -109,7 +125,11 @@ chrome.downloads.onChanged.addListener(async (delta) => {
   // Straight beside the file when the helper can; otherwise via the inbox.
   const wrote = await native({ type: 'note', savedPath: path, note: data });
   if (!wrote?.ok) await writeSidecar(id, data);
-  await logSave(logEntry(id, media, post, match));
+  await logSave({ ...logEntry(id, media, post, match), dup: wrote?.duplicate || null });
+  const tabId = (await recentSeen()).find((s) => s.tabId != null)?.tabId;
+  if (wrote?.duplicate) toast(tabId, { tone: 'dupe', title: 'Already in coolimages', detail: `Same picture as ${wrote.duplicate}. This copy was set aside in _duplicates.` });
+  else if (wrote?.ok) toast(tabId, { tone: 'ok', title: 'Saved to coolimages', detail: fromLine(post, match) });
+  else toast(tabId, { tone: 'ok', title: 'Saved to coolimages', detail: `${fromLine(post, match)} \u00b7 note waiting in the inbox` });
 });
 
 function logEntry(id, media, post, match) {
@@ -120,17 +140,28 @@ function logEntry(id, media, post, match) {
 // With the helper, the file and its note go straight into the folder;
 // without it, the file downloads into the inbox and the listener above
 // writes its note when it finishes.
-async function saveToInbox(item, referrer) {
+// Returns what happened: saved, duplicate (already in the folder, by name
+// or by picture), inbox (no helper; the download listener notes it), or error.
+async function saveToInbox(item, referrer, tabId) {
   const media = { kind: item.kind, key: item.key, videoId: null };
   const { post, match } = item.post ? { post: item.post, match: 'exact' } : await resolve(media, referrer);
   const note = sidecar({ id: item.key, file: `${item.key}.${item.ext}`, media, mediaUrl: item.url, post, match, savedAt: new Date().toISOString() });
   const done = await native({ type: 'save', url: item.url, name: `${item.key}.${item.ext}`, note });
   if (done?.ok) {
-    await logSave(logEntry(item.key, media, post, match));
-    return true;
+    await logSave({ ...logEntry(item.key, media, post, match), dup: done.duplicate || null });
+    if (done.duplicate) {
+      toast(tabId, { tone: 'dupe', title: 'Already in coolimages', detail: `Same picture as ${done.duplicate}; not saved again.` });
+      return { status: 'duplicate', name: done.duplicate };
+    }
+    toast(tabId, { tone: 'ok', title: 'Saved to coolimages', detail: fromLine(post, match) });
+    return { status: 'saved' };
+  }
+  if (done && !done.ok) {
+    toast(tabId, { tone: 'warn', title: 'Couldn\u2019t save that', detail: done.reason || 'The helper refused it.' });
+    return { status: 'error', reason: done.reason };
   }
   await chrome.downloads.download({ url: item.url, filename: `${INBOX}/${item.key}.${item.ext}`, conflictAction: 'uniquify', saveAs: false });
-  return true;
+  return { status: 'inbox' };
 }
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -140,12 +171,12 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-chrome.contextMenus.onClicked.addListener(async (info) => {
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'save-image') {
     const media = parseMedia(info.srcUrl);
     if (!media) return;
     const ext = media.format === 'png' ? 'png' : 'jpg';
-    await saveToInbox({ kind: 'image', url: `https://pbs.twimg.com/media/${media.key}?format=${ext}&name=orig`, key: media.key, ext }, info.pageUrl);
+    await saveToInbox({ kind: 'image', url: `https://pbs.twimg.com/media/${media.key}?format=${ext}&name=orig`, key: media.key, ext }, info.pageUrl, tab?.id);
     return;
   }
   if (info.menuItemId === 'save-post') {
@@ -161,7 +192,7 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
     const pick = wanted ? all.filter((m) => m.kind === 'video' || m.key === seen[0].mediaKey) : all;
     for (const m of pick.length ? pick : all) {
       const hit = findMedia(tweet, m);
-      await saveToInbox({ ...m, post: hit ? describePost(hit.tweet, hit.detail) : null }, info.pageUrl);
+      await saveToInbox({ ...m, post: hit ? describePost(hit.tweet, hit.detail) : null }, info.pageUrl, tab?.id);
     }
   }
 });
@@ -169,7 +200,7 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
 // ------------------------------------------------------------ messages
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   if (msg?.type === 'seen') {
-    remember({ ...msg, at: Date.now() });
+    remember({ ...msg, at: Date.now(), tabId: sender.tab?.id ?? null });
     return false;
   }
   if (msg?.type === 'post') {
@@ -181,7 +212,11 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     fetchPost(m.postId).then((tweet) => {
       const hit = tweet && findMedia(tweet, m);
       return saveToInbox({ ...m, post: hit ? describePost(hit.tweet, hit.detail) : null });
-    }).then(() => reply(true));
+    }).then((result) => reply(result));
+    return true;
+  }
+  if (msg?.type === 'check') {
+    native({ type: 'check', url: msg.item.url, name: `${msg.item.key}.${msg.item.ext}` }).then((res) => reply(res));
     return true;
   }
   if (msg?.type === 'host') {

@@ -13,6 +13,9 @@ Videos (needs ffmpeg and ffprobe on PATH) become a web-friendly H.264 MP4
 (<id>.mp4, max edge 960, 30 fps, capped at 2 Mbit/s), a poster frame (<id>.jpg, the texture shown
 until the video plays) and a 3x2 contact sheet for the curator
 (<id>.sheet.jpg). Transcodes are cached until the source changes.
+
+The same picture saved twice under different names goes in once
+(tools/dupes.py compares the pictures themselves, not the names).
 """
 import json
 import os
@@ -23,6 +26,9 @@ from datetime import datetime
 from pathlib import Path
 
 from PIL import Image
+
+import dupes
+from curate import handwritten_ids
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SRC = Path.home() / "OneDrive" / "Pictures" / "coolimages"
@@ -115,6 +121,25 @@ def public_source(note):
     }
 
 
+def second_copies(src):
+    """Files that are the same picture as another in the folder (tools/dupes.py).
+
+    Of each group the museum keeps the copy the catalogue already describes,
+    else the largest; returns {left-out name: kept name}."""
+    index = dupes.Index(src).refresh()
+    index.save()
+    known = handwritten_ids()
+    try:
+        known |= set(json.loads((ROOT / "data" / "catalog.json").read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        pass
+    skip = {}
+    for group in index.groups():
+        keep = next((name for name in group if Path(name).stem in known), group[0])
+        skip.update({name: keep for name in group if name != keep})
+    return skip
+
+
 def main():
     src = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(os.environ.get("COOLIMAGES_DIR", DEFAULT_SRC))
     if not src.is_dir():
@@ -124,7 +149,11 @@ def main():
     items = []
     sources = {}
     has_ffmpeg = bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
+    skip = second_copies(src)
     for path in sorted(src.iterdir()):
+        if path.name in skip:
+            print(f"Skipping {path.name}: same picture as {skip[path.name]}")
+            continue
         # The collector extension's note (<stem>.json beside the file) knows
         # when it was really saved; OneDrive re-stamps file times.
         note = read_note(path)

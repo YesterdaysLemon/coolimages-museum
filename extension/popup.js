@@ -37,11 +37,22 @@ async function showPost() {
   grid.replaceChildren(
     ...data.media.map((m) => {
       const btn = el('button', { type: 'button', textContent: 'Save to coolimages' });
+      const already = (name) => {
+        btn.disabled = true;
+        btn.textContent = name === `${m.key}.${m.ext}` ? 'Already in coolimages' : 'Already in coolimages (another copy)';
+        btn.title = `Same picture as ${name}`;
+      };
+      // With the helper, check first whether this picture is already saved.
+      chrome.runtime.sendMessage({ type: 'check', item: m }).then((res) => res?.duplicate && already(res.duplicate));
       btn.addEventListener('click', async () => {
         btn.disabled = true;
         btn.textContent = 'Saving…';
-        await chrome.runtime.sendMessage({ type: 'save', item: m });
-        btn.textContent = 'Saved';
+        const res = await chrome.runtime.sendMessage({ type: 'save', item: m });
+        if (res?.status === 'duplicate') already(res.name);
+        else if (res?.status === 'error') {
+          btn.disabled = false;
+          btn.textContent = 'Couldn’t save; try again';
+        } else btn.textContent = res?.status === 'inbox' ? 'Sent to the inbox' : 'Saved';
       });
       return el('figure', {}, el('img', { src: m.thumb, alt: m.alt || '' }), m.kind === 'video' ? el('span', { className: 'kind', textContent: 'video' }) : null, btn);
     }),
@@ -59,7 +70,7 @@ async function showLog() {
         {},
         e.thumb ? el('img', { className: 'thumb', src: e.thumb, alt: '' }) : el('span', { className: 'thumb' }),
         el('div', { className: 'who' }, who, el('small', { textContent: `${e.id} · ${ago(e.at)}` })),
-        el('span', { className: `badge ${e.match}`, textContent: MATCH[e.match] || e.match }),
+        e.dup ? el('span', { className: 'badge dup', textContent: 'already had', title: `Same picture as ${e.dup}` }) : el('span', { className: `badge ${e.match}`, textContent: MATCH[e.match] || e.match }),
       );
     }),
   );

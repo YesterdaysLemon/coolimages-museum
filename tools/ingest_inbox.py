@@ -10,6 +10,11 @@ coolimages folder and puts each note beside its file as <id>.json, where
 tools/build_assets.py reads it. Processed notes are kept in the inbox's
 "ingested" subfolder.
 
+A save that is the same picture as a file already in the folder, under any
+name (tools/dupes.py), isn't moved in: it and its note go to the inbox's
+"duplicates" subfolder, and its post is added to the existing file's note
+as alsoPosted.
+
 A post that asks not to be reposted gets its work added to
 content-policy.json, so it is never uploaded (the museum's standing rule).
 
@@ -23,6 +28,8 @@ import re
 import shutil
 import sys
 from pathlib import Path
+
+import dupes
 
 ROOT = Path(__file__).resolve().parent.parent
 INBOX = Path(os.environ.get("COOLIMAGES_INBOX", Path.home() / "Downloads" / "coolimages-inbox"))
@@ -83,13 +90,15 @@ def main():
     if not FOLDER.is_dir():
         sys.exit(f"Coolimages folder not found: {FOLDER}")
     done = INBOX / "ingested"
-    moved = notes = withheld = 0
+    aside = INBOX / "duplicates"
+    moved = notes = withheld = duplicates = 0
     inbox = sorted(INBOX.iterdir()) if INBOX.is_dir() else []
+    media = [p for p in inbox if p.is_file() and p.suffix.lower() in MEDIA]
+    index = dupes.Index(FOLDER).refresh() if media else None
+    copies = {}  # inbox stem -> the folder file it duplicates
 
     # 1. Media the extension saved.
-    for path in inbox:
-        if not path.is_file() or path.suffix.lower() not in MEDIA:
-            continue
+    for path in media:
         target = FOLDER / path.name
         if target.exists():
             print(f"already in the folder: {path.name}")
@@ -97,10 +106,22 @@ def main():
                 done.mkdir(exist_ok=True)
                 shutil.move(str(path), done / path.name)
             continue
+        hit = index.find(dupes.fingerprint_file(path))
+        if hit:
+            print(f"duplicate: {path.name} is the same picture as {hit[0]}")
+            copies[path.stem] = hit[0]
+            if not args.dry_run:
+                aside.mkdir(exist_ok=True)
+                shutil.move(str(path), aside / path.name)
+            duplicates += 1
+            continue
         print(f"moving {path.name}")
         if not args.dry_run:
             shutil.move(str(path), target)
+            index.refresh()
         moved += 1
+    if index and not args.dry_run:
+        index.save()
 
     # 2. Notes: next to their file, keeping the best-traced one.
     policy = load(POLICY, {"exclude": {}})
@@ -111,6 +132,15 @@ def main():
             print(f"skipping {path.name}: not a collector note")
             continue
         note = clean_note(raw)
+        if note["id"] in copies:
+            # Its picture was a duplicate: credit the post on the kept file.
+            kept = Path(copies[note["id"]]).stem
+            print(f"note for {note['id']}: also posted as {kept}")
+            if not args.dry_run:
+                dupes.add_also_posted(FOLDER, kept, note)
+                aside.mkdir(exist_ok=True)
+                shutil.move(str(path), aside / path.name)
+            continue
         target = FOLDER / f"{note['id']}.json"
         existing = load(target, None)
         if existing and rank(existing) > rank(note):
@@ -140,7 +170,7 @@ def main():
     if withheld and not args.dry_run:
         POLICY.write_text(json.dumps(policy, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
         print("content-policy.json changed: commit it so the site keeps the works withheld.")
-    print(f"Inbox: {moved} files moved, {notes} notes filed, {withheld} withheld")
+    print(f"Inbox: {moved} files moved, {duplicates} duplicates set aside, {notes} notes filed, {withheld} withheld")
     return 0
 
 
