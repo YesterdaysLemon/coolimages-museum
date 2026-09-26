@@ -118,7 +118,15 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     return { doors, forms, stairs: { up, down, ground } };
   }
 
-  const world = { rooms: {}, portals: [], artworks: [], animators: [] };
+  const world = { rooms: {}, portals: [], artworks: [], animators: [], featured: new Set() };
+  // Images sharpen after the world is built (main.js); things drawn from a
+  // work's image (the Entrance Hall's banners) redraw when it arrives.
+  const artWaiters = new Map();
+  const whenArt = (id, fn) => artWaiters.set(id, [...(artWaiters.get(id) || []), fn]);
+  world.artLoaded = (id) => {
+    for (const fn of artWaiters.get(id) || []) fn();
+    artWaiters.delete(id);
+  };
   const glowTex = TX.glowTexture();
   const beamTex = TX.beamTexture();
   const M = {
@@ -419,31 +427,36 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     return m;
   }
 
-  function addPortal(room, { pos, dir, dest, w = 2.8, h = 3.6, signW = 3.6, style = 'dark', subtitle, entrance = false }) {
+  // A door you walk into. Usually a gilt frame with the next room inside it and
+  // a sign above; `frameless` is a plain doorway (the museum's front doors,
+  // whose leaves architecture.js swings open in front of it).
+  function addPortal(room, { pos, dir, dest, w = 2.8, h = 3.6, signW = 3.6, style = 'dark', subtitle, entrance = false, frameless = false }) {
     const g = new THREE.Group();
-    g.position.set(pos.x, (pos.y || 0) + 0.12 + h / 2, pos.z);
+    g.position.set(pos.x, (pos.y || 0) + (frameless ? 0 : 0.12) + h / 2, pos.z);
     g.rotation.y = facing(dir);
     room.group.add(g);
     const surface = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: 0xffffff }));
     surface.position.z = 0.02;
     g.add(surface);
-    bars(g, w, h, 0.05, 0.05, M.lip);
-    bars(g, w + 0.1, h + 0.1, 0.2, 0.16, M.gold);
-    const shimmer = new THREE.Mesh(new THREE.PlaneGeometry(w, h), additive(0xfff1d0, 0.1));
-    shimmer.position.z = 0.03;
-    g.add(shimmer);
-    const phase = pos.x + pos.z;
-    animate(room, (t) => {
-      shimmer.material.opacity = 0.08 + 0.06 * Math.sin(t * 1.3 + phase);
-    });
-    const wing = WINGS[dest];
-    const sign = TX.signTexture(wing.name, subtitle ?? (dest === 'lobby' ? 'Return to the entrance hall' : wing.subtitle), style);
-    const sm = new THREE.Mesh(
-      new THREE.PlaneGeometry(signW, signW / sign.aspect),
-      new THREE.MeshBasicMaterial({ map: sign.texture, transparent: true, depthWrite: false, toneMapped: false }),
-    );
-    sm.position.set(0, h / 2 + 0.2 + signW / sign.aspect / 2, 0.02);
-    g.add(sm);
+    if (!frameless) {
+      bars(g, w, h, 0.05, 0.05, M.lip);
+      bars(g, w + 0.1, h + 0.1, 0.2, 0.16, M.gold);
+      const shimmer = new THREE.Mesh(new THREE.PlaneGeometry(w, h), additive(0xfff1d0, 0.1));
+      shimmer.position.z = 0.03;
+      g.add(shimmer);
+      const phase = pos.x + pos.z;
+      animate(room, (t) => {
+        shimmer.material.opacity = 0.08 + 0.06 * Math.sin(t * 1.3 + phase);
+      });
+      const wing = WINGS[dest];
+      const sign = TX.signTexture(wing.name, subtitle ?? (dest === 'lobby' ? 'Return to the entrance hall' : wing.subtitle), style);
+      const sm = new THREE.Mesh(
+        new THREE.PlaneGeometry(signW, signW / sign.aspect),
+        new THREE.MeshBasicMaterial({ map: sign.texture, transparent: true, depthWrite: false, toneMapped: false }),
+      );
+      sm.position.set(0, h / 2 + 0.2 + signW / sign.aspect / 2, 0.02);
+      g.add(sm);
+    }
     const normal = dir.clone().normalize();
     const portal = { room: room.id, dest, pos: V3(pos.x, pos.y || 0, pos.z), normal, w, h, surface, group: g, entrance, subtitle };
     room.portals.push(portal);
@@ -563,7 +576,8 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     if (!wing) return null;
     const own = layout?.wings?.[key]?.works || Object.keys(WORKS).filter((id) => WORKS[id].wing === key && !WORKS[id].generated);
     const id = own.find((w) => art.has(w));
-    return { key, kicker, title: wing.name, subtitle: wing.subtitle, accent: wing.accent || '#8a6d3b', image: id ? art.get(id).texture.image : null };
+    if (id) world.featured.add(id);
+    return { key, kicker, title: wing.name, subtitle: wing.subtitle, accent: wing.accent || '#8a6d3b', workId: id, image: () => (id ? art.get(id).texture.image : null) };
   }
 
   // ------------------------------------------------------ Entrance Hall
@@ -1138,8 +1152,11 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     return room;
   }
 
-  const arch = makeArchitecture({ M, V3, facing, additive, glowTex, beamTex, makeRoom, addLights, addWork, addPortal, addText, animate, pictureLight, rectRoom, easel, art, withheld, TEMPLATES });
+  const arch = makeArchitecture({ M, V3, facing, additive, glowTex, beamTex, makeRoom, addLights, addWork, addPortal, addText, animate, pictureLight, rectRoom, easel, art, withheld, TEMPLATES, whenArt, customPlaque });
   buildEntrance();
+  // Outside, a door on its own leads somewhere different on every visit.
+  const elsewhere = ['gallery', 'eyes', 'familiars', 'bedroom', ...generatedWings.map(([k]) => k)];
+  arch.buildOutside({ elsewhere: elsewhere[Math.floor(Math.random() * elsewhere.length)] });
   buildGallery();
   buildEyes();
   buildFamiliars();

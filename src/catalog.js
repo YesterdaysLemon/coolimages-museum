@@ -9,6 +9,12 @@ export const WINGS = {
     statement: '',
     accent: '#8a6d3b',
   },
+  outside: {
+    name: 'Outside',
+    subtitle: 'It goes on for a while',
+    statement: '',
+    accent: '#c98a5e',
+  },
   gallery: {
     name: 'The Grand Gallery',
     subtitle: 'Serious Treatment',

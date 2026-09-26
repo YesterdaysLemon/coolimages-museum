@@ -22,6 +22,7 @@ function fovFor(aspect) {
 }
 let baseFov = fovFor(innerWidth / innerHeight);
 const SENSITIVITY = 0.0022;
+const SPONSORS = 'https://github.com/sponsors/YesterdaysLemon';
 const ACCENT = { lobby: '#8a6d3b', gallery: '#9a2f2f', eyes: '#6c5ce7', familiars: '#1f7a8c', bedroom: '#d4679a' };
 const accentFor = (id) => WINGS[id]?.accent || ACCENT[id] || ACCENT.lobby;
 // Generated wings borrow the score of the hand-built wing their template imitates.
@@ -46,6 +47,7 @@ const audio = new MuseumAudio();
 if (params.has('mute')) audio.muted = true;
 let world = null;
 let collection = null;
+let collectionArt = new Map(); // id -> { ...manifest item, work, texture, loaded }
 // Where works were saved from (the collector extension's notes).
 let SOURCES = {};
 const traced = (src) => src?.url && (src.match === 'exact' || src.match === 'page');
@@ -122,30 +124,114 @@ function fitTexture(img) {
   return c;
 }
 
-async function loadArt(items) {
+// Every work starts as its blurred preview (the manifest's `blur`, a tiny
+// inline WebP) and sharpens when its image arrives: the Entrance Hall's works
+// first, then room by room outward from wherever you are (planLoads).
+async function prepareArt(items) {
   const art = new Map();
-  let done = 0;
-  const bar = $('#load-bar span');
   await Promise.all(
     items.map(async (item) => {
-      try {
-        const img = await loadImage(lowPower && item.small ? item.small : item.file);
-        const work = WORKS[item.id] || null;
-        const texture = new THREE.Texture(work?.oval ? ovalMask(fitTexture(img)) : fitTexture(img));
-        texture.colorSpace = THREE.SRGBColorSpace;
-        texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-        if (work?.pixel) texture.magFilter = THREE.NearestFilter;
-        texture.needsUpdate = true;
-        art.set(item.id, { ...item, work, texture, aspect: item.width / item.height, oval: !!work?.oval });
-      } catch (err) {
-        console.warn(err);
+      const work = WORKS[item.id] || null;
+      let img = null;
+      if (item.blur) img = await loadImage(item.blur).catch(() => null);
+      if (!img) {
+        img = TX.makeCanvas(4, 4);
+        const ctx = img.getContext('2d');
+        ctx.fillStyle = item.color || '#d9d3c7';
+        ctx.fillRect(0, 0, 4, 4);
       }
-      done++;
-      bar.style.width = `${(done / items.length) * 100}%`;
-      setStatus(`Hanging the collection · ${done} / ${items.length}`);
+      const texture = new THREE.Texture(work?.oval ? ovalMask(img) : img);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      texture.needsUpdate = true;
+      art.set(item.id, { ...item, work, texture, aspect: item.width / item.height, oval: !!work?.oval, loaded: false, requested: false });
     }),
   );
   return art;
+}
+
+const MAX_LOADS = lowPower ? 3 : 6;
+const loads = { active: 0, order: [], rooms: new Map(), waiters: [] };
+let previewQueue = [];
+
+async function sharpen(entry) {
+  try {
+    const img = await loadImage(lowPower && entry.small ? entry.small : entry.file);
+    const t = entry.texture;
+    // A new size needs new GPU storage: drop the placeholder's first.
+    t.dispose();
+    t.image = entry.oval ? ovalMask(fitTexture(img)) : fitTexture(img);
+    if (entry.work?.pixel) t.magFilter = THREE.NearestFilter;
+    t.needsUpdate = true;
+  } catch (err) {
+    console.warn(err);
+  }
+  entry.loaded = true;
+  world.artLoaded(entry.id);
+  // A room whose works have all arrived gets fresh previews on its doors.
+  for (const roomId of loads.rooms.get(entry.id) || []) {
+    const room = world.rooms[roomId];
+    if (room.sharp || !room.artworks.every((m) => collectionArt.get(m.userData.id)?.loaded)) continue;
+    room.sharp = true;
+    previewQueue.push(...world.portals.filter((p) => p.dest === roomId));
+  }
+  for (const w of loads.waiters) w();
+}
+
+// Load order: `first`, then the works of each room by how many doors away it is.
+function planLoads(roomId, first = []) {
+  if (!loads.rooms.size) {
+    for (const m of world.artworks) {
+      const set = loads.rooms.get(m.userData.id) || new Set();
+      set.add(m.userData.room);
+      loads.rooms.set(m.userData.id, set);
+    }
+  }
+  const seen = new Set([roomId]);
+  const queue = [roomId];
+  for (let i = 0; i < queue.length; i++) {
+    for (const p of world.rooms[queue[i]].portals) {
+      if (seen.has(p.dest)) continue;
+      seen.add(p.dest);
+      queue.push(p.dest);
+    }
+  }
+  for (const id of Object.keys(world.rooms)) if (!seen.has(id)) queue.push(id);
+  const ids = [...first, ...queue.flatMap((id) => world.rooms[id].artworks.map((m) => m.userData.id)), ...collectionArt.keys()];
+  loads.order = [...new Set(ids)].filter((id) => collectionArt.has(id) && !collectionArt.get(id).requested);
+  pumpLoads();
+}
+
+function pumpLoads() {
+  while (loads.active < MAX_LOADS && loads.order.length) {
+    const entry = collectionArt.get(loads.order.shift());
+    if (entry.requested) continue;
+    entry.requested = true;
+    loads.active++;
+    sharpen(entry).finally(() => {
+      loads.active--;
+      pumpLoads();
+    });
+  }
+}
+
+// Resolves when all of `ids` have arrived (or failed), or after `ms`.
+function whenLoaded(ids, ms, onProgress) {
+  return new Promise((resolve) => {
+    const check = () => {
+      const done = ids.filter((id) => collectionArt.get(id)?.loaded).length;
+      onProgress?.(done, ids.length);
+      if (done < ids.length) return;
+      loads.waiters = loads.waiters.filter((w) => w !== check);
+      resolve();
+    };
+    loads.waiters.push(check);
+    setTimeout(() => {
+      loads.waiters = loads.waiters.filter((w) => w !== check);
+      resolve();
+    }, ms);
+    check();
+  });
 }
 
 async function loadFonts() {
@@ -190,7 +276,8 @@ async function boot() {
   for (const [id, credit] of Object.entries(CREDITS)) if (WORKS[id]) WORKS[id].credit = credit;
   collection = manifest;
   await loadFonts();
-  const art = await loadArt(manifest.items);
+  const art = await prepareArt(manifest.items);
+  collectionArt = art;
   setStatus('Lighting the rooms…');
   await new Promise((r) => setTimeout(r, 30));
   // Anything no room has claimed goes on the Entrance Hall's acquisition easels.
@@ -217,6 +304,14 @@ async function boot() {
   enterRoom('lobby');
   arriveAtStart(world.rooms.lobby);
   updateCamera();
+  // The way in loads first; everything else keeps arriving while you walk.
+  const entrance = [...new Set([...world.rooms.lobby.artworks.map((m) => m.userData.id), ...world.featured])];
+  planLoads('lobby', entrance);
+  const bar = $('#load-bar span');
+  await whenLoaded(entrance, 12000, (done, total) => {
+    bar.style.width = `${(done / total) * 100}%`;
+    setStatus(`Hanging the entrance · ${done} / ${total}`);
+  });
   renderer.render(scene, camera);
   state = 'ready';
   setStatus(acquisitions.length ? `${manifest.items.length} works on view · ${acquisitions.length} new acquisition${acquisitions.length > 1 ? 's' : ''}` : `${manifest.items.length} works on view`);
@@ -233,6 +328,7 @@ function applyRoom(id) {
   scene.background = new THREE.Color(env.bg);
   scene.fog = env.fog.type === 'exp2' ? new THREE.FogExp2(env.fog.color, env.fog.density) : new THREE.Fog(env.fog.color, env.fog.near, env.fog.far);
   scene.environmentIntensity = env.envI;
+  camera.far = env.far || 140;
 }
 
 function enterRoom(id) {
@@ -241,6 +337,7 @@ function enterRoom(id) {
   markVisited(id);
   applyRoom(id);
   syncVideos();
+  if (state !== 'loading') planLoads(id);
   document.documentElement.style.setProperty('--accent', accentFor(id));
   $('#room-name').textContent = WINGS[id].name;
   audio.setMood(moodFor(id));
@@ -260,9 +357,36 @@ function registerVideos() {
   }
 }
 
+// When a video can't be served (the media Worker is over its free daily
+// allowance, or videos are paused in the manifest), its frame shows a plea.
+let pleaded = false;
+function videoUnavailable(v) {
+  if (v.poor) return;
+  v.poor = true;
+  v.el?.pause();
+  const texture = TX.toTexture(TX.poorNotice(v.entry.width / v.entry.height));
+  for (const mesh of v.meshes) {
+    mesh.material.map = texture;
+    mesh.material.needsUpdate = true;
+  }
+  if (pleaded) return;
+  pleaded = true;
+  const note = $('#poor');
+  note.hidden = false;
+  setTimeout(() => note.classList.add('show'), 30);
+  setTimeout(() => note.classList.remove('show'), 12000);
+}
+
 function videoElement(v) {
-  if (v.el) return v.el;
+  if (v.el || v.poor) return v.el;
+  if (collection.videosPaused) {
+    videoUnavailable(v);
+    return null;
+  }
   const el = document.createElement('video');
+  // Videos come from the media host; CORS lets WebGL use their frames.
+  el.crossOrigin = 'anonymous';
+  el.addEventListener('error', () => videoUnavailable(v));
   Object.assign(el, { muted: true, loop: true, playsInline: true, preload: 'auto', src: v.entry.video });
   // Keep the poster until a real frame has been decoded, so a slow start
   // never shows a black screen.
@@ -290,7 +414,7 @@ function videoElement(v) {
 function syncVideos() {
   for (const v of videos.values()) {
     const here = !document.hidden && v.meshes.some((m) => m.userData.room === player.room);
-    if (here) videoElement(v).play().catch(() => {});
+    if (here) videoElement(v)?.play().catch(() => {});
     else v.el?.pause();
   }
 }
@@ -331,48 +455,87 @@ function runAnimators(roomId, t, dt, cam) {
   for (const a of world.animators) if (a.room === roomId) a.fn(t, dt, cam);
 }
 
-function renderPreviews() {
-  const cam = new THREE.PerspectiveCamera(62, 1, 0.05, 140);
-  const shared = new Map();
-  const copyMat = new THREE.MeshBasicMaterial({ toneMapped: false, depthTest: false });
-  const copyScene = new THREE.Scene();
-  copyScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), copyMat));
-  const copyCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  for (const portal of world.portals) {
-    const arrival = arrivalFor(portal);
-    if (!arrival) continue;
-    const aspect = portal.w / portal.h;
-    const W = Math.round(640 * aspect);
-    const key = `${W}`;
-    if (!shared.has(key)) shared.set(key, new THREE.WebGLRenderTarget(W, 640, { samples: 4 }));
-    const big = shared.get(key);
-    const s = spawnFrom(arrival, 2.6);
-    const destRoom = world.rooms[portal.dest];
-    const floorY = ground(destRoom, s.x, s.z, s.y) ?? s.y;
-    cam.aspect = aspect;
-    cam.updateProjectionMatrix();
-    cam.position.set(s.x, floorY + EYE_HEIGHT, s.z);
-    cam.rotation.set(-0.02, s.yaw, 0, 'YXZ');
-    cam.updateMatrixWorld();
-    applyRoom(portal.dest);
-    runAnimators(portal.dest, 1.5, 1 / 60, cam);
-    renderer.setRenderTarget(big);
-    renderer.render(scene, cam);
-    const small = new THREE.WebGLRenderTarget(W, 640, { depthBuffer: false });
-    copyMat.map = big.texture;
-    renderer.setRenderTarget(small);
-    renderer.render(copyScene, copyCam);
-    portal.surface.material.map = small.texture;
+// Each door shows a picture of the room behind it, rendered into a shared
+// multisampled target and copied into the door's own small texture. Doors are
+// rendered once at load, and again when their room's works have all arrived.
+const preview = { cam: null, shared: new Map(), copyMat: null, copyScene: null, copyCam: null };
+function renderPreview(portal) {
+  const arrival = arrivalFor(portal);
+  if (!arrival) return;
+  if (!preview.cam) {
+    preview.cam = new THREE.PerspectiveCamera(62, 1, 0.05, 140);
+    preview.copyMat = new THREE.MeshBasicMaterial({ toneMapped: false, depthTest: false });
+    preview.copyScene = new THREE.Scene();
+    preview.copyScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), preview.copyMat));
+    preview.copyCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  }
+  const { cam, shared, copyMat, copyScene, copyCam } = preview;
+  const aspect = portal.w / portal.h;
+  const W = Math.round(640 * aspect);
+  const key = `${W}`;
+  if (!shared.has(key)) shared.set(key, new THREE.WebGLRenderTarget(W, 640, { samples: 4 }));
+  const big = shared.get(key);
+  const s = spawnFrom(arrival, 2.6);
+  const destRoom = world.rooms[portal.dest];
+  const floorY = ground(destRoom, s.x, s.z, s.y) ?? s.y;
+  cam.aspect = aspect;
+  cam.far = destRoom.env.far || 140;
+  cam.updateProjectionMatrix();
+  cam.position.set(s.x, floorY + EYE_HEIGHT, s.z);
+  cam.rotation.set(-0.02, s.yaw, 0, 'YXZ');
+  cam.updateMatrixWorld();
+  applyRoom(portal.dest);
+  runAnimators(portal.dest, 1.5, 1 / 60, cam);
+  renderer.setRenderTarget(big);
+  renderer.render(scene, cam);
+  portal.previewTarget ||= new THREE.WebGLRenderTarget(W, 640, { depthBuffer: false });
+  copyMat.map = big.texture;
+  renderer.setRenderTarget(portal.previewTarget);
+  renderer.render(copyScene, copyCam);
+  renderer.setRenderTarget(null);
+  if (portal.surface.material.map !== portal.previewTarget.texture) {
+    portal.surface.material.map = portal.previewTarget.texture;
     portal.surface.material.needsUpdate = true;
   }
+}
+
+function paintPleinAir() {
+  const room = Object.values(world.rooms).find((r) => r.pleinAir);
+  if (!room) return;
+  const { material, from, to, hide } = room.pleinAir;
+  const cam = new THREE.PerspectiveCamera(40, 4 / 3, 0.1, room.env.far || 140);
+  cam.position.copy(from);
+  cam.lookAt(to);
+  cam.updateMatrixWorld();
+  applyRoom(room.id);
+  runAnimators(room.id, 30, 1 / 60, cam);
+  const target = new THREE.WebGLRenderTarget(640, 480, { samples: 4 });
+  // The easel paints the view past itself, not itself.
+  hide.visible = false;
+  renderer.setRenderTarget(target);
+  renderer.render(scene, cam);
   renderer.setRenderTarget(null);
-  for (const rt of shared.values()) rt.dispose();
-  copyMat.dispose();
+  hide.visible = true;
+  material.color.set(0xffffff);
+  material.map = target.texture;
+  material.needsUpdate = true;
+}
+
+function renderPreviews() {
+  paintPleinAir();
+  for (const portal of world.portals) renderPreview(portal);
   // Compile every room's shaders now so first visits don't hitch.
   for (const id of Object.keys(world.rooms)) {
     applyRoom(id);
     renderer.compile(scene, camera);
   }
+}
+
+// One refreshed door per frame, then back to the room you're in.
+function refreshPreviews() {
+  if (!previewQueue.length || state === 'transition' || state === 'loading') return;
+  renderPreview(previewQueue.shift());
+  applyRoom(player.room);
 }
 
 // ------------------------------------------------------------------ camera
@@ -457,6 +620,16 @@ function walkUpdate(dt) {
     player.z = nz;
     player.y = hz;
   } else player.vz = 0;
+  if (room.wrap) {
+    const { x: ox, z: oz, L } = room.wrap;
+    const sx = Math.round((player.x - ox) / L) * L;
+    const sz = Math.round((player.z - oz) / L) * L;
+    if (sx || sz) {
+      player.x -= sx;
+      player.z -= sz;
+      autoWalk = null;
+    }
+  }
   player.ey += (player.y - player.ey) * Math.min(1, dt * 14);
   const moving = Math.hypot(player.vx, player.vz);
   if (moving > 0.3) {
@@ -764,6 +937,12 @@ function showCaption(ud) {
     ? `${formatSaved(entry.saved)} · Moving image, ${clockTime(entry.duration || 0)}${sound}`
     : formatSaved(entry.saved);
   renderCaptionCredit(panel.querySelector('.credit'), work, SOURCES[ud.id]);
+  if (videos.get(ud.id)?.poor) {
+    const plea = document.createElement('span');
+    plea.className = 'plea';
+    plea.append('Not playing right now: the server is super poor. ', link(SPONSORS, 'Please donate to help \u2665'));
+    panel.querySelector('.credit').append(plea);
+  }
   panel.querySelector('.note').textContent =
     work?.note || 'This image arrived after the catalogue was written. The curator is still deciding why it resonates.';
   panel.querySelector('.back').innerHTML = usingTouch
@@ -976,6 +1155,7 @@ try {
 function markVisited(id) {
   if (visited.has(id)) return;
   visited.add(id);
+  if (world?.rooms[id]?.secret) mapLayout = null;
   try {
     localStorage.setItem('coolimages.visited', JSON.stringify([...visited]));
   } catch {}
@@ -992,10 +1172,12 @@ function layoutMap() {
   const perRow = portrait ? 3 : 5;
   const font = portrait ? 25 : 17;
   const rowGap = portrait ? 132 : 104;
-  const ids = Object.keys(world.rooms);
+  const shown = (id) => !world.rooms[id].secret || visited.has(id);
+  const ids = Object.keys(world.rooms).filter(shown);
   const edges = [];
   const seen = new Set();
   for (const p of world.portals) {
+    if (!shown(p.room) || !shown(p.dest)) continue;
     const k = [p.room, p.dest].sort().join('|');
     if (!seen.has(k)) {
       seen.add(k);
@@ -1081,7 +1263,7 @@ function drawMap() {
     svg.append(g);
   }
   const info = $('#map-info');
-  const doors = world.rooms[pick].portals.map((p) => WINGS[p.dest].name);
+  const doors = world.rooms[pick].portals.filter((p) => !world.rooms[p.dest].secret || visited.has(p.dest)).map((p) => WINGS[p.dest].name);
   const where = { ground: 'Ground floor', up: 'Upstairs', down: 'Basement' }[floor(pick)];
   info.textContent = `${WINGS[pick].name} \u00b7 ${where}. Doors to ${[...new Set(doors)].join(', ')}.`;
   const go = $('#map-go');
@@ -1410,7 +1592,7 @@ const tmpV = new THREE.Vector3();
 function drawMinimap() {
   const room = world.rooms[player.room];
   const S = mini.width;
-  const b = room.bounds;
+  const b = room.wrap ? { type: 'rect', x0: player.x - 60, x1: player.x + 60, z0: player.z - 60, z1: player.z + 60 } : room.bounds;
   const [minX, maxX, minZ, maxZ] = b.type === 'circle' ? [b.x - b.r, b.x + b.r, b.z - b.r, b.z + b.r] : [b.x0, b.x1, b.z0, b.z1];
   const pad = S * 0.1;
   const scale = (S - pad * 2) / Math.max(maxX - minX, maxZ - minZ);
@@ -1526,6 +1708,7 @@ function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
   if (!world) return;
   simulate(dt);
+  refreshPreviews();
   renderer.render(scene, camera);
   miniTimer += dt;
   if (miniTimer > 0.066) {
@@ -1572,6 +1755,10 @@ window.museum = {
   },
   walkable: (x, z, y) => walkable(world.rooms[player.room], x, z, 0.38, y),
   tap: (x, y) => tapAt(x, y),
+  // For checks: how many works have their full image, and what's still queued.
+  get loading() {
+    return { loaded: [...collectionArt.values()].filter((e) => e.loaded).length, total: collectionArt.size, queued: loads.order.length, active: loads.active, previews: previewQueue.length };
+  },
   // For checks: works that something hides from a viewer standing in front
   // of them (a wall they poke into, a column, an easel). Casts rays to a grid
   // over each picture; returns the ones with blocked points and what blocks.
@@ -1635,7 +1822,10 @@ window.museum = {
   },
   // Advance the simulation without waiting for frames (for scripted checks).
   tick(seconds = 1) {
-    for (let t = 0; t < seconds; t += 1 / 60) simulate(1 / 60);
+    for (let t = 0; t < seconds; t += 1 / 60) {
+      simulate(1 / 60);
+      refreshPreviews();
+    }
     renderer.render(scene, camera);
   },
   press(code, down = true) {

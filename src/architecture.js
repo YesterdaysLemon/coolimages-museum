@@ -81,7 +81,7 @@ export function displayModes(form, key, n) {
 }
 
 export function makeArchitecture(ctx) {
-  const { M, V3, facing, additive, glowTex, beamTex, makeRoom, addLights, addWork, addPortal, addText, animate, pictureLight, rectRoom, easel, art, withheld, TEMPLATES } = ctx;
+  const { M, V3, facing, additive, glowTex, beamTex, makeRoom, addLights, addWork, addPortal, addText, animate, pictureLight, rectRoom, easel, art, withheld, TEMPLATES, whenArt, customPlaque } = ctx;
   const std = (color, roughness = 0.85, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness, ...extra });
   const twoSided = (color, roughness = 0.9, extra = {}) => std(color, roughness, { side: THREE.DoubleSide, ...extra });
 
@@ -1103,6 +1103,42 @@ export function makeArchitecture(ctx) {
     return room;
   }
 
+  // Bronze double doors that swing open toward you as you come near; `dir` is
+  // the side they open to. A frameless portal stands just behind them.
+  function doubleDoors(room, { x, y = 0, z, dir, w = 2.6, h = 3.5, mat, parent = room.group }) {
+    const g = new THREE.Group();
+    g.position.set(x, y, z);
+    g.rotation.y = facing(dir);
+    parent.add(g);
+    const leaves = [];
+    for (const sx of [-1, 1]) {
+      const pivot = new THREE.Group();
+      pivot.position.set((sx * w) / 2, 0, 0);
+      g.add(pivot);
+      const part = (geo, px, py, pz) => {
+        const m = new THREE.Mesh(geo, mat);
+        m.position.set(px, py, pz);
+        pivot.add(m);
+      };
+      part(new THREE.BoxGeometry(w / 2 - 0.02, h, 0.08), (-sx * w) / 4, h / 2, 0);
+      for (const py of [h * 0.27, h * 0.74]) part(new THREE.BoxGeometry(w / 2 - 0.34, h * 0.36, 0.03), (-sx * w) / 4, py, 0.05);
+      const pull = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 1.1, 12), M.brass);
+      pull.position.set(-sx * (w / 2 - 0.16), h * 0.43, 0.13);
+      pivot.add(pull);
+      leaves.push([pivot, sx]);
+    }
+    const here = new THREE.Vector3();
+    let open = 0;
+    animate(room, (t, dt, cam) => {
+      g.getWorldPosition(here);
+      const d = Math.hypot(cam.position.x - here.x, cam.position.z - here.z);
+      const want = Math.max(0, Math.min(1, (6.5 - d) / 3.8));
+      open += (want - open) * Math.min(1, (dt || 1 / 60) * 3.5);
+      for (const [pivot, sx] of leaves) pivot.rotation.y = sx * open * 1.45;
+    });
+    return g;
+  }
+
   // ------------------------------------------------------ Entrance Hall
   // The way in. You start inside the bronze front doors, in a low concrete
   // vestibule whose front wall is perforated like the building in "The
@@ -1194,12 +1230,10 @@ export function makeArchitecture(ctx) {
     front.rotation.y = Math.PI;
     const bronze = std(0x4a3a27, 0.4, { metalness: 0.75 });
     box(room, 2.9, 0.16, 0.2, 0, 3.66, VN - 0.1, bronze);
-    for (const sx of [-1, 1]) {
-      box(room, 0.14, 3.66, 0.2, sx * 1.38, 1.83, VN - 0.1, bronze);
-      box(room, 1.3, 3.56, 0.08, sx * 0.66, 1.78, VN - 0.06, bronze);
-      for (const y of [0.95, 2.6]) box(room, 0.96, 1.25, 0.03, sx * 0.66, y, VN - 0.11, bronze);
-      mesh(room, new THREE.CylinderGeometry(0.024, 0.024, 1.1, 12), M.brass, sx * 0.13, 1.5, VN - 0.19);
-    }
+    for (const sx of [-1, 1]) box(room, 0.14, 3.66, 0.2, sx * 1.38, 1.83, VN - 0.1, bronze);
+    // The front doors open: walk out and see what's there.
+    addPortal(room, { pos: V3(0, 0, VN - 0.03), dir: V3(0, 0, -1), dest: 'outside', w: 2.56, h: 3.52, frameless: true });
+    doubleDoors(room, { x: 0, z: VN - 0.15, dir: V3(0, 0, -1), mat: bronze });
     const spill = mesh(room, new THREE.PlaneGeometry(6.8, 3.6), additive(0xfff1d8, 0.14), 0, 0.01, VN - 1.9);
     spill.rotation.x = -Math.PI / 2;
     const doormat = mesh(room, new THREE.PlaneGeometry(2.4, 1.2), std(0xffffff, 1, { map: TX.toTexture(TX.doormat()) }), 0, 0.014, VN - 1.15);
@@ -1243,7 +1277,15 @@ export function makeArchitecture(ctx) {
       const g = new THREE.Group();
       g.position.set(x, top, z);
       room.group.add(g);
-      const mat = new THREE.MeshStandardMaterial({ map: TX.bannerTexture(spec), alphaTest: 0.5, roughness: 0.95 });
+      const draw = () => TX.bannerTexture({ ...spec, image: spec.image() });
+      const mat = new THREE.MeshStandardMaterial({ map: draw(), alphaTest: 0.5, roughness: 0.95 });
+      if (spec.workId) {
+        whenArt(spec.workId, () => {
+          mat.map.dispose();
+          mat.map = draw();
+          mat.needsUpdate = true;
+        });
+      }
       for (const flip of [0, Math.PI]) {
         const cloth = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
         cloth.position.y = -h / 2 - 0.06;
@@ -1334,5 +1376,241 @@ export function makeArchitecture(ctx) {
     });
   }
 
-  return { buildStairHall, buildWing, buildEntrance };
+
+  // ------------------------------------------------------------ Outside
+  // Past the front doors: an endless salt flat at dusk under a sky with an eye
+  // in it. The plain wraps every L metres, so whichever way you walk, the
+  // museum comes back out of the haze ahead of you. Things to find: a bench
+  // facing the horizon, an easel that has painted the museum, a colossal
+  // stone eye that turns to watch you, an invisible sculpture round the back,
+  // a gilt door standing on its own (to a different room each visit), and
+  // the edge of the grounds, signposted both ways.
+  function buildOutside({ elsewhere }) {
+    const OX = 0;
+    const OZ = 3000;
+    const L = 800;
+    const X = (x) => OX + x;
+    const Z = (z) => OZ + z;
+    const HAZE = '#d9a98c';
+    const room = makeRoom('outside', { type: 'rect', x0: X(-70), x1: X(70), z0: Z(-70), z1: Z(70) }, 'salt', {
+      bg: HAZE,
+      fog: { type: 'linear', color: HAZE, near: 55, far: 330 },
+      envI: 0.3,
+      far: 420,
+    });
+    room.floors = [{ type: 'rect', x0: X(-L), x1: X(L), z0: Z(-L), z1: Z(L), h: 0 }];
+    room.wrap = { x: OX, z: OZ, L };
+    room.secret = true;
+    addLights(room, [0x9aa0d4, 0xd9a07a, 0.95], []);
+    const concrete = std(0x9a948a, 0.95);
+    const bronze = std(0x4a3a27, 0.4, { metalness: 0.75 });
+    const wood = std(0x8a6a45, 0.7);
+    // Everything out here is shown at its nearest copy across the wrap.
+    const wrapped = [];
+    const site = (x, z, rotY = 0) => {
+      const g = new THREE.Group();
+      g.position.set(X(x), 0, Z(z));
+      g.rotation.y = rotY;
+      room.group.add(g);
+      wrapped.push(g);
+      return { group: g, obstacles: [] };
+    };
+
+    // ---- the ground, the sky, the eye in it (all follow you)
+    const salt = TX.toTexture(TX.saltFlat(), { repeat: [112, 112] });
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(896, 896), new THREE.MeshStandardMaterial({ map: salt, roughness: 0.8 }));
+    ground.rotation.x = -Math.PI / 2;
+    room.group.add(ground);
+    const R = 390;
+    const skyGeo = new THREE.SphereGeometry(R, 48, 24);
+    const top = new THREE.Color('#171a36');
+    const mid = new THREE.Color('#57507c');
+    const low = new THREE.Color(HAZE);
+    const c = new THREE.Color();
+    const cols = [];
+    const sp = skyGeo.attributes.position;
+    for (let i = 0; i < sp.count; i++) {
+      const y = sp.getY(i) / R;
+      if (y > 0.3) c.lerpColors(mid, top, Math.min(1, (y - 0.3) / 0.6));
+      else if (y > 0.02) c.lerpColors(low, mid, (y - 0.02) / 0.28);
+      else c.copy(low);
+      cols.push(c.r, c.g, c.b);
+    }
+    skyGeo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    const sky = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false, toneMapped: false }));
+    sky.renderOrder = -2;
+    room.group.add(sky);
+    const r = TX.rng(77);
+    const stars = [];
+    for (let i = 0; i < 500; i++) {
+      const a = r() * TAU;
+      const y = 0.3 + r() * 0.7;
+      const h = Math.sqrt(1 - y * y);
+      stars.push(Math.cos(a) * h * (R - 5), y * (R - 5), Math.sin(a) * h * (R - 5));
+    }
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(stars, 3));
+    const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xfff4e0, size: 1.6, sizeAttenuation: false, fog: false, transparent: true, opacity: 0.75, depthWrite: false }));
+    starField.renderOrder = -1;
+    sky.add(starField);
+    // It is low in the south-east, it is enormous, and it is looking at you.
+    const eyeDir = V3(0.42, 0.3, 1).normalize();
+    const skyEye = new THREE.Mesh(
+      new THREE.PlaneGeometry(64, 32),
+      new THREE.MeshBasicMaterial({ map: TX.toTexture(TX.skyEye()), transparent: true, fog: false, depthWrite: false, toneMapped: false }),
+    );
+    skyEye.renderOrder = -1;
+    room.group.add(skyEye);
+    const halo = new THREE.Mesh(new THREE.PlaneGeometry(150, 150), new THREE.MeshBasicMaterial({ map: glowTex, color: 0xffe9c4, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, fog: false, depthWrite: false }));
+    halo.renderOrder = -1;
+    room.group.add(halo);
+    let nextBlink = 6;
+
+    // ---- the museum, from outside: the building in "The Museum, Exterior"
+    const b = site(0, 0);
+    const walls = TX.toTexture(TX.concreteWall(14, '#9a948a'));
+    wall(b, 40, 14, walls, -24, -20, V3(-1, 0, 0));
+    wall(b, 40, 14, walls, 24, -20, V3(1, 0, 0));
+    wall(b, 48, 14, walls, 0, -40, V3(0, 0, -1));
+    box(b, 48.8, 0.9, 40.8, 0, 14.3, -20, concrete);
+    const screen = TX.perforatedScreen(48, 14, { w: 3.4, h: 4.3 }, 40);
+    const facade = mesh(
+      b,
+      new THREE.PlaneGeometry(48, 14),
+      new THREE.MeshStandardMaterial({ map: TX.toTexture(screen.map), emissiveMap: TX.toTexture(screen.glow), emissive: 0xffc27e, roughness: 0.95 }),
+      0,
+      7,
+      0.02,
+    );
+    facade.rotation.y = 0;
+    box(b, 11, 0.5, 4.6, 0, 4.95, 2.3, concrete);
+    box(b, 2.9, 0.16, 0.2, 0, 3.66, 0.1, bronze);
+    for (const sx of [-1, 1]) box(b, 0.14, 3.66, 0.2, sx * 1.38, 1.83, 0.1, bronze);
+    doubleDoors(room, { x: 0, z: 0.16, dir: V3(0, 0, 1), mat: bronze, parent: b.group });
+    const name = TX.inscription('COOLIMAGES', 'A MUSEUM OF THINGS THAT STARE BACK', { width: 9, ink: '#3f3931', light: 'rgba(255,230,200,0.35)' });
+    mesh(b, new THREE.PlaneGeometry(name.width, name.height), new THREE.MeshBasicMaterial({ map: name.texture, transparent: true, depthWrite: false }), 0, 6.5, 0.05);
+    addText(b, { kicker: 'Coolimages', body: ['A museum of things that stare back. Open whenever you are.', 'The building is larger on the inside. Please do not measure it.'], width: 1.5, style: 'light' }, V3(3.3, 1.7, 0.05), V3(0, 0, 1));
+    const spill = mesh(b, new THREE.PlaneGeometry(7, 5), additive(0xffc58a, 0.22), 0, 0.02, 2.6);
+    spill.rotation.x = -Math.PI / 2;
+    const doorLight = new THREE.PointLight(0xffc68a, 16, 20, 1.3);
+    doorLight.position.set(0, 3.4, 2.6);
+    b.group.add(doorLight);
+    room.obstacles.push({ type: 'rect', x0: X(-24.3), x1: X(24.3), z0: Z(-40.4), z1: Z(0.05) });
+    const home = addPortal(room, { pos: V3(X(0), 0, Z(0.05)), dir: V3(0, 0, 1), dest: 'lobby', w: 2.56, h: 3.52, frameless: true, entrance: true });
+
+    // ---- a bench facing the horizon
+    const bench = site(0, 34);
+    box(bench, 2.4, 0.1, 0.55, 0, 0.46, 0, M.leather);
+    for (const lx of [-1.05, 1.05]) box(bench, 0.06, 0.42, 0.5, lx, 0.21, 0, M.brass);
+    const benchNote = customPlaque({ title: 'Please do not feed the horizon.', artist: 'The Management', medium: '', saved: '' }, 'brass');
+    benchNote.position.set(0, 0.36, 0.29);
+    benchNote.scale.setScalar(0.6);
+    bench.group.add(benchNote);
+    room.obstacles.push({ type: 'rect', x0: X(-1.3), x1: X(1.3), z0: Z(33.6), z1: Z(34.4) });
+
+    // ---- plein air: an easel that has painted the museum from where it stands
+    const ex = 30;
+    const ez = 66;
+    const toMuseum = Math.atan2(0 - ex, 0 - ez);
+    const easelSite = site(ex, ez, toMuseum + Math.PI);
+    const tilt = 0.12;
+    for (const sx of [-1, 1]) beam(easelSite, V3(sx * 0.45, 0, 0.12), V3(sx * 0.08, 2.05, -0.12), 0.05, wood);
+    beam(easelSite, V3(0, 0, -0.8), V3(0, 1.95, -0.15), 0.05, wood);
+    box(easelSite, 1.2, 0.045, 0.16, 0, 0.9, 0.05, wood);
+    const canvasMat = new THREE.MeshBasicMaterial({ color: 0xf3eee4, toneMapped: false });
+    const canvas = mesh(easelSite, new THREE.PlaneGeometry(1.2, 0.9), canvasMat, 0, 1.4, 0.02);
+    canvas.rotation.x = -tilt;
+    const stretcher = mesh(easelSite, new THREE.BoxGeometry(1.24, 0.94, 0.03), std(0xefe6d6, 0.9), 0, 1.4, -0.005);
+    stretcher.rotation.x = -tilt;
+    const easelNote = customPlaque({ title: 'Plein Air', artist: 'The easel', medium: 'Oil on canvas, finished just now', saved: 'Weather permitting' }, 'card');
+    easelNote.position.set(0.85, 0.95, 0.1);
+    easelNote.scale.setScalar(0.7);
+    easelSite.group.add(easelNote);
+    room.obstacles.push({ type: 'circle', x: X(ex), z: Z(ez), r: 0.8 });
+    // main.js paints it once: the view from just behind the canvas.
+    const behind = V3(X(ex) + Math.sin(toMuseum + Math.PI) * 1.4, 1.7, Z(ez) + Math.cos(toMuseum + Math.PI) * 1.4);
+    room.pleinAir = { material: canvasMat, from: behind, to: V3(X(0), 5.5, Z(-8)), hide: easelSite.group };
+
+    // ---- the watcher: a colossal stone eye, half sunk in the salt
+    const wx = -130;
+    const wz = 190;
+    const watcher = site(wx, wz);
+    const ball = new THREE.Group();
+    ball.position.y = 1.2;
+    watcher.group.add(ball);
+    const irisTex = TX.iris();
+    const eyeGeo = new THREE.SphereGeometry(6, 64, 32);
+    eyeGeo.rotateY(-Math.PI / 2);
+    ball.add(new THREE.Mesh(eyeGeo, new THREE.MeshStandardMaterial({ map: irisTex, emissiveMap: irisTex, emissive: 0xffffff, emissiveIntensity: 0.12, roughness: 0.45 })));
+    const drift = new THREE.Mesh(new THREE.TorusGeometry(6.1, 1.1, 12, 48), std(0xe6ded3, 0.9));
+    drift.rotation.x = Math.PI / 2;
+    drift.scale.set(1, 1, 0.45);
+    drift.position.y = 0.2;
+    watcher.group.add(drift);
+    const watchLight = new THREE.PointLight(0xb8c2ff, 30, 36, 1.3);
+    watchLight.position.set(0, 9, 7);
+    watcher.group.add(watchLight);
+    box(watcher, 0.08, 1.0, 0.08, 7.6, 0.5, 5.2, M.black);
+    const watcherNote = customPlaque({ title: 'Untitled (Watcher)', artist: 'Unknown sculptor', medium: 'Marble, salt, patience', saved: 'On permanent display' }, 'brass');
+    watcherNote.position.set(7.6, 1.05, 5.2);
+    watcherNote.rotation.x = -0.5;
+    watcher.group.add(watcherNote);
+    room.obstacles.push({ type: 'circle', x: X(wx), z: Z(wz), r: 6.6 });
+    const seen = new THREE.Vector3();
+
+    // ---- round the back: an invisible sculpture
+    const plinth = site(-26, -62);
+    box(plinth, 1.1, 1.1, 1.1, 0, 0.55, 0, M.slab);
+    const airNote = customPlaque({ title: 'Invisible Sculpture', artist: 'Unknown artist', medium: 'Air, on plinth', saved: 'Please do not touch' }, 'card');
+    airNote.position.set(0, 0.55, 0.56);
+    airNote.scale.setScalar(0.8);
+    plinth.group.add(airNote);
+    room.obstacles.push({ type: 'rect', x0: X(-26.6), x1: X(-25.4), z0: Z(-62.6), z1: Z(-61.4) });
+
+    // ---- a door on its own, to somewhere else
+    const dx = 190;
+    const dz = 118;
+    const door = addPortal(room, { pos: V3(X(dx), 0, Z(dz)), dir: V3(-dx, 0, -dz).normalize(), dest: elsewhere, w: 2.4, h: 3.2, signW: 2.8, subtitle: 'Somewhere else' });
+
+    // ---- the edge of the grounds, signposted both ways
+    const edge = site(0, 372);
+    for (const sx of [-1, 1]) box(edge, 0.12, 2.9, 0.12, sx * 1.5, 1.45, 0, wood);
+    const board = (tex, rotY) => {
+      const m = mesh(edge, new THREE.PlaneGeometry(3.4, 1.28), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 }), 0, 2.25, rotY ? 0.04 : -0.04);
+      m.rotation.y = rotY;
+    };
+    board(TX.signBoard('You are now leaving the museum', 'Nothing to see for a while'), Math.PI);
+    board(TX.signBoard('You are now entering the museum', 'Welcome back'), 0);
+    room.obstacles.push({ type: 'rect', x0: X(-1.7), x1: X(1.7), z0: Z(371.8), z1: Z(372.2) });
+
+    for (const p of [home, door]) wrapped.push(p.group);
+    for (const g of wrapped) g.userData.base = g.position.clone();
+    animate(room, (t, dt, cam) => {
+      const p = cam.position;
+      for (const g of wrapped) {
+        const o = g.userData.base;
+        g.position.x = o.x + L * Math.round((p.x - o.x) / L);
+        g.position.z = o.z + L * Math.round((p.z - o.z) / L);
+      }
+      ground.position.set(Math.round(p.x / 8) * 8, 0, Math.round(p.z / 8) * 8);
+      sky.position.set(p.x, 0, p.z);
+      skyEye.position.set(p.x + eyeDir.x * 340, eyeDir.y * 340, p.z + eyeDir.z * 340);
+      skyEye.lookAt(p.x, p.y, p.z);
+      halo.position.copy(skyEye.position);
+      halo.quaternion.copy(skyEye.quaternion);
+      // Now and then, it blinks.
+      const since = t - nextBlink;
+      skyEye.scale.y = since > 0 && since < 0.22 ? Math.max(0.04, Math.abs(since - 0.11) / 0.11) : 1;
+      if (since > 0.22) nextBlink = t + 6 + ((t * 7.3) % 8);
+      // The stone eye turns, slowly, to keep you in view.
+      ball.getWorldPosition(seen);
+      const want = Math.atan2(p.x - seen.x, p.z - seen.z);
+      let diff = want - ball.rotation.y;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      ball.rotation.y += diff * Math.min(1, (dt || 1 / 60) * 0.6);
+    });
+    return room;
+  }
+
+  return { buildStairHall, buildWing, buildEntrance, buildOutside };
 }

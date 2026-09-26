@@ -1,0 +1,15 @@
+# The museum's video Worker (see worker.js). Deployed with the Cloudflare API;
+# `npx wrangler deploy` from this folder deploys the same thing.
+name = "coolimages-media"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+workers_dev = false
+
+routes = [{ pattern = "coolimages-media.alirezaafshan.com", custom_domain = true }]
+
+[triggers]
+crons = ["17 */6 * * *"]
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "coolimages-media"

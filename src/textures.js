@@ -1047,8 +1047,7 @@ export function concreteWall(H, base = '#8f897f') {
 // dither pattern (after the Okinawa museum in "The Museum, Exterior"), with
 // daylight in the holes. Returns a colour map and an emissive mask; the
 // doorway (door = {w, h}, centred at the bottom) stays solid.
-export function perforatedScreen(w, h, door) {
-  const ppm = 160;
+export function perforatedScreen(w, h, door, ppm = 160) {
   const W = Math.round(w * ppm);
   const H = Math.round(h * ppm);
   const map = makeCanvas(W, H);
@@ -1216,6 +1215,156 @@ export function bannerTexture({ kicker, title, subtitle, accent = '#8a6d3b', ima
     ctx.fillStyle = ink;
     ctx.fillRect(box.x - 6, box.y - 6, box.w + 12, box.h + 12);
     ctx.drawImage(image, (image.width - sw) / 2, (image.height - sh) / 2, sw, sh, box.x, box.y, box.w, box.h);
+  }
+  return toTexture(c);
+}
+
+// Shown in place of a video when the media server can't (or mustn't) serve it.
+export function poorNotice(aspect = 16 / 9) {
+  const W = 1280;
+  const H = Math.round(W / Math.min(3, Math.max(0.5, aspect)));
+  const c = makeCanvas(W, H);
+  const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#2b2621');
+  g.addColorStop(1, '#171411');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(217,178,94,0.55)';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(40, 40, W - 80, H - 80);
+  const size = Math.min(W / 14, H / 7);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#fbf7ef';
+  ctx.font = `500 ${Math.round(size)}px ${FONT.serif}`;
+  ctx.fillText('The server is super poor.', W / 2, H / 2 - size * 1.1);
+  ctx.fillStyle = '#d9b25e';
+  ctx.font = `italic ${Math.round(size * 0.82)}px ${FONT.serif}`;
+  ctx.fillText('Please donate to help \u2665', W / 2, H / 2 + size * 0.05);
+  ctx.fillStyle = 'rgba(251,247,239,0.7)';
+  ctx.font = `${Math.round(size * 0.5)}px ${FONT.serif}`;
+  ctx.fillText('github.com/sponsors/YesterdaysLemon', W / 2, H / 2 + size * 1.25);
+  return c;
+}
+
+// ------------------------------------------------------------- outside
+// A salt flat: pale crust cracked into polygons (a Voronoi pattern that
+// tiles: its seeds repeat across the edges). One canvas covers 8 x 8 m.
+export function saltFlat() {
+  const S = 384;
+  const r = rng(314);
+  const N = 7;
+  const seeds = [];
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) seeds.push([((i + 0.5 + (j % 2) * 0.5 + (r() - 0.5) * 0.7) / N) % 1, ((j + 0.5 + (r() - 0.5) * 0.7) / N) % 1]);
+  const pts = [];
+  for (const [x, y] of seeds) for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) pts.push([(x + ox) * S, (y + oy) * S]);
+  const small = makeCanvas(S, S);
+  const sctx = small.getContext('2d');
+  const img = sctx.createImageData(S, S);
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      let d1 = Infinity;
+      let d2 = Infinity;
+      for (const [px, py] of pts) {
+        const d = (px - x) ** 2 + (py - y) ** 2;
+        if (d < d1) {
+          d2 = d1;
+          d1 = d;
+        } else if (d < d2) d2 = d;
+      }
+      const edge = Math.sqrt(d2) - Math.sqrt(d1);
+      // A raised ridge along each crack, darker in its seam.
+      const v = edge < 1.2 ? 196 : edge < 3 ? 246 : 234 - Math.min(10, Math.sqrt(d1) * 0.25);
+      const k = (y * S + x) * 4;
+      img.data[k] = v;
+      img.data[k + 1] = v - 4;
+      img.data[k + 2] = v - 10;
+      img.data[k + 3] = 255;
+    }
+  }
+  sctx.putImageData(img, 0, 0);
+  const W = 1024;
+  const c = makeCanvas(W, W);
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(small, 0, 0, W, W);
+  grain(ctx, W, W, 10, r);
+  return c;
+}
+
+// The eye in the evening sky: pale, moonlit, on a transparent ground.
+export function skyEye() {
+  const W = 1024;
+  const H = 512;
+  const c = makeCanvas(W, H);
+  const ctx = c.getContext('2d');
+  const cx = W / 2;
+  const cy = H / 2;
+  const almond = () => {
+    ctx.beginPath();
+    ctx.moveTo(40, cy);
+    ctx.bezierCurveTo(W * 0.3, 20, W * 0.7, 20, W - 40, cy);
+    ctx.bezierCurveTo(W * 0.7, H - 20, W * 0.3, H - 20, 40, cy);
+    ctx.closePath();
+  };
+  ctx.save();
+  almond();
+  ctx.clip();
+  const sclera = ctx.createRadialGradient(cx, cy, 20, cx, cy, W * 0.5);
+  sclera.addColorStop(0, '#fbf6ee');
+  sclera.addColorStop(1, '#d9cdbf');
+  ctx.fillStyle = sclera;
+  ctx.fillRect(0, 0, W, H);
+  const ir = 150;
+  const g = ctx.createRadialGradient(cx, cy, 20, cx, cy, ir);
+  g.addColorStop(0, '#f0d58c');
+  g.addColorStop(0.45, '#c9a45c');
+  g.addColorStop(0.85, '#6f5a3a');
+  g.addColorStop(1, '#2b2418');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(cx, cy, ir, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#0a0806';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 58, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.beginPath();
+  ctx.arc(cx - 34, cy - 36, 16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(40,30,24,0.8)';
+  ctx.lineWidth = 10;
+  almond();
+  ctx.stroke();
+  return c;
+}
+
+// A painted board: big spaced capitals and a smaller line under them.
+export function signBoard(title, sub = '') {
+  const W = 1600;
+  const H = 600;
+  const c = makeCanvas(W, H);
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#23201c';
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = '#d9b25e';
+  ctx.lineWidth = 10;
+  ctx.strokeRect(28, 28, W - 56, H - 56);
+  ctx.fillStyle = '#fbf7ef';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `500 96px ${FONT.serif}`;
+  spaced(ctx, 14);
+  const lines = wrapLines(ctx, title.toUpperCase(), W - 180);
+  lines.forEach((line, i) => ctx.fillText(line, W / 2 + 7, H / 2 - 40 + (i - (lines.length - 1) / 2) * 110));
+  spaced(ctx, 0);
+  if (sub) {
+    ctx.fillStyle = '#d9b25e';
+    ctx.font = `italic 58px ${FONT.serif}`;
+    ctx.fillText(sub, W / 2, H - 110);
   }
   return toTexture(c);
 }

@@ -635,6 +635,34 @@
         opacity: 1;
         transform: translate(-50%, 0);
       }
+      #poor {
+        position: fixed;
+        left: 50%;
+        bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+        transform: translate(-50%, 8px);
+        max-width: calc(100vw - 32px);
+        padding: 10px 20px;
+        border-radius: 14px;
+        background: rgba(29, 26, 22, 0.9);
+        color: #fbfaf6;
+        font-size: 16px;
+        text-align: center;
+        opacity: 0;
+        transition: opacity 0.4s, transform 0.4s;
+        z-index: 7;
+      }
+      #poor.show {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+      #poor a,
+      #caption .plea a {
+        color: #d9b25e;
+      }
+      #caption .plea {
+        display: block;
+        margin-top: 6px;
+      }
 
       /* museum map */
       #museum-map {
@@ -979,6 +1007,7 @@
     <div id="crosshair" class="desk-only"></div>
     <div id="hint" role="status" aria-live="polite"></div>
     <div id="toast" role="status" aria-live="polite"></div>
+    <div id="poor" role="status" hidden>The server is super poor, so videos are resting. <a href="https://github.com/sponsors/YesterdaysLemon" target="_blank" rel="noopener noreferrer">Please donate to help &#9829;</a></div>
     <div id="banner" aria-live="polite"><h2></h2><p></p></div>
     <div id="mapbox"><canvas id="minimap" aria-hidden="true"></canvas><span id="room-name">The Entrance Hall</span></div>
     <div id="legend" class="desk-only">

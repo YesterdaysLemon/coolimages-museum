@@ -25,6 +25,11 @@ const MOODS = {
     arp: { step: 0.3, gain: 0.022 },
     bell: { rate: 0.2, notes: [83, 86, 88, 90, 95], ratio: 2, decay: 1.4, gain: 0.025 },
   },
+  outside: {
+    chords: [[36, 43, 50, 55, 62], [34, 41, 48, 53, 60], [31, 38, 45, 50, 57], [33, 40, 47, 52, 59]],
+    dur: 14, cutoff: 620, pad: 0.04,
+    bell: { rate: 0.12, notes: [79, 83, 86, 91], ratio: 2.76, decay: 7, gain: 0.018, slow: true },
+  },
   bedroom: {
     chords: [[53, 60, 64, 67, 69], [52, 59, 62, 67, 71], [50, 57, 60, 65, 69], [48, 55, 59, 62, 67]],
     dur: 7, cutoff: 1300, pad: 0.035,
@@ -38,6 +43,7 @@ const SURFACES = {
   stone: { f: 850, q: 1.1, g: 0.22, d: 0.1, wet: 0.6 },
   void: { f: 1500, q: 0.8, g: 0.09, d: 0.07, wet: 0.35 },
   carpet: { f: 260, q: 0.7, g: 0.2, d: 0.11, wet: 0.05 },
+  salt: { f: 3400, q: 0.6, g: 0.14, d: 0.09, wet: 0.02 },
 };
 
 export class MuseumAudio {

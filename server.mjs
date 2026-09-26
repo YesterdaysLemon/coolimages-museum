@@ -19,6 +19,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src https://fonts.gstatic.com",
   "img-src 'self' data: blob:",
+  "media-src 'self' https://coolimages-media.alirezaafshan.com",
   "connect-src 'self' https://cdn.jsdelivr.net",
   "object-src 'none'",
   "base-uri 'none'",
@@ -34,10 +35,11 @@ const types = {
   '.txt': 'text/plain; charset=utf-8',
   '.jpg': 'image/jpeg',
   '.png': 'image/png',
+  '.webp': 'image/webp',
   '.mp4': 'video/mp4',
   '.svg': 'image/svg+xml',
 };
-const allowed = [/^\/src\/[\w-]+\.js$/, /^\/data\/[\w-]+\.json$/, /^\/content\/[\w-]+\.json$/, /^\/content\/art\/[\w-]+(\.sheet|\.sm)?\.(jpg|png|mp4)$/, /^\/robots\.txt$/];
+const allowed = [/^\/src\/[\w-]+\.js$/, /^\/data\/[\w-]+\.json$/, /^\/content\/[\w-]+\.json$/, /^\/content\/art\/[\w-]+(\.sheet|\.sm)?\.(jpg|png|webp|mp4)$/, /^\/robots\.txt$/];
 
 http
   .createServer(async (req, res) => {
