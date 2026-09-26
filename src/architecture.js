@@ -1468,7 +1468,7 @@ export function makeArchitecture(ctx) {
 
     // ---- the museum, from outside: the building in "The Museum, Exterior"
     const b = site(0, 0);
-    const walls = TX.toTexture(TX.concreteWall(14, '#9a948a'));
+    const walls = TX.toTexture(TX.concreteWall(14, '#9a948a', 64));
     wall(b, 40, 14, walls, -24, -20, V3(-1, 0, 0));
     wall(b, 40, 14, walls, 24, -20, V3(1, 0, 0));
     wall(b, 48, 14, walls, 0, -40, V3(0, 0, -1));

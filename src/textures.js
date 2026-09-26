@@ -999,8 +999,7 @@ export function calloutDecal(callouts, artW, artH, { style = 'dark', reserve = 0
 // ------------------------------------------------------------ entrance
 // Board-formed concrete: faint plank bands, soft mottling and tie holes.
 // One canvas is 4 m wide by H tall, like the other wall canvases.
-export function concreteWall(H, base = '#8f897f') {
-  const ppm = 200;
+export function concreteWall(H, base = '#8f897f', ppm = 200) {
   const W = 4 * ppm;
   const Hp = Math.round(H * ppm);
   const c = makeCanvas(W, Hp);
@@ -1177,7 +1176,6 @@ export function bannerTexture({ kicker, title, subtitle, accent = '#8a6d3b', ima
   shade.addColorStop(1, 'rgba(0,0,0,0.18)');
   ctx.fillStyle = shade;
   ctx.fillRect(0, 0, W, H);
-  grain(ctx, W, H, 6, rng(Math.round(hash(title) * 1e4)));
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   let y = 110;
@@ -1253,25 +1251,34 @@ export function poorNotice(aspect = 16 / 9) {
 // tiles: its seeds repeat across the edges). One canvas covers 8 x 8 m.
 export function saltFlat() {
   const S = 384;
-  const r = rng(314);
   const N = 7;
-  const seeds = [];
-  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) seeds.push([((i + 0.5 + (j % 2) * 0.5 + (r() - 0.5) * 0.7) / N) % 1, ((j + 0.5 + (r() - 0.5) * 0.7) / N) % 1]);
-  const pts = [];
-  for (const [x, y] of seeds) for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) pts.push([(x + ox) * S, (y + oy) * S]);
+  const cell = S / N;
+  const r = rng(314);
+  // One jittered seed per cell of an N x N grid that wraps at the edges.
+  const seed = [];
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) seed.push([(i + 0.15 + r() * 0.7) * cell, (j + 0.15 + r() * 0.7) * cell]);
   const small = makeCanvas(S, S);
   const sctx = small.getContext('2d');
   const img = sctx.createImageData(S, S);
   for (let y = 0; y < S; y++) {
+    const cj = Math.floor(y / cell);
     for (let x = 0; x < S; x++) {
+      const ci = Math.floor(x / cell);
       let d1 = Infinity;
       let d2 = Infinity;
-      for (const [px, py] of pts) {
-        const d = (px - x) ** 2 + (py - y) ** 2;
-        if (d < d1) {
-          d2 = d1;
-          d1 = d;
-        } else if (d < d2) d2 = d;
+      for (let dj = -1; dj <= 1; dj++) {
+        for (let di = -1; di <= 1; di++) {
+          const i = ci + di;
+          const j = cj + dj;
+          const s0 = seed[(((j % N) + N) % N) * N + (((i % N) + N) % N)];
+          const px = s0[0] + (i < 0 ? -S : i >= N ? S : 0);
+          const py = s0[1] + (j < 0 ? -S : j >= N ? S : 0);
+          const d = (px - x) * (px - x) + (py - y) * (py - y);
+          if (d < d1) {
+            d2 = d1;
+            d1 = d;
+          } else if (d < d2) d2 = d;
+        }
       }
       const edge = Math.sqrt(d2) - Math.sqrt(d1);
       // A raised ridge along each crack, darker in its seam.

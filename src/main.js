@@ -173,7 +173,7 @@ async function sharpen(entry) {
     const room = world.rooms[roomId];
     if (room.sharp || !room.artworks.every((m) => collectionArt.get(m.userData.id)?.loaded)) continue;
     room.sharp = true;
-    previewQueue.push(...world.portals.filter((p) => p.dest === roomId));
+    for (const p of world.portals) if (p.dest === roomId && !previewQueue.includes(p)) previewQueue.push(p);
   }
   for (const w of loads.waiters) w();
 }
@@ -332,6 +332,10 @@ function applyRoom(id) {
 }
 
 function enterRoom(id) {
+  if (world.rooms[id].pleinAir && !world.rooms[id].painted) {
+    world.rooms[id].painted = true;
+    paintPleinAir();
+  }
   player.room = id;
   autoWalk = null;
   markVisited(id);
@@ -521,17 +525,17 @@ function paintPleinAir() {
   material.needsUpdate = true;
 }
 
+// Doors are drawn one per frame from the moment the collection is ready
+// (while the welcome screen is up), the Entrance Hall's first. Only its own
+// shaders are compiled up front.
 function renderPreviews() {
-  paintPleinAir();
-  for (const portal of world.portals) renderPreview(portal);
-  // Compile every room's shaders now so first visits don't hitch.
-  for (const id of Object.keys(world.rooms)) {
-    applyRoom(id);
-    renderer.compile(scene, camera);
-  }
+  const first = world.portals.filter((p) => p.room === 'lobby');
+  previewQueue.push(...first, ...world.portals.filter((p) => p.room !== 'lobby'));
+  applyRoom('lobby');
+  renderer.compile(scene, camera);
 }
 
-// One refreshed door per frame, then back to the room you're in.
+// One door per frame, then back to the room you're in.
 function refreshPreviews() {
   if (!previewQueue.length || state === 'transition' || state === 'loading') return;
   renderPreview(previewQueue.shift());
