@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "Coolimages Collector",
+  "version": "0.1.0",
+  "description": "When you save a picture or video from X, keeps a note of the post it came from for the coolimages museum.",
+  "permissions": [
+    "downloads",
+    "contextMenus",
+    "storage",
+    "nativeMessaging"
+  ],
+  "host_permissions": [
+    "https://x.com/*",
+    "https://twitter.com/*",
+    "https://mobile.x.com/*",
+    "https://pbs.twimg.com/*",
+    "https://video.twimg.com/*",
+    "https://cdn.syndication.twimg.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://x.com/*",
+        "https://twitter.com/*",
+        "https://mobile.x.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Coolimages Collector",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png",
+      "48": "icons/48.png"
+    }
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAp7Km2FRe+z+fqFAtH7833JDWZ43TptAkz3G8BbH6ADDGPEcHy9NnBoN+yIsJNAAfphAECaJV5bkirtXKarDeQndtar4XUF4gmyuVZOAj5lByaWjkYKYKq6flnhBSRVYbvSdzua3dD4jwDRyg7bIJBU6uMJtr/5nYBfRr9OTeLT0yTEZZP7otov9hc4xUHf9Q9rAQB76JPUZ4DUcPSkO0U3o0pHZGKp+EKC6xDi8L8zpP56+LS/LTQ+ajsuoVBX005LLb4XEOQgUxDM++JD17msrUjE6AXTTmlf5QSyhhTnZJsOtVs/H7LzcNyA6TIBDkHNVNRPUdjGYXBjhHuuVpUQIDAQAB"
+}

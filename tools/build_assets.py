@@ -84,6 +84,37 @@ def build_video(path):
     }
 
 
+def read_note(path):
+    note_path = path.with_suffix(".json")
+    try:
+        note = json.loads(note_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+    return note if isinstance(note, dict) and note.get("version") == 1 else None
+
+
+def note_saved(note):
+    try:
+        when = datetime.fromisoformat(str(note["savedAt"]).replace("Z", "+00:00"))
+    except (TypeError, KeyError, ValueError):
+        return None
+    return when.astimezone().replace(tzinfo=None).isoformat(timespec="minutes")
+
+
+def public_source(note):
+    """The post a work was saved from, as the site and the curator use it."""
+    post = note["post"]
+    author = post.get("author") or {}
+    return {
+        "url": post.get("url"),
+        "postedAt": post.get("postedAt"),
+        "author": {"name": author.get("name", ""), "handle": author.get("handle", ""), "url": author.get("url", "")},
+        "text": post.get("text", ""),
+        "alt": post.get("alt", ""),
+        "match": note.get("match", "none"),
+    }
+
+
 def main():
     src = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(os.environ.get("COOLIMAGES_DIR", DEFAULT_SRC))
     if not src.is_dir():
@@ -91,9 +122,15 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
 
     items = []
+    sources = {}
     has_ffmpeg = bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
     for path in sorted(src.iterdir()):
-        saved = datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="minutes")
+        # The collector extension's note (<stem>.json beside the file) knows
+        # when it was really saved; OneDrive re-stamps file times.
+        note = read_note(path)
+        saved = note_saved(note) or datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="minutes")
+        if note and note.get("post"):
+            sources[path.stem] = public_source(note)
         if path.suffix.lower() in VIDEO_EXTENSIONS:
             if not has_ffmpeg:
                 print(f"Skipping {path.name}: ffmpeg/ffprobe not found")
@@ -138,6 +175,7 @@ def main():
             stale.unlink()
 
     manifest = {"built": datetime.now().isoformat(timespec="seconds"), "count": len(items), "items": items}
+    (ROOT / "content" / "sources.json").write_text(json.dumps(sources, indent=2, ensure_ascii=False), encoding="utf-8")
     (ROOT / "content" / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     videos = sum(1 for item in items if "video" in item)
     print(f"Built {len(items) - videos} images and {videos} videos from {src} -> {OUT}")

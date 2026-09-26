@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Coolimages Collector</title>
+    <style>
+      :root {
+        --paper: #f6f2ea;
+        --card: #fffdf8;
+        --ink: #1d1a16;
+        --soft: #6d655a;
+        --rule: #e2dacb;
+        --accent: #8a6d3b;
+        --ok: #2c7552;
+        --warn: #9c5d14;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #17150f;
+          --card: #211e17;
+          --ink: #efe8da;
+          --soft: #a89f90;
+          --rule: #383226;
+          --accent: #d2ac68;
+          --ok: #7bc79f;
+          --warn: #e3a75d;
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        width: 340px;
+        background: var(--paper);
+        color: var(--ink);
+        font: 14px/1.45 Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 16px 10px;
+        border-bottom: 1px solid var(--rule);
+      }
+      header h1 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 500;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      header img {
+        width: 28px;
+        height: 28px;
+      }
+      section {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--rule);
+      }
+      h2 {
+        margin: 0 0 8px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--soft);
+        font-family: system-ui, sans-serif;
+      }
+      .post-head {
+        font-size: 13px;
+        color: var(--soft);
+        margin: 0 0 8px;
+      }
+      .post-head b {
+        color: var(--ink);
+        font-weight: 500;
+      }
+      .media {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .media figure {
+        margin: 0;
+        position: relative;
+        background: var(--card);
+        border: 1px solid var(--rule);
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .media img {
+        display: block;
+        width: 100%;
+        height: 96px;
+        object-fit: cover;
+      }
+      .media .kind {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.65);
+        color: #fff;
+        font: 11px system-ui, sans-serif;
+      }
+      button {
+        font: 13px system-ui, sans-serif;
+        cursor: pointer;
+      }
+      .media button {
+        width: 100%;
+        padding: 7px 6px;
+        border: 0;
+        border-top: 1px solid var(--rule);
+        background: var(--card);
+        color: var(--ink);
+      }
+      .media button:hover {
+        background: var(--paper);
+      }
+      .media button:disabled {
+        color: var(--ok);
+        cursor: default;
+      }
+      .muted {
+        margin: 0;
+        color: var(--soft);
+        font-size: 13px;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        color: var(--soft);
+      }
+      input {
+        width: 100%;
+        margin-top: 4px;
+        padding: 6px 8px;
+        border: 1px solid var(--rule);
+        border-radius: 6px;
+        background: var(--card);
+        color: var(--ink);
+        font: 13px ui-monospace, Consolas, monospace;
+      }
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      li {
+        display: grid;
+        grid-template-columns: 36px minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+        padding: 5px 0;
+      }
+      li + li {
+        border-top: 1px solid var(--rule);
+      }
+      li .thumb {
+        width: 36px;
+        height: 36px;
+        border-radius: 4px;
+        object-fit: cover;
+        background: var(--rule);
+      }
+      li .who {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      li .who small {
+        display: block;
+        color: var(--soft);
+        font: 11px ui-monospace, Consolas, monospace;
+      }
+      li a {
+        color: var(--ink);
+      }
+      .badge {
+        font: 11px system-ui, sans-serif;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid currentColor;
+      }
+      .badge.exact {
+        color: var(--ok);
+      }
+      .badge.page,
+      .badge.nearby {
+        color: var(--warn);
+      }
+      .badge.none {
+        color: var(--soft);
+      }
+      footer {
+        padding: 10px 16px 14px;
+        font-size: 12px;
+        color: var(--soft);
+      }
+      code {
+        font: 11.5px ui-monospace, Consolas, monospace;
+      }
+      .tip {
+        margin-top: 8px;
+        padding: 8px 10px;
+        border-left: 3px solid var(--warn);
+        background: var(--card);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <img src="icons/48.png" alt="" />
+      <h1>Coolimages</h1>
+    </header>
+    <section id="post">
+      <h2>This post</h2>
+      <p class="muted" id="post-empty">Open a post on X to save its pictures and videos here.</p>
+      <p class="post-head" id="post-head" hidden></p>
+      <div class="media" id="media"></div>
+    </section>
+    <section>
+      <h2>Where saves go</h2>
+      <p class="muted" id="mode">Checking…</p>
+      <p class="muted tip" id="tip" hidden>Helium asked where to save a note. Install the helper (<code>extension\host\install.ps1</code>), or turn off <i>Ask where to save each file</i> in Settings → Downloads. <i>Save image as…</i> still asks either way.</p>
+    </section>
+    <section>
+      <h2>Watching</h2>
+      <label for="folder">Also note saves into folders whose path contains</label>
+      <input id="folder" type="text" spellcheck="false" />
+    </section>
+    <section>
+      <h2>Recent saves</h2>
+      <p class="muted" id="log-empty">Nothing saved yet. Save a picture from X into your coolimages folder, or right-click it and choose <i>Save to coolimages</i>.</p>
+      <ul id="log"></ul>
+    </section>
+    <footer>Each save gets a note <code>&lt;id&gt;.json</code> with its post. The museum pipeline picks them up.</footer>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

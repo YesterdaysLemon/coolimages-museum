@@ -64,7 +64,7 @@ STYLE_GUIDE = """You are the curator of "coolimages", a walkable 3D museum built
 
 For each image you receive, write:
 - title: a museum title, 2 to 6 words. Witty is fine; never a pun for its own sake.
-- artist: only what is visible (a signature, watermark or handle in the image). Otherwise "Unknown artist", "Unknown photographer" or "Almost certainly a model" when the image clearly looks AI-generated. Never guess a real person's identity.
+- artist: only what is visible (a signature, watermark or handle in the image), or what the post it was saved from says outright (the poster calling it their own work, or naming the artist). The person who posted it is not necessarily the maker. Otherwise "Unknown artist", "Unknown photographer" or "Almost certainly a model" when the image clearly looks AI-generated. Never guess a real person's identity.
 - medium: short, e.g. "Digital painting", "Pixel art", "Photograph, dusty corner".
 - note: 2 to 4 sentences. Describe what is actually in the picture, then why it is interesting: the tension, the joke, the craft, or the mood. Be specific to this image. No filler, no "this piece invites us to". Be kind about people in photographs; don't speculate about them.
 - callouts: 0 to 4 labels pointing at specific visible details. u and v are the target point as fractions of the image width and height, measured from the top-left corner (0 to 1). Labels are 2 to 5 words, often with a dry parenthetical, e.g. "Chips (winning)", "Expression: remorse". Only point at things you can clearly locate.
@@ -209,7 +209,7 @@ def clean_work(raw):
     }
 
 
-def ask_claude(client, batch, held, catalog, layout, videos):
+def ask_claude(client, batch, held, catalog, layout, videos, sources=None):
     open_wings = [
         f'- key "{key}": {w["name"]} ({w["subtitle"]}), template {w["template"]}, {MAX_WING - len(w.get("works", []))} spaces left. {w["statement"]}'
         for key, w in layout["wings"].items()
@@ -224,6 +224,12 @@ def ask_claude(client, batch, held, catalog, layout, videos):
             label = f"Image ID: {item_id} (a video, {v.get('duration', 0):.0f} seconds, {sound}; shown as a contact sheet)"
         if item_id in held:
             label += f' (already catalogued as "{catalog[item_id]["title"]}"; keep its text unless it is clearly wrong, and decide its placement)'
+        src = (sources or {}).get(item_id)
+        if src and src.get("match") in ("exact", "page"):
+            author = src.get("author") or {}
+            label += f'\nSaved from a post by @{author.get("handle", "?")} ({author.get("name", "")}), {str(src.get("postedAt") or "")[:10]}: "{str(src.get("text", ""))[:500]}"'
+            if src.get("alt"):
+                label += f'\nAlt text on the post: "{src["alt"][:400]}"'
         content.append({"type": "text", "text": label})
         content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": encode_image(path)}})
     content.append({
@@ -351,6 +357,14 @@ def main():
         manifest = load_json(CONTENT / "manifest.json", {"items": []})
         items = {item["id"]: ROOT / item.get("sheet", item["file"]) for item in manifest["items"]}
     videos = {item["id"]: item for item in manifest["items"] if "video" in item}
+    # Where each work was saved from, when the collector extension noted it.
+    if args.source == "site":
+        try:
+            sources = fetch_json(f"{SITE}/content/sources.json")
+        except Exception:  # noqa: BLE001 - optional context
+            sources = {}
+    else:
+        sources = load_json(CONTENT / "sources.json", {})
     catalog = load_json(DATA / "catalog.json", {})
     layout = load_json(DATA / "layout.json", {"version": 1, "wings": {}})
     layout.setdefault("wings", {})
@@ -380,7 +394,7 @@ def main():
     DATA.mkdir(exist_ok=True)
     for start in range(0, len(queue), args.limit):
         batch = [(i, items[i]) for i in queue[start:start + args.limit]]
-        result = ask_claude(client, batch, held, catalog, layout, videos)
+        result = ask_claude(client, batch, held, catalog, layout, videos, sources)
         apply_result(result, {i for i, _ in batch}, held, catalog, layout, now)
         # Save after every batch so a later failure keeps earlier work.
         write_json(DATA / "catalog.json", catalog)

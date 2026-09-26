@@ -46,6 +46,9 @@ const audio = new MuseumAudio();
 if (params.has('mute')) audio.muted = true;
 let world = null;
 let collection = null;
+// Where works were saved from (the collector extension's notes).
+let SOURCES = {};
+const traced = (src) => src?.url && (src.match === 'exact' || src.match === 'page');
 let state = 'loading'; // loading | ready | walk | inspect | transition | paused
 let locked = false;
 let hovered = null;
@@ -172,6 +175,7 @@ async function boot() {
   const manifest = await fetchJson('content/manifest.json');
   if (!manifest) throw new Error('The collection is missing (content/manifest.json). Run: python tools/build_assets.py');
   // Entries written by the curation pipeline never override hand-written ones.
+  SOURCES = (await fetchJson('content/sources.json')) || {};
   const generated = await fetchJson('data/catalog.json');
   for (const [id, work] of Object.entries(generated || {})) if (!WORKS[id]) WORKS[id] = { ...work, generated: true };
   const layout = await fetchJson('data/layout.json');
@@ -753,7 +757,7 @@ function showCaption(ud) {
   panel.querySelector('.saved').textContent = entry.video
     ? `${formatSaved(entry.saved)} · Moving image, ${clockTime(entry.duration || 0)}${sound}`
     : formatSaved(entry.saved);
-  renderCaptionCredit(panel.querySelector('.credit'), work);
+  renderCaptionCredit(panel.querySelector('.credit'), work, SOURCES[ud.id]);
   panel.querySelector('.note').textContent =
     work?.note || 'This image arrived after the catalogue was written. The curator is still deciding why it resonates.';
   panel.querySelector('.back').innerHTML = usingTouch
@@ -775,15 +779,22 @@ function link(href, text) {
   return a;
 }
 
-function renderCaptionCredit(el, work) {
+function renderCaptionCredit(el, work, source) {
   el.replaceChildren();
   const credit = work?.credit;
-  if (credit?.sourceUrl || credit?.profileUrl) {
+  const credited = credit?.sourceUrl || credit?.profileUrl;
+  if (credited) {
     el.append('Credit: ');
     el.append(credit.profileUrl ? link(credit.profileUrl, credit.creator || credit.handle || 'the artist') : credit.creator || 'the artist');
     if (credit.sourceUrl) el.append(' · ', link(credit.sourceUrl, 'original'));
     if (credit.license) el.append(` · ${credit.license}`);
-  } else {
+  }
+  if (traced(source)) {
+    if (credited) el.append(document.createElement('br'));
+    const when = source.postedAt ? `, ${new Date(source.postedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : '';
+    el.append('Saved from ', link(source.url, `@${source.author.handle}\u2019s post`), when);
+    if (!credited) el.append(document.createElement('br'), 'Maker not confirmed. ', link(REMOVAL_URL, 'Know who made it?'));
+  } else if (!credited) {
     el.append('Creator not yet identified. ', link(REMOVAL_URL, 'Know who made it?'));
   }
 }
@@ -806,7 +817,9 @@ function renderCredits() {
       title.textContent = w.title;
       li.append(title, ' — ');
       const c = w.credit;
+      const src = SOURCES[id];
       if (c?.profileUrl) li.append(link(c.profileUrl, c.creator || c.handle));
+      else if (traced(src)) li.append(c?.creator || w.artist, ' · via ', link(src.url, `@${src.author.handle}`));
       else li.append(c?.creator || w.artist);
       if (c?.sourceUrl) li.append(' · ', link(c.sourceUrl, 'original'));
       if (withheld.has(id)) li.append(' · not shown online');
@@ -1549,6 +1562,15 @@ window.museum = {
   },
   walkable: (x, z, y) => walkable(world.rooms[player.room], x, z, 0.38, y),
   tap: (x, y) => tapAt(x, y),
+  // Look closer at a work by id, from wherever you are (for checks).
+  show(id) {
+    const m = world.artworks.find((a) => a.userData.id === id);
+    if (!m) return false;
+    if (player.room !== m.userData.room) enterRoom(m.userData.room);
+    state = 'walk';
+    startInspect(m);
+    return true;
+  },
   // Advance the simulation without waiting for frames (for scripted checks).
   tick(seconds = 1) {
     for (let t = 0; t < seconds; t += 1 / 60) simulate(1 / 60);

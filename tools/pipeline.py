@@ -1,4 +1,4 @@
-"""Scheduled museum update on this PC: rebuild textures and publish them.
+"""Scheduled museum update on this PC: ingest saves, rebuild textures, publish.
 
 Usage:
     python tools/pipeline.py [--no-publish] [--no-dispatch]
@@ -68,6 +68,9 @@ def main():
     LOCK.write_text(str(time.time()), encoding="utf-8")
     try:
         before = live_ids()
+        # Saves and notes from the browser extension go into the folder first.
+        if step("ingest_inbox.py") != 0:
+            return 1
         if step("build_assets.py") != 0:
             return 1
         if args.no_publish:

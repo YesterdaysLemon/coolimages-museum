@@ -55,6 +55,10 @@ def main():
                 if key in item:
                     shutil.copy2(ROOT / item[key], stage / "art" / Path(item[key]).name)
         public = {"built": manifest.get("built"), "count": len(items), "items": items, "withheld": withheld}
+        # Where each public work was saved from (tools/ingest_inbox.py notes).
+        sources = json.loads((CONTENT / "sources.json").read_text(encoding="utf-8")) if (CONTENT / "sources.json").exists() else {}
+        ids = {item["id"] for item in items}
+        (stage / "sources.json").write_text(json.dumps({k: v for k, v in sources.items() if k in ids}, indent=2, ensure_ascii=False), encoding="utf-8")
         # Written last so a reader never sees a manifest pointing at missing files.
         (stage / "manifest.json").write_text(json.dumps(public, indent=2), encoding="utf-8")
 
