@@ -341,15 +341,38 @@ async function loadReal(url) {
   let mw = 0; // walking weight
   let hw = 0; // hissing weight
   let hissing = false;
-  const turnBones = [[model.getObjectByName('Neck02'), 0.35], [model.getObjectByName('Head'), 0.65]].filter(([b]) => b);
+  // Turning, bone by bone. His front leads: the spine bends toward his
+  // heading from the hips forward and the neck and head lead into the turn
+  // (and look at you). Behind, the hips and each tail bone follow the bone
+  // ahead with the delay of walking one segment's length, so the body follows
+  // the path the head took and the tail trails it; standing still, they drag
+  // round slowly. Each joint bends a limited amount.
+  const B = (n) => model.getObjectByName(n);
+  const hips = B('Hips');
+  const front = [['Spine', 0.1, 0], ['Spine1', 0.22, 0], ['Spine2', 0.38, 0], ['Spine3', 0.56, 0], ['Spine4', 0.74, 0], ['Neck01', 0.88, 0.15], ['Neck02', 0.96, 0.4], ['Neck03', 1, 0.7], ['Head', 1, 1]]
+    .map(([n, k, lookK]) => ({ bone: B(n), k, lookK }))
+    .filter((j) => j.bone);
+  const tail = ['Tail01', 'Tail02', 'Tail03', 'Tail04', 'Tail05'].map(B).filter(Boolean);
+  const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+  let hipYaw = 0;
+  const tailYaw = tail.map(() => 0);
+  let primed = false;
+  const follow = (yaw, lead, step, seg, dt, maxBend) => {
+    yaw += wrap(lead - yaw) * Math.min(1, step / seg + dt * 0.7);
+    const d = wrap(lead - yaw);
+    return Math.abs(d) > maxBend ? lead - Math.sign(d) * maxBend : yaw;
+  };
   const q = new THREE.Quaternion();
   const axis = new THREE.Vector3();
   const turn = new THREE.Quaternion();
+  const targets = new Map();
   let look = 0;
   return {
     root,
     pose(t, dt, g) {
-      mw += (Math.min(1, g.speed / 0.3) - mw) * Math.min(1, dt * 4);
+      // His legs step whenever he moves or turns, even on the spot.
+      const turning = Math.abs(g.omega);
+      mw += (Math.min(1, Math.max(g.speed / 0.3, turning / 0.45)) - mw) * Math.min(1, dt * 4);
       if (g.hissing && !hissing) {
         hissing = true;
         hiss.reset().play();
@@ -362,16 +385,38 @@ async function loadReal(url) {
       walk.setEffectiveWeight(mw * (1 - hw));
       rest.setEffectiveWeight((1 - mw) * (1 - hw));
       hiss.setEffectiveWeight(hw);
-      walk.setEffectiveTimeScale(Math.max(0.25, g.speed / TROT_SPEED));
+      walk.setEffectiveTimeScale(Math.max(0.25, Math.max(g.speed, turning * 0.9) / TROT_SPEED));
       mixer.update(dt);
-      // Turn the neck and head (about the world's up, after the clips).
+      // The bend: an absolute yaw for each bone, then each bone turned by the
+      // difference from its parent's (about the world's up, after the clips).
+      const heading = g.heading;
+      if (!primed || g.placed) {
+        hipYaw = heading;
+        tailYaw.fill(heading);
+        primed = true;
+        g.placed = false;
+      }
+      const step = g.speed * dt;
+      hipYaw = follow(hipYaw, heading, step, 0.9, dt, 0.5);
+      let prev = hipYaw;
+      tail.forEach((b, i) => {
+        tailYaw[i] = follow(tailYaw[i], prev, step, 0.3, dt, 0.28);
+        prev = tailYaw[i];
+      });
       look += (g.look - look) * Math.min(1, dt * 3);
-      if (Math.abs(look) < 0.005) return;
+      const lead = Math.max(-0.45, Math.min(0.45, g.omega * 0.55));
+      const bend = wrap(heading - hipYaw);
+      targets.clear();
+      if (hips) targets.set(hips, hipYaw);
+      for (const j of front) targets.set(j.bone, hipYaw + bend * j.k + lead * Math.max(0, (j.k - 0.7) / 0.3) + look * j.lookK);
+      tail.forEach((b, i) => targets.set(b, tailYaw[i]));
       root.updateMatrixWorld(true);
-      for (const [bone, share] of turnBones) {
+      for (const [bone, yaw] of targets) {
+        const delta = wrap(yaw - (targets.has(bone.parent) ? targets.get(bone.parent) : heading));
+        if (Math.abs(delta) < 1e-4) continue;
         bone.parent.getWorldQuaternion(q);
         axis.set(0, 1, 0).applyQuaternion(q.invert());
-        bone.quaternion.premultiply(turn.setFromAxisAngle(axis, look * share));
+        bone.quaternion.premultiply(turn.setFromAxisAngle(axis, delta));
       }
     },
   };
@@ -475,6 +520,8 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
     g.y = door.pos.y;
     g.heading = headingTo(-door.normal.x, -door.normal.z);
     g.mode = 'exit';
+    g.omega = 0;
+    g.placed = true;
   }
 
   // The player just arrived in `roomId` (through `arrival`, if by a door).
@@ -484,7 +531,7 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
     const from = arrival ? { x: arrival.pos.x + arrival.normal.x * 2.4, z: arrival.pos.z + arrival.normal.z * 2.4 } : null;
     if (g.room === roomId) {
       const s = spot(from);
-      if (s) Object.assign(g, s, { mode: 'wander', target: null, heading: Math.random() * TAU });
+      if (s) Object.assign(g, s, { mode: 'wander', target: null, heading: Math.random() * TAU, omega: 0, placed: true });
       return;
     }
     if (t - g.lastStaged < 60 || Math.random() > 0.22) return;
@@ -554,7 +601,7 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
         const off = steer(headingTo(dx, dz), dt);
         // Blocked: stand and turn toward somewhere else before moving on.
         if (g.pause > 0) g.pause -= dt;
-        else want = off < 0.7 ? cruise(t) : off < 1.6 ? 0.35 : 0;
+        else want = off < 0.7 ? cruise(t) : off < 1.6 ? 0.4 : 0.18;
         if (Math.hypot(dx, dz) < 0.7) {
           if (g.mode === 'toDoor') g.mode = 'exit';
           else {
@@ -662,6 +709,8 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
     g.y = back.pos.y;
     g.heading = headingTo(back.normal.x, back.normal.z);
     g.mode = 'emerge';
+    g.omega = 0;
+    g.placed = true;
   }
 
   const tmp = new THREE.Vector3();
@@ -811,7 +860,7 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
       g.enabled = true;
       g.room = roomId;
       const s = spot(near);
-      if (s) Object.assign(g, s, { mode: 'wander', target: null });
+      if (s) Object.assign(g, s, { mode: 'wander', target: null, omega: 0, placed: true });
       return !!s;
     },
   };
