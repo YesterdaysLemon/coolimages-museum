@@ -1810,7 +1810,7 @@ window.museum = {
             }
           }
         }
-        if (blocked) out.push({ room: room.id, id: art.userData.id, blocked: `${blocked}/${total}`, by: [...blockers.entries()].map(([k, n]) => `${k} (${n})`) });
+        if (blocked) out.push({ room: room.id, id: art.userData.id, blocked: `${blocked}/${total}`, by: [...blockers.entries()].map(([k, n]) => `${k} (${n})`), at: target.toArray().map((v) => +v.toFixed(2)), facing: [+normal.x.toFixed(2), +normal.z.toFixed(2)] });
       }
     }
     return out;

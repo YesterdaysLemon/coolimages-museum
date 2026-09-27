@@ -803,15 +803,17 @@ export function makeArchitecture(ctx) {
     const doorFaces = [Math.PI, Math.PI / 2, -Math.PI / 2];
     const slots = doorFaces.map((phi) => ({ ...face(phi, 0.06, 0), w: 2.4, h: 3.3, signW: 2.8 }));
     const spare = hangDoors(room, slots, doors.links, ink);
-    // The statement takes a spare door face, else a lectern by the entrance.
+    // The statement takes a spare door face, else a lectern in the middle
+    // facing the entrance (the diagonal faces all hold works, so anywhere
+    // nearer the walls stands in front of one).
     if (spare.length) {
       const phi = doorFaces[doorFaces.length - spare.length];
       const f = face(phi, 0.04, 2.5);
       wingText(room, spec, f.pos, f.dir, ink, 3.0);
     } else {
-      box(room, 1.9, 1.4, 0.12, cx + 2.4, 0.7, cz + 4.2, std(0x3a3028, 0.6));
-      wingText(room, spec, V3(cx + 2.4, 1.0, cz + 4.2 - 0.07), V3(0, 0, -1), 'light', 1.7);
-      room.obstacles.push({ type: 'rect', x0: cx + 1.4, x1: cx + 3.4, z0: cz + 4.1, z1: cz + 4.3 });
+      box(room, 1.9, 1.4, 0.12, cx, 0.7, cz + 0.9, std(0x3a3028, 0.6));
+      wingText(room, spec, V3(cx, 1.0, cz + 0.9 + 0.07), V3(0, 0, 1), 'light', 1.7);
+      room.obstacles.push({ type: 'rect', x0: cx - 1.0, x1: cx + 1.0, z0: cz + 0.8, z1: cz + 1.0 });
     }
     const common = workStyle(t, accent);
     const flames = [];
