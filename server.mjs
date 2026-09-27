@@ -42,7 +42,7 @@ const types = {
   '.svg': 'image/svg+xml',
   '.webmanifest': 'application/manifest+json',
 };
-const allowed = [/^\/app\/[\w-]+\.(png|webmanifest)$/, /^\/src\/[\w-]+\.js$/, /^\/data\/[\w-]+\.json$/, /^\/content\/[\w-]+\.json$/, /^\/content\/art\/[\w-]+(\.sheet|\.sm)?\.(jpg|png|webp|mp4|glb)$/, /^\/robots\.txt$/];
+const allowed = [/^\/app\/[\w-]+\.(png|webmanifest)$/, /^\/src\/[\w-]+\.js$/, /^\/data\/[\w-]+\.json$/, /^\/content\/[\w-]+\.json$/, /^\/content\/art\/[\w-]+(\.[0-9a-f]{8})?(\.sheet|\.sm)?\.(jpg|png|webp|mp4|glb)$/, /^\/robots\.txt$/];
 
 http
   .createServer(async (req, res) => {
@@ -83,7 +83,9 @@ http
       res.setHeader('Content-Type', types[ext] || 'application/octet-stream');
       res.setHeader('Content-Length', body.length);
       res.setHeader('Last-Modified', info.mtime.toUTCString());
-      res.setHeader('Cache-Control', rel.startsWith('/content/art/') ? 'public, max-age=604800' : 'no-cache');
+      // (Art whose name carries a hash of its bytes never changes: keep it for good.)
+      const hashed = /^\/content\/art\/[\w-]+\.[0-9a-f]{8}\./.test(rel);
+      res.setHeader('Cache-Control', hashed ? 'public, max-age=31536000, immutable' : rel.startsWith('/content/art/') ? 'public, max-age=604800' : 'no-cache');
       res.setHeader('Accept-Ranges', 'bytes');
       if (ext === '.html') res.setHeader('Content-Security-Policy', csp);
       // Video elements fetch in byte ranges (Caddy does this in production).

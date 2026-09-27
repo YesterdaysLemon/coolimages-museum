@@ -12,6 +12,7 @@ import { makeArt } from './art.js';
 import { makeGpu, arrivalFor, spawnFrom } from './gpu.js';
 import { makeVideos } from './videos.js';
 import { drawMinimap } from './minimap.js';
+import { mergeStatic } from './batch.js';
 
 const $ = (sel) => document.querySelector(sel);
 const params = new URLSearchParams(location.search);
@@ -204,6 +205,11 @@ async function boot() {
     // Compile his materials as soon as he arrives, not on first sight.
     onReady: (root) => renderer.compile(root, camera, scene),
   });
+  // Fewer draw calls: what never moves, merged per material (batch.js; `?nomerge` to compare).
+  if (!params.has('nomerge')) {
+    const merged = mergeStatic(world);
+    perf.note(`meshes ${merged.before} -> ${merged.after}`);
+  }
   gpu = makeGpu({ renderer, scene, camera, fx, perf, world, gator, lowPower, previewHeight: PREVIEW_H, applyRoom, runAnimators, player, state: () => state });
   art.attach(world, { onRoomArrived: (id) => gpu.roomChanged(id) });
   videos = makeVideos({ world, audio, paused: !!collection.videosPaused });
@@ -631,6 +637,8 @@ function startInspect(mesh) {
   }
   camPose = { ...from };
   showCaption(mesh.userData);
+  // Its full-size image, ahead of everything else.
+  art.want([mesh.userData.id], true);
   videos.sound(mesh, true);
   runAnim(reducedMotion ? 0.2 : 1.05, (t) => {
     camPose = lerpPose(from, to, smoother(t));
@@ -665,6 +673,7 @@ function inspectStep(dir) {
   const to = inspectPose(next);
   inspect.mesh = next;
   showCaption(next.userData);
+  art.want([next.userData.id], true);
   videos.sound(next, true);
   audio.chime();
   state = 'transition';
@@ -1409,9 +1418,27 @@ function simulate(dt) {
 }
 
 // `sync` (for checks) waits for the GPU before the frame is counted done.
+// Works you've walked up to get their full-size images (art.js), nearest
+// first. (On phones, only the one you look closer at.)
+const UP_CLOSE = 6;
+let closeTimer = 0;
+function wantCloseWorks(dt) {
+  closeTimer -= dt;
+  if (lowPower || state !== 'walk' || closeTimer > 0) return;
+  closeTimer = 0.25;
+  const close = [];
+  for (const m of world.rooms[player.room].artworks) {
+    m.getWorldPosition(tmpV);
+    const d = Math.hypot(tmpV.x - player.x, tmpV.z - player.z);
+    if (d < UP_CLOSE && Math.abs(tmpV.y - (player.y + EYE_HEIGHT)) < 3) close.push([d, m.userData.id]);
+  }
+  if (close.length) art.want(close.sort((a, b) => a[0] - b[0]).map(([, id]) => id));
+}
+
 function runFrame(dt, sync = null) {
   perf.begin();
   simulate(dt);
+  wantCloseWorks(dt);
   perf.time('uploads', () => gpu.pump(art.pump()));
   perf.time('previews', () => gpu.refreshPreviews(dt));
   // The alligator's room grids, a little each frame.
@@ -1442,6 +1469,10 @@ boot().catch((err) => {
 
 // Debug/testing hooks (used by automated checks; harmless otherwise).
 window.museum = {
+  // The built world, for checks (?test only).
+  get world() {
+    return TEST ? world : undefined;
+  },
   get state() {
     return state;
   },

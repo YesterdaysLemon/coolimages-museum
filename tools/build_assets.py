@@ -20,6 +20,12 @@ Videos (needs ffmpeg and ffprobe on PATH) become a web-friendly H.264 MP4
 (<id>.webp, the texture shown until the video plays) and a 3x2 contact sheet
 for the curator (<id>.sheet.jpg).
 
+Images, posters, contact sheets and the alligator's model are named with a
+hash of their bytes (<id>.<hash8>.webp, <id>.<hash8>.sm.webp, ...), so a file's
+name changes whenever its content does and browsers and Cloudflare can keep
+them for good (Caddy sends a year's `immutable` for those names). Videos keep
+their plain names here: tools/publish_content.py hashes them for the media host.
+
 Outputs are reused until their source changes or the encoding settings do
 (IMAGE_VERSION, VIDEO_VERSION; the record is content/.build-cache.json).
 
@@ -27,7 +33,9 @@ The same picture saved twice under different names goes in once
 (tools/dupes.py compares the pictures themselves, not the names).
 """
 import base64
+import hashlib
 import io
+import re
 import json
 import os
 import shutil
@@ -101,12 +109,38 @@ def stamp(path):
     return f"{int(st.st_mtime)}:{st.st_size}"
 
 
+HASHED = re.compile(r"^[0-9a-f]{8}\.")
+
+
+def fingerprint(rel, stem):
+    """Give a built file (`content/art/<stem>.<rest>`) a name carrying a hash of
+    its bytes, `<stem>.<hash8>.<rest>`, renaming it if need be; returns the new
+    relative path."""
+    path = ROOT / rel
+    rest = path.name[len(stem) + 1:]
+    rest = HASHED.sub("", rest)
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()[:8]
+    target = path.with_name(f"{stem}.{digest}.{rest}")
+    if target != path:
+        path.replace(target)
+    return f"content/art/{target.name}"
+
+
+def fingerprinted(fields, stem, keys):
+    return {**fields, **{k: fingerprint(fields[k], stem) for k in keys if k in fields}}
+
+
+def reusable(hit, version, path, keys):
+    return hit and hit.get("v") == version and hit.get("src") == stamp(path) and all((ROOT / hit["fields"][k]).exists() for k in keys)
+
+
 def build_image(path, cache):
     """Encode one image (or reuse the last encode); returns its manifest fields."""
     out, sm = OUT / f"{path.stem}.webp", OUT / f"{path.stem}.sm.webp"
     key = f"image:{path.name}"
     hit = cache.get(key)
-    if hit and hit.get("v") == IMAGE_VERSION and hit.get("src") == stamp(path) and out.exists() and sm.exists():
+    if reusable(hit, IMAGE_VERSION, path, ("file", "small")):
+        hit["fields"] = fingerprinted(hit["fields"], path.stem, ("file", "small"))
         return hit["fields"]
     with Image.open(path) as im:
         im.load()
@@ -122,6 +156,7 @@ def build_image(path, cache):
     save_webp(im, out, lossless)
     save_webp(small, sm, lossless)
     fields = {"file": f"content/art/{out.name}", "small": f"content/art/{sm.name}", "width": width, "height": height, **placeholder(small)}
+    fields = fingerprinted(fields, path.stem, ("file", "small"))
     cache[key] = {"v": IMAGE_VERSION, "src": stamp(path), "fields": fields}
     return fields
 
@@ -131,7 +166,8 @@ def build_video(path, cache):
     mp4, poster, sheet = OUT / f"{path.stem}.mp4", OUT / f"{path.stem}.webp", OUT / f"{path.stem}.sheet.jpg"
     key = f"video:{path.name}"
     hit = cache.get(key)
-    if hit and hit.get("v") == VIDEO_VERSION and hit.get("src") == stamp(path) and all(f.exists() for f in (mp4, poster, sheet)):
+    if reusable(hit, VIDEO_VERSION, path, ("file", "video", "sheet")):
+        hit["fields"] = fingerprinted(hit["fields"], path.stem, ("file", "sheet"))
         return hit["fields"]
     box = f"scale=w='min({VIDEO_EDGE},iw)':h='min({VIDEO_EDGE},ih)':force_original_aspect_ratio=decrease:force_divisible_by=2"
     ffmpeg(
@@ -158,6 +194,7 @@ def build_video(path, cache):
         "audio": audio,
         **blur,
     }
+    fields = fingerprinted(fields, path.stem, ("file", "sheet"))
     cache[key] = {"v": VIDEO_VERSION, "src": stamp(path), "fields": fields}
     return fields
 
@@ -252,8 +289,8 @@ def main():
     extras = {}
     if gator.exists():
         shutil.copy2(gator, OUT / "alligator.glb")
-        keep.add("alligator.glb")
-        extras["gator"] = "content/art/alligator.glb"
+        extras["gator"] = fingerprint("content/art/alligator.glb", "alligator")
+        keep.add(Path(extras["gator"]).name)
     for stale in OUT.iterdir():
         if stale.name not in keep:
             stale.unlink()
