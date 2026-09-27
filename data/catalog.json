@@ -1037,8 +1037,7 @@
       }
     ],
     "curatedAt": "2026-09-25T06:12",
-    "wing": "lobby",
-    "hold": true
+    "wing": "wing-understudies"
   },
   "HQPFbRMXQAA_rIP": {
     "title": "Retirement Of A Contestant",
@@ -1382,8 +1381,7 @@
       }
     ],
     "curatedAt": "2026-09-26T23:38",
-    "wing": "lobby",
-    "hold": true
+    "wing": "wing-understudies"
   },
   "HTEOLaTbkAA0_nS": {
     "title": "Mall With Night Sky",
@@ -1603,5 +1601,275 @@
     ],
     "curatedAt": "2026-09-26T23:38",
     "wing": "wing-devotional-diagrams"
+  },
+  "HTLw-pGbYAAyJQW": {
+    "title": "Open Case, Fish Cooled",
+    "artist": "Unknown artist",
+    "medium": "Photograph, desk at night",
+    "note": "A PC has been opened and something has grown into it: raw fish skin draped over the board slots, a rubbery brain resting where a GPU would go, cables cinched around pink limbs, and a fish head with its full set of teeth lying on the desk next to the keyboard. Above it all a pale face in a headset looks down, half in shadow. The build is horrible and also completely legible as a build — fan at the top, cable management, everything seated. That is the part that gets you.",
+    "callouts": [
+      {
+        "u": 0.28,
+        "v": 0.13,
+        "t": "Cooling (for what)"
+      },
+      {
+        "u": 0.3,
+        "v": 0.36,
+        "t": "Brain, unseated"
+      },
+      {
+        "u": 0.76,
+        "v": 0.83,
+        "t": "Fish (front intake)"
+      },
+      {
+        "u": 0.1,
+        "v": 0.89,
+        "t": "Keyboard, still in use"
+      }
+    ],
+    "curatedAt": "2026-09-27T22:00",
+    "wing": "wing-wet-hardware"
+  },
+  "HTLxBL4bsAAnDro": {
+    "title": "Tower Build, Organ Cooled",
+    "artist": "Unknown artist",
+    "medium": "Installation, CRTs, PVC and offal",
+    "note": "A column of old beige CRTs, PVC plumbing and bagged pink organs, assembled against a gallery skirting board and wired into a keyboard held across someone's lap. One screen in the middle shows a clean medical brain scan, which is the only tidy image in the whole stack. The hands at the bottom are blurred because they are typing, and that detail is what turns a pile of parts into a machine someone is operating.",
+    "callouts": [
+      {
+        "u": 0.45,
+        "v": 0.54,
+        "t": "Brain (on display)"
+      },
+      {
+        "u": 0.44,
+        "v": 0.3,
+        "t": "Plumbing, purpose unclear"
+      },
+      {
+        "u": 0.14,
+        "v": 0.87,
+        "t": "Operator (typing anyway)"
+      },
+      {
+        "u": 0.28,
+        "v": 0.73,
+        "t": "Screen showing something soft"
+      }
+    ],
+    "curatedAt": "2026-09-27T22:00",
+    "wing": "wing-wet-hardware"
+  },
+  "HTMUoxPWcAA2wdy": {
+    "title": "The Sulfur God Introduces Himself",
+    "artist": "Unknown artist",
+    "medium": "Image macro",
+    "note": "A smiling stick figure offers the reasonable position that it is human and therefore likes living. Across from it, a cut-out slab of bone-in meat with a fur texture and a single dark hole announces that it is THE SULFUR GOD, will take SOUL, and will then kill you. The threat is delivered in three different fonts, escalating exactly where the claim does. Perfect comic timing from an object with no face.",
+    "callouts": [
+      {
+        "u": 0.21,
+        "v": 0.51,
+        "t": "Optimism (misplaced)"
+      },
+      {
+        "u": 0.62,
+        "v": 0.67,
+        "t": "Mouth? (hole, anyway)"
+      },
+      {
+        "u": 0.87,
+        "v": 0.12,
+        "t": "Font upgrade mid-threat"
+      }
+    ],
+    "curatedAt": "2026-09-27T22:00",
+    "wing": "wing-wet-hardware"
+  },
+  "HTMCaY4b0AApb2f": {
+    "title": "Unfinished, Ground Floor",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, flash in a shell building",
+    "note": "A concrete shell caught by flash: bare columns, a staircase with no handrail, dust and footprints across the slab, and — already installed, already varnished — a full wooden balustrade on the floor above. Nothing is finished except the one decorative thing. The flash bleaches the near columns and leaves the doorways as flat black rectangles, which is doing a lot of the atmospheric work here.",
+    "callouts": [
+      {
+        "u": 0.22,
+        "v": 0.08,
+        "t": "Railing (finished first)"
+      },
+      {
+        "u": 0.75,
+        "v": 0.6,
+        "t": "Stairs, no destination yet"
+      },
+      {
+        "u": 0.4,
+        "v": 0.9,
+        "t": "Footprints (someone's)"
+      }
+    ],
+    "curatedAt": "2026-09-27T22:00",
+    "wing": "wing-somewhere-to-stand"
+  },
+  "HTN8HjNXkAA6ZTV": {
+    "title": "Fig. 17: Sticky Hardening Foam",
+    "artist": "Unknown artist",
+    "medium": "Figure from a technical paper",
+    "note": "Two renders of the same servicing satellite, stacked. In the top one a pink tendril reaches out and touches a dead spacecraft; in the bottom one the pink has swallowed it entirely and set into a glossy lump roughly the size of the satellite that made it. The caption underneath is entirely serious. Real orbital engineering, rendered in the exact colour and finish of chewed bubblegum.",
+    "callouts": [
+      {
+        "u": 0.78,
+        "v": 0.18,
+        "t": "Debris (about to be gum)"
+      },
+      {
+        "u": 0.8,
+        "v": 0.6,
+        "t": "Foam (hardened, enormous)"
+      },
+      {
+        "u": 0.45,
+        "v": 0.93,
+        "t": "Caption, entirely serious"
+      }
+    ],
+    "curatedAt": "2026-09-27T22:00",
+    "wing": "wing-wrong-size"
+  },
+  "HTQDK0WWUAAH3pQ": {
+    "title": "Her Arms Have Left",
+    "artist": "@DaruKem",
+    "medium": "Low-poly 3D model, viewport render",
+    "note": "A low-poly character in a black-and-white chevron sweater sits in a grey viewport with her arms drifting off across the frame, disconnected at the shoulder and pointing in three directions at once. Her face is a blank white plane with a zigzag drawn on it and a red choker still rendering perfectly. The flat shading means the breakage reads as design rather than accident — the arms look posed, not dropped. Ten thousand rigs have done this and almost none of them looked this deliberate.",
+    "callouts": [
+      {
+        "u": 0.28,
+        "v": 0.17,
+        "t": "Arm (unaffiliated)"
+      },
+      {
+        "u": 0.13,
+        "v": 0.5,
+        "t": "Second arm, elsewhere"
+      },
+      {
+        "u": 0.79,
+        "v": 0.35,
+        "t": "Mouth: zigzag"
+      },
+      {
+        "u": 0.8,
+        "v": 0.45,
+        "t": "Choker (rendering fine)"
+      }
+    ],
+    "curatedAt": "2026-09-27T22:00",
+    "wing": "wing-signal-loss"
+  },
+  "HTLXxQzXIAAq7jH": {
+    "title": "XVIII, Observed in the Yard",
+    "artist": "Unknown artist",
+    "medium": "Photograph and tarot card, side by side",
+    "note": "Left: two puppies on concrete, one with its mouth open, both watching a crayfish that has walked up out of nowhere. Right: the Moon card, with two dogs baying at the sky and a crustacean crawling from the pool. The match is close enough that the joke works and loose enough that it stays funny — nobody on the left knows they are in a tarot deck. The crayfish, in both pictures, is completely unbothered.",
+    "callouts": [
+      {
+        "u": 0.1,
+        "v": 0.18,
+        "t": "Howling (roughly)"
+      },
+      {
+        "u": 0.24,
+        "v": 0.56,
+        "t": "The crayfish, arriving"
+      },
+      {
+        "u": 0.76,
+        "v": 0.85,
+        "t": "Same crustacean, 1909"
+      }
+    ],
+    "curatedAt": "2026-09-27T22:00",
+    "wing": "wing-understudies"
+  },
+  "HTOfKAja8AAnjnk": {
+    "title": "Flock, Corded",
+    "artist": "Unknown artist",
+    "medium": "Sculpture, telephone handsets and cable",
+    "note": "Sheep standing on a polished gallery floor, their fleece built entirely from coiled telephone cord and their heads and legs from old rotary handsets and bases. One has its head down at a phone on the tiles, grazing on it. The curl of a 1980s phone cord turns out to be an almost exact match for wool, which is the kind of discovery you can't argue with once you've seen it.",
+    "callouts": [
+      {
+        "u": 0.33,
+        "v": 0.07,
+        "t": "Head (rotary)"
+      },
+      {
+        "u": 0.4,
+        "v": 0.45,
+        "t": "Fleece: coiled cord"
+      },
+      {
+        "u": 0.52,
+        "v": 0.85,
+        "t": "Grazing (on a phone)"
+      }
+    ],
+    "curatedAt": "2026-09-27T22:00",
+    "wing": "wing-understudies"
+  },
+  "HTPGaMqXAAAPviI": {
+    "title": "Field Wizard, Standing By",
+    "artist": "Unknown artist",
+    "medium": "Digital illustration",
+    "note": "A young soldier in a plate carrier and a long camouflage coat, holding a belt-fed machine gun at rest, under a camo wizard's hat whose point droops sideways like a spaniel's ear. Behind her, painted in the same loose brush as the clouds, stand the spires of a storybook castle. The gear is drawn with real attention — pouches, buckles, bipod — and the hat is drawn with exactly as much. The chromatic fringing along the edges makes the whole thing look like a scanned print from a war that never happened.",
+    "callouts": [
+      {
+        "u": 0.4,
+        "v": 0.25,
+        "t": "Hat (camo, pointed)"
+      },
+      {
+        "u": 0.4,
+        "v": 0.43,
+        "t": "Patch: small mascot"
+      },
+      {
+        "u": 0.3,
+        "v": 0.75,
+        "t": "Rifle, fully specified"
+      },
+      {
+        "u": 0.82,
+        "v": 0.58,
+        "t": "Towers (wrong century)"
+      }
+    ],
+    "curatedAt": "2026-09-27T22:00",
+    "wing": "wing-anachronism"
+  },
+  "HTPrh8aW8AEIKy2": {
+    "title": "Misalignment on Company Time",
+    "artist": "Unknown photographer",
+    "medium": "Embroidered patch, photographed close",
+    "note": "A tan morale patch velcroed to a coyote-brown plate carrier, stitched with a boxy cartoon robot scowling between two lines of doggerel about out-earning a famous AI-risk writer. The embroidery is good: tight satin stitch, clean black border, the little robot's eyebrows doing all the acting. Somebody paid money to have an inside joke about existential risk sewn onto tactical nylon, and the photograph presents it as flatly as a hardware catalogue.",
+    "callouts": [
+      {
+        "u": 0.5,
+        "v": 0.13,
+        "t": "Velcro (lifting slightly)"
+      },
+      {
+        "u": 0.5,
+        "v": 0.48,
+        "t": "Robot (angry, tiny)"
+      },
+      {
+        "u": 0.5,
+        "v": 0.66,
+        "t": "Punchline, fully stitched"
+      }
+    ],
+    "curatedAt": "2026-09-27T22:00",
+    "wing": "wing-plain-evidence"
   }
 }

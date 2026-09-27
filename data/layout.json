@@ -45,7 +45,8 @@
       "works": [
         "HTCHlVQWIAEgceS",
         "HTBRNcmaIAAo-SS",
-        "HS-uZdDb0AA7RWf"
+        "HS-uZdDb0AA7RWf",
+        "HTN8HjNXkAA6ZTV"
       ],
       "form": "attic"
     },
@@ -79,7 +80,8 @@
         "HSn10KgaoAAt_da",
         "HTAOkRCW0AArXJi",
         "HRkwmJAbAAE048c",
-        "HTGT6g5bgAAj0op"
+        "HTGT6g5bgAAj0op",
+        "HTPGaMqXAAAPviI"
       ],
       "form": "basilica"
     },
@@ -96,7 +98,8 @@
         "HRq4SQlXQAAYMFM",
         "HRrpvM-bYAAIMe9",
         "HTFqtUXW4AAisX7",
-        "N6lBq0Nrkb3xlLNa"
+        "N6lBq0Nrkb3xlLNa",
+        "HTPrh8aW8AEIKy2"
       ],
       "form": "void"
     },
@@ -124,7 +127,8 @@
       "works": [
         "HRcQqCnacAAPjFs",
         "HQaO2CXXoAEjm6E",
-        "HO9lc7YWEAA4lAa"
+        "HO9lc7YWEAA4lAa",
+        "HTQDK0WWUAAH3pQ"
       ],
       "form": "octagon"
     },
@@ -198,9 +202,39 @@
       "works": [
         "HTEOLaTbkAA0_nS",
         "HTCqiMSaUAA_R9M",
-        "HTFCnkzWEAAZXd1"
+        "HTFCnkzWEAAZXd1",
+        "HTMCaY4b0AApb2f"
       ],
       "form": "crypt"
+    },
+    "wing-wet-hardware": {
+      "name": "Wet Hardware",
+      "subtitle": "Flesh, Plugged In",
+      "statement": "A tower PC growing organs around a fish head, a column of CRTs bagged in offal and still being typed into, and a slab of bone-in meat that would like you to know it is a god. The flesh in these pictures isn't presented as a wound; it's a component, installed, seated correctly, apparently working. The room is dark so that you have to walk up close to see what's in the bags.",
+      "template": "night",
+      "accent": "#c2726a",
+      "created": "2026-09-27T22:00",
+      "works": [
+        "HTLw-pGbYAAyJQW",
+        "HTLxBL4bsAAnDro",
+        "HTMUoxPWcAA2wdy"
+      ],
+      "form": "iron"
+    },
+    "wing-understudies": {
+      "name": "The Understudies",
+      "subtitle": "Cast As Something Else",
+      "statement": "Two puppies and a crayfish accidentally restaging the Moon card, sheep knitted out of telephone cable, a microSD laid on a tongue like a wafer, and two dolls filming a fifteen-second friendship with a title card at the end. Each picture has cast something in a role it was never built for, and in each case the casting holds. None of them is trying very hard to convince you, which is exactly why it works.",
+      "template": "pastel",
+      "accent": "#d59ac0",
+      "created": "2026-09-27T22:00",
+      "works": [
+        "HTLXxQzXIAAq7jH",
+        "HTOfKAja8AAnjnk",
+        "HQNGrC-XwAAJwc8",
+        "oiL9Q7cWHNxhL-cp"
+      ],
+      "form": "rect"
     }
   },
   "links": [
@@ -288,6 +322,16 @@
       "wing-somewhere-to-stand",
       "wing-anachronism",
       "Eras, built to scale"
+    ],
+    [
+      "wing-wet-hardware",
+      "wing-fine-grain",
+      "Too much detail, close up"
+    ],
+    [
+      "wing-understudies",
+      "wing-wrong-size",
+      "Objects, badly scaled"
     ]
   ],
   "stairs": {
