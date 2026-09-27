@@ -178,7 +178,7 @@ export function makeFx(renderer) {
   const size = new THREE.Vector2();
   renderer.getDrawingBufferSize(size);
   const float = renderer.extensions.has('EXT_color_buffer_float');
-  const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: float ? THREE.HalfFloatType : THREE.UnsignedByteType, samples: 4 });
+  const rt = new THREE.WebGLRenderTarget(Math.max(1, size.x), Math.max(1, size.y), { type: float ? THREE.HalfFloatType : THREE.UnsignedByteType, samples: 4 });
   const uniforms = {
     tScene: { value: rt.texture },
     uMode: { value: 0 },
@@ -192,6 +192,14 @@ export function makeFx(renderer) {
   const quad = new THREE.Scene();
   quad.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material));
   const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  // The target follows the drawing buffer's size.
+  const fit = () => {
+    renderer.getDrawingBufferSize(size);
+    if (!size.x || !size.y || (size.x === rt.width && size.y === rt.height)) return;
+    rt.setSize(size.x, size.y);
+    uniforms.uRes.value.copy(size);
+    uniforms.uAspect.value = size.x / size.y;
+  };
   return {
     get on() {
       return uniforms.uMode.value !== 0;
@@ -201,13 +209,17 @@ export function makeFx(renderer) {
       uniforms.uAmount.value = amount;
       uniforms.uDir.value = dir;
     },
+    // The effect's shader compiled and its target allocated up front, so the
+    // first door doesn't do it. (The scene's shaders for drawing into a
+    // target are warmed with `target`: see prepareGpu in main.js.)
+    target: rt,
+    warm() {
+      fit();
+      renderer.compile(quad, cam);
+      renderer.initRenderTarget?.(rt);
+    },
     render(scene, camera) {
-      renderer.getDrawingBufferSize(size);
-      if (size.x !== rt.width || size.y !== rt.height) {
-        rt.setSize(size.x, size.y);
-        uniforms.uRes.value.copy(size);
-        uniforms.uAspect.value = size.x / size.y;
-      }
+      fit();
       uniforms.uTime.value = performance.now() / 1000;
       renderer.setRenderTarget(rt);
       renderer.render(scene, camera);

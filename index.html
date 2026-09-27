@@ -6,6 +6,14 @@
     <title>Coolimages Museum</title>
     <meta name="description" content="A walkable 3D museum of a saved-images folder, with themed wings, plaques and generative music." />
     <meta name="robots" content="noindex, nofollow" />
+    <!-- As an app (Add to Home Screen): full screen, no browser bars. -->
+    <link rel="manifest" href="/app/manifest.webmanifest" />
+    <meta name="theme-color" content="#f2ede4" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Coolimages" />
+    <link rel="apple-touch-icon" href="/app/apple-touch-icon.png" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M4 32 Q32 6 60 32 Q32 58 4 32Z' fill='%23fff' stroke='%231d1a16' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='11' fill='%233fa38f'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%23000'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -29,6 +37,12 @@
         --accent: #8a6d3b;
         --panel: rgba(251, 250, 247, 0.96);
         --shadow: 0 18px 50px rgba(30, 20, 10, 0.22);
+        /* Clear of a phone's notch, rounded corners and home bar (the page runs
+           edge to edge: viewport-fit=cover, and as an app, under the status bar). */
+        --safe-top: env(safe-area-inset-top, 0px);
+        --safe-right: env(safe-area-inset-right, 0px);
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-left: env(safe-area-inset-left, 0px);
         color-scheme: light;
       }
       * {
@@ -193,8 +207,8 @@
       }
       #mapbox {
         position: fixed;
-        top: 16px;
-        right: 16px;
+        top: calc(16px + var(--safe-top));
+        right: calc(16px + var(--safe-right));
         width: 150px;
         z-index: 5;
         text-align: center;
@@ -221,8 +235,8 @@
       }
       #legend {
         position: fixed;
-        left: 16px;
-        bottom: 16px;
+        left: calc(16px + var(--safe-left));
+        bottom: calc(16px + var(--safe-bottom));
         display: flex;
         flex-wrap: wrap;
         gap: 6px 14px;
@@ -242,8 +256,8 @@
       }
       #mute {
         position: fixed;
-        right: 16px;
-        bottom: 16px;
+        right: calc(16px + var(--safe-right));
+        bottom: calc(16px + var(--safe-bottom));
         min-height: 44px;
         padding: 8px 16px;
         border: 0;
@@ -258,9 +272,9 @@
       /* caption panel, shown while looking closer */
       #caption {
         position: fixed;
-        top: 7vh;
-        right: 3vw;
-        bottom: 7vh;
+        top: calc(7vh + var(--safe-top));
+        right: calc(3vw + var(--safe-right));
+        bottom: calc(7vh + var(--safe-bottom));
         width: min(420px, 36vw);
         display: flex;
         flex-direction: column;
@@ -339,7 +353,7 @@
         align-items: center;
         justify-content: center;
         gap: 10px;
-        padding: 24px 16px;
+        padding: calc(24px + var(--safe-top)) calc(16px + var(--safe-right)) calc(24px + var(--safe-bottom)) calc(16px + var(--safe-left));
         background: radial-gradient(ellipse at 50% 38%, #ffffff 0%, var(--paper) 55%, #ebe6dc 100%);
         text-align: center;
         overflow-y: auto;
@@ -487,7 +501,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 16px;
+        padding: calc(16px + var(--safe-top)) calc(16px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(16px + var(--safe-left));
         background: rgba(247, 245, 240, 0.62);
         backdrop-filter: blur(6px);
       }
@@ -562,7 +576,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 16px;
+        padding: calc(16px + var(--safe-top)) calc(16px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(16px + var(--safe-left));
         background: rgba(247, 245, 240, 0.7);
         backdrop-filter: blur(6px);
       }
@@ -672,7 +686,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 16px;
+        padding: calc(16px + var(--safe-top)) calc(16px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(16px + var(--safe-left));
         background: rgba(247, 245, 240, 0.72);
         backdrop-filter: blur(6px);
       }
@@ -847,8 +861,8 @@
       /* touch: menu, legend */
       #menu {
         position: fixed;
-        left: 16px;
-        top: 16px;
+        left: calc(16px + var(--safe-left));
+        top: calc(16px + var(--safe-top));
         min-height: 44px;
         padding: 8px 18px;
         border: 0;
@@ -1093,6 +1107,7 @@
         <li>Tap a door to go through, a picture to look closer</li>
       </ul>
       <p class="fine">Best with headphones. The music is generated live, so it never repeats exactly.</p>
+      <p class="fine" id="install-tip" hidden>For full screen, tap Share, then Add to Home Screen.</p>
       <button class="text-button" type="button" data-open-credits>Credits &amp; removal requests</button>
     </section>
 

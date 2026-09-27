@@ -7,6 +7,7 @@ import { buildWorld, walkable, ground, heightsAt, floorTop, faceAhead, EYE_HEIGH
 import { MuseumAudio } from './audio.js';
 import { makeGator } from './gator.js';
 import { makeFx, pickTransition, TRANSITIONS } from './transitions.js';
+import { makePerf } from './perf.js';
 
 const $ = (sel) => document.querySelector(sel);
 const params = new URLSearchParams(location.search);
@@ -16,6 +17,8 @@ const touchFirst = matchMedia('(pointer: coarse)').matches;
 // Phones and small-memory devices get a lower render scale and smaller textures.
 const lowPower = touchFirst || (navigator.deviceMemory || 8) <= 4;
 const MAX_TEXTURE = lowPower ? 1024 : 2048;
+// Door pictures' height in pixels (every door has one).
+const PREVIEW_H = lowPower ? 384 : 640;
 // Portrait screens get a taller field of view, so a room isn't a keyhole.
 function fovFor(aspect) {
   if (aspect >= 1) return 72;
@@ -40,8 +43,11 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 // Screen effects for going through doors (transitions.js); idle otherwise.
 const fx = makeFx(renderer);
+// Frame timing (perf.js): `?perf` shows it; `museum.perf` has the numbers.
+const perf = makePerf(renderer, { show: params.has('perf') });
 let forcedTransition = null;
 TX.setAnisotropy(Math.min(8, renderer.capabilities.getMaxAnisotropy()));
+if (lowPower) TX.setDetail(0.5);
 
 const scene = new THREE.Scene();
 const pmrem = new THREE.PMREMGenerator(renderer);
@@ -162,20 +168,217 @@ async function prepareArt(items) {
 
 const MAX_LOADS = lowPower ? 3 : 6;
 const loads = { active: 0, order: [], rooms: new Map(), waiters: [] };
-let previewQueue = [];
+
+// Can createImageBitmap flip an image as it decodes? (Where it can't, or
+// isn't there, images go the <img> way.)
+let bitmapsFlip = null;
+function canFlipBitmaps() {
+  bitmapsFlip ||= flipTest();
+  return bitmapsFlip;
+}
+async function flipTest() {
+  try {
+    const c = TX.makeCanvas(1, 2);
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#f00';
+    ctx.fillRect(0, 0, 1, 1);
+    ctx.fillStyle = '#00f';
+    ctx.fillRect(0, 1, 1, 1);
+    const b = await createImageBitmap(c, { imageOrientation: 'flipY' });
+    const out = TX.makeCanvas(1, 2).getContext('2d');
+    out.drawImage(b, 0, 0);
+    return out.getImageData(0, 0, 1, 1).data[2] > 128;
+  } catch {
+    return false; // (no createImageBitmap, or no options for it)
+  }
+}
+
+// A work's image, decoded off the main thread and scaled to fit this device
+// where the browser can (an ImageBitmap, already flipped for WebGL); else an
+// <img>, scaled on a canvas.
+async function decodeArt(entry) {
+  const url = lowPower && entry.small ? entry.small : entry.file;
+  if (!entry.oval && (await canFlipBitmaps())) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Could not load ${url}`);
+      let bmp = await createImageBitmap(await res.blob(), { imageOrientation: 'flipY', premultiplyAlpha: 'none' });
+      const s = MAX_TEXTURE / Math.max(bmp.width, bmp.height);
+      if (s < 1) {
+        const fit = await createImageBitmap(bmp, {
+          resizeWidth: Math.round(bmp.width * s),
+          resizeHeight: Math.round(bmp.height * s),
+          resizeQuality: entry.work?.pixel ? 'pixelated' : 'high',
+          premultiplyAlpha: 'none',
+        });
+        bmp.close();
+        bmp = fit;
+      }
+      return { image: bmp, flipY: false };
+    } catch (err) {
+      console.warn(err);
+    }
+  }
+  const img = await loadImage(url);
+  return { image: entry.oval ? ovalMask(fitTexture(img)) : fitTexture(img), flipY: true };
+}
+
+// Getting things onto the GPU, spread out so no frame does much of it: new
+// images wait in `uploads.art` and go one per frame. Otherwise rooms are
+// warmed ahead of need, the room you're in and its neighbours first: their
+// own textures (walls, floors, plaques) go up a few milliseconds a frame
+// (uploads.warm: room id -> textures still to go), then the room is drawn
+// once, unseen, into each kind of target it will be drawn into (warmDraw). A
+// door's picture waits until its room is warm.
+const uploads = { art: [], warm: new Map(), drawn: new Map() }; // drawn: room id -> targets drawn into
 
 async function sharpen(entry) {
   try {
-    const img = await loadImage(lowPower && entry.small ? entry.small : entry.file);
-    const t = entry.texture;
-    // A new size needs new GPU storage: drop the placeholder's first.
-    t.dispose();
-    t.image = entry.oval ? ovalMask(fitTexture(img)) : fitTexture(img);
-    if (entry.work?.pixel) t.magFilter = THREE.NearestFilter;
-    t.needsUpdate = true;
+    const job = { entry, ...(await decodeArt(entry)) };
+    // (Before the doors open nothing is on view, so straight up.)
+    if (state === 'loading') upload(job);
+    else uploads.art.push(job);
   } catch (err) {
     console.warn(err);
+    arrived(entry);
   }
+}
+
+function upload({ entry, image, flipY }) {
+  const t = entry.texture;
+  // A new size needs new GPU storage: drop the placeholder's first.
+  t.dispose();
+  t.image = image;
+  t.flipY = flipY;
+  if (entry.work?.pixel) t.magFilter = THREE.NearestFilter;
+  t.needsUpdate = true;
+  renderer.initTexture(t);
+  perf.note(`image ${image.width}px`);
+  arrived(entry);
+  // On the GPU now (and drawn on any banner that wanted it): the decoded copy
+  // can go. (Should the GPU's copy be lost, the page reloads: see below.)
+  if (typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap) {
+    image.close();
+    uploadsReleased = true;
+  }
+}
+
+// Once textures' own images have been let go, a lost WebGL context (a phone
+// can drop it while the page is in the background) can't be rebuilt: start
+// over instead.
+let uploadsReleased = false;
+canvas.addEventListener('webglcontextlost', (e) => {
+  if (!uploadsReleased) return;
+  e.preventDefault();
+  location.reload();
+});
+
+function pumpUploads() {
+  if (uploads.art.length) {
+    upload(uploads.art.shift());
+    // (While the welcome screen is up there's time for more.)
+    if (state !== 'ready') return;
+  }
+  if (state === 'loading' || state === 'transition') return;
+  const until = performance.now() + (state === 'ready' ? 12 : 3);
+  if (releaseCanvases(until)) return;
+  for (const id of roomsFrom(player.room)) {
+    if (roomWarm(id)) continue;
+    const list = uploads.warm.get(id);
+    while (list?.length && performance.now() < until) renderer.initTexture(list.shift());
+    if (list?.length) return;
+    uploads.warm.delete(id);
+    // One draw a frame (while walking, only when the last frame was quick).
+    if (state !== 'ready' && perf.last > 20) return;
+    warmDraw(id, state === 'ready' ? 2 : 1);
+    if (state !== 'ready' || performance.now() >= until) return;
+  }
+}
+const roomWarm = (id) => uploads.drawn.get(id) === 2;
+
+// On phones, once every room is warm, the canvases the rooms' textures were
+// drawn on are let go (after making sure each texture is on the GPU): together
+// they're a few hundred MB a phone's Safari would rather have back. True while
+// there's still some to do this frame.
+let released = !lowPower;
+let toRelease = null;
+function releaseCanvases(until) {
+  if (released || uploads.drawn.size < Object.keys(world.rooms).length || [...uploads.drawn.values()].some((n) => n < 2)) return false;
+  toRelease ||= Object.values(world.rooms).flatMap(roomTextures);
+  while (toRelease.length && performance.now() < until) renderer.initTexture(toRelease.pop());
+  if (toRelease.length) return true;
+  for (const room of Object.values(world.rooms)) {
+    for (const t of roomTextures(room)) {
+      if (t.image instanceof HTMLCanvasElement) t.image.width = t.image.height = 0;
+    }
+  }
+  released = uploadsReleased = true;
+  perf.note('canvases released');
+  return false;
+}
+
+// Draw a room once where it can't be seen, with nothing culled: into a tiny
+// target of the kind door previews and the transitions draw into, and onto a
+// single pixel of the screen. (Chrome on Windows draws WebGL through
+// Direct3D, which finishes compiling a shader the first time it draws into
+// each kind of target: this is where that happens, rather than mid-walk.)
+// `count` draws of the two, the target first.
+let warmTarget = null;
+function warmDraw(id, count = 2) {
+  warmTarget ||= new THREE.WebGLRenderTarget(16, 16, { type: fx.target.texture.type, samples: 4 });
+  const done = uploads.drawn.get(id) || 0;
+  const to = Math.min(2, done + count);
+  const room = world.rooms[id];
+  applyRoom(id);
+  // (The alligator too, unless he's out in a room: then he's drawn anyway.)
+  const borrow = !gator.root.parent;
+  if (borrow) {
+    gator.root.position.set(0, -60, 0);
+    room.group.add(gator.root);
+  }
+  const culled = [];
+  room.group.traverse((o) => {
+    if (!o.frustumCulled) return;
+    o.frustumCulled = false;
+    culled.push(o);
+  });
+  if (done < 1) {
+    renderer.setRenderTarget(warmTarget);
+    renderer.render(scene, camera);
+    renderer.setRenderTarget(null);
+  }
+  if (to > 1) {
+    renderer.setScissorTest(true);
+    renderer.setScissor(0, 0, 1, 1);
+    renderer.render(scene, camera);
+    renderer.setScissorTest(false);
+  }
+  for (const o of culled) o.frustumCulled = true;
+  if (borrow) room.group.remove(gator.root);
+  uploads.drawn.set(id, to);
+  // (Drawing it put up anything of its own still waiting.)
+  uploads.warm.delete(id);
+  perf.note(`warmed ${id} ${to}/2`);
+  applyRoom(player.room);
+}
+
+// The textures a room's own materials use.
+const TEXTURE_SLOTS = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'alphaMap', 'aoMap', 'bumpMap', 'lightMap'];
+function roomTextures(room) {
+  const out = new Set();
+  room.group.traverse((o) => {
+    for (const m of [o.material].flat()) {
+      for (const slot of TEXTURE_SLOTS) {
+        const t = m?.[slot];
+        if (t?.isTexture && t.image && !t.isRenderTargetTexture && !t.isVideoTexture) out.add(t);
+      }
+    }
+  });
+  return [...out];
+}
+
+// A work has its image (or won't get one).
+function arrived(entry) {
   entry.loaded = true;
   world.artLoaded(entry.id);
   // A room whose works have all arrived gets fresh previews on its doors.
@@ -183,9 +386,28 @@ async function sharpen(entry) {
     const room = world.rooms[roomId];
     if (room.sharp || !room.artworks.every((m) => collectionArt.get(m.userData.id)?.loaded)) continue;
     room.sharp = true;
-    for (const p of world.portals) if (p.dest === roomId && !previewQueue.includes(p)) previewQueue.push(p);
+    for (const p of world.portals) if (p.dest === roomId) stalePreviews.add(p);
   }
   for (const w of loads.waiters) w();
+}
+
+// Every room, by how many doors away from `roomId` it is (the last asked
+// for is kept).
+let roomsFromCache = null;
+function roomsFrom(roomId) {
+  if (roomsFromCache?.id === roomId) return roomsFromCache.order;
+  const seen = new Set([roomId]);
+  const queue = [roomId];
+  for (let i = 0; i < queue.length; i++) {
+    for (const p of world.rooms[queue[i]].portals) {
+      if (seen.has(p.dest) || !world.rooms[p.dest]) continue;
+      seen.add(p.dest);
+      queue.push(p.dest);
+    }
+  }
+  for (const id of Object.keys(world.rooms)) if (!seen.has(id)) queue.push(id);
+  roomsFromCache = { id: roomId, order: queue };
+  return queue;
 }
 
 // Load order: `first`, then the works of each room by how many doors away it is.
@@ -197,16 +419,7 @@ function planLoads(roomId, first = []) {
       loads.rooms.set(m.userData.id, set);
     }
   }
-  const seen = new Set([roomId]);
-  const queue = [roomId];
-  for (let i = 0; i < queue.length; i++) {
-    for (const p of world.rooms[queue[i]].portals) {
-      if (seen.has(p.dest)) continue;
-      seen.add(p.dest);
-      queue.push(p.dest);
-    }
-  }
-  for (const id of Object.keys(world.rooms)) if (!seen.has(id)) queue.push(id);
+  const queue = roomsFrom(roomId);
   const ids = [...first, ...queue.flatMap((id) => world.rooms[id].artworks.map((m) => m.userData.id)), ...collectionArt.keys()];
   loads.order = [...new Set(ids)].filter((id) => collectionArt.has(id) && !collectionArt.get(id).requested);
   pumpLoads();
@@ -321,8 +534,8 @@ async function boot() {
   });
   registerVideos();
   renderCredits();
-  renderPreviews();
   enterRoom('lobby');
+  await prepareGpu();
   arriveAtStart(world.rooms.lobby);
   updateCamera();
   // The way in loads first; everything else keeps arriving while you walk.
@@ -346,8 +559,11 @@ async function boot() {
 function applyRoom(id) {
   for (const [rid, room] of Object.entries(world.rooms)) room.group.visible = rid === id;
   const env = world.rooms[id].env;
-  scene.background = new THREE.Color(env.bg);
-  scene.fog = env.fog.type === 'exp2' ? new THREE.FogExp2(env.fog.color, env.fog.density) : new THREE.Fog(env.fog.color, env.fog.near, env.fog.far);
+  // (Made once per room.)
+  env.background ||= new THREE.Color(env.bg);
+  env.sceneFog ||= env.fog.type === 'exp2' ? new THREE.FogExp2(env.fog.color, env.fog.density) : new THREE.Fog(env.fog.color, env.fog.near, env.fog.far);
+  scene.background = env.background;
+  scene.fog = env.sceneFog;
   scene.environmentIntensity = env.envI;
   camera.far = env.far || 140;
 }
@@ -496,9 +712,9 @@ function renderPreview(portal) {
   }
   const { cam, shared, copyMat, copyScene, copyCam } = preview;
   const aspect = portal.w / portal.h;
-  const W = Math.round(640 * aspect);
+  const W = Math.round(PREVIEW_H * aspect);
   const key = `${W}`;
-  if (!shared.has(key)) shared.set(key, new THREE.WebGLRenderTarget(W, 640, { samples: 4 }));
+  if (!shared.has(key)) shared.set(key, new THREE.WebGLRenderTarget(W, PREVIEW_H, { type: fx.target.texture.type, samples: 4 }));
   const big = shared.get(key);
   const s = spawnFrom(arrival, 2.6);
   const destRoom = world.rooms[portal.dest];
@@ -513,7 +729,7 @@ function renderPreview(portal) {
   runAnimators(portal.dest, 1.5, 1 / 60, cam);
   renderer.setRenderTarget(big);
   renderer.render(scene, cam);
-  portal.previewTarget ||= new THREE.WebGLRenderTarget(W, 640, { depthBuffer: false });
+  portal.previewTarget ||= new THREE.WebGLRenderTarget(W, PREVIEW_H, { depthBuffer: false });
   copyMat.map = big.texture;
   renderer.setRenderTarget(portal.previewTarget);
   renderer.render(copyScene, copyCam);
@@ -546,24 +762,65 @@ function paintPleinAir() {
   material.needsUpdate = true;
 }
 
-// Doors are drawn one per frame from the moment the collection is ready
-// (while the welcome screen is up), the Entrance Hall's first. Only its own
-// shaders are compiled up front.
-function renderPreviews() {
-  const first = world.portals.filter((p) => p.room === 'lobby');
-  previewQueue.push(...first, ...world.portals.filter((p) => p.room !== 'lobby'));
-  applyRoom('lobby');
-  // The alligator's materials too, so his first appearance doesn't hitch.
-  gator.root.position.set(0, -60, 0);
-  world.rooms.lobby.group.add(gator.root);
-  renderer.compile(scene, camera);
-  world.rooms.lobby.group.remove(gator.root);
+// Doors whose picture is missing or out of date (their room's works have
+// since arrived). A door's picture only matters in its own room, so they're
+// drawn as they're needed: a blank door in the room you're in straight away
+// (one a frame), then the rest of that room's and its neighbours' in frames
+// with time to spare, a few a second.
+const stalePreviews = new Set();
+let previewWait = 0;
+function refreshPreviews(dt) {
+  if (!stalePreviews.size || state === 'transition' || state === 'loading') return;
+  previewWait -= dt;
+  const here = world.rooms[player.room];
+  const ready = (p) => stalePreviews.has(p) && roomWarm(p.dest);
+  let next = here.portals.find((p) => ready(p) && !p.previewTarget);
+  if (!next) {
+    if (previewWait > 0 || perf.last > 20) return;
+    const near = new Set([player.room, ...here.portals.map((p) => p.dest)]);
+    next = here.portals.find(ready) || [...stalePreviews].find((p) => near.has(p.room) && roomWarm(p.dest));
+    if (!next) return;
+  }
+  stalePreviews.delete(next);
+  previewWait = 0.2;
+  perf.note(`preview ${next.dest}`);
+  renderPreview(next);
+  applyRoom(player.room);
 }
 
-// One door per frame, then back to the room you're in.
-function refreshPreviews() {
-  if (!previewQueue.length || state === 'transition' || state === 'loading') return;
-  renderPreview(previewQueue.shift());
+// Up front, while the welcome screen is up: every door is stale, every room
+// is to be warmed, and the shaders for every kind of room (by its fog and
+// lights) are compiled, the alligator's with them.
+async function prepareGpu() {
+  for (const p of world.portals) stalePreviews.add(p);
+  for (const [id, room] of Object.entries(world.rooms)) uploads.warm.set(id, roomTextures(room));
+  gator.root.position.set(0, -60, 0);
+  const kinds = new Map();
+  for (const [id, room] of Object.entries(world.rooms)) {
+    let lights = 0;
+    room.group.traverse((o) => {
+      if (o.isLight) lights++;
+    });
+    // (The outside is a kind of its own: its ground and sky are like nothing else.)
+    const kind = id === 'outside' ? id : `${room.env.fog.type}:${lights}`;
+    if (!kinds.has(kind)) kinds.set(kind, id);
+  }
+  // Each kind twice: for the screen, and for drawing into a target (door
+  // previews and the transitions' effects), which three.js compiles apart.
+  for (const id of kinds.values()) {
+    applyRoom(id);
+    world.rooms[id].group.add(gator.root);
+    for (const target of [null, fx.target]) {
+      renderer.setRenderTarget(target);
+      const ready = renderer.compileAsync(scene, camera);
+      renderer.setRenderTarget(null);
+      await ready.catch(() => {});
+    }
+    world.rooms[id].group.remove(gator.root);
+    // Drawing a room of each kind takes the most compiling: that's now, too.
+    warmDraw(id);
+  }
+  fx.warm();
   applyRoom(player.room);
 }
 
@@ -797,7 +1054,7 @@ function startPortal(portal) {
     apply(way ? way.out(t, way.dir) : { fade: smoothstep(0.3, 1, t) });
   }, () => {
     enterRoom(portal.dest);
-    gator?.entered(portal.dest, arrival, elapsed);
+    perf.time('gatorEnter', () => gator?.entered(portal.dest, arrival, elapsed));
     const s = spawnFrom(arrival);
     const start = { x: arrival.pos.x + arrival.normal.x * 0.2, z: arrival.pos.z + arrival.normal.z * 0.2 };
     player.x = start.x;
@@ -1357,7 +1614,7 @@ function travelTo(id) {
   runAnim(reducedMotion ? 0.2 : 0.5, (t) => setFade(smooth(t)), () => {
     enterRoom(id);
     arriveAtStart(world.rooms[id]);
-    gator?.entered(id, null, elapsed);
+    perf.time('gatorEnter', () => gator?.entered(id, null, elapsed));
     runAnim(reducedMotion ? 0.2 : 0.6, (t) => setFade(1 - smooth(t)), () => {
       state = 'walk';
       showBanner(id);
@@ -1486,6 +1743,11 @@ addEventListener('blur', () => keys.clear());
 // touch mode on their first touch.
 let usingTouch = touchFirst;
 if (touchFirst) document.body.classList.add('touch');
+// On an iPhone or iPad in Safari, how to have it full screen: as an app, from
+// the Home Screen (index.html and app/manifest.webmanifest set that up).
+const appleTouch = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const asApp = navigator.standalone || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
+if (appleTouch && !asApp) $('#install-tip').hidden = false;
 {
   const stick = $('#stick');
   const knob = stick.querySelector('span');
@@ -1736,32 +1998,43 @@ let miniTimer = 0;
 function simulate(dt) {
   elapsed += dt;
   stepAnim(dt);
-  if (state === 'walk') walkUpdate(dt);
+  if (state === 'walk') perf.time('walk', () => walkUpdate(dt));
   else {
     player.vx *= 0.8;
     player.vz *= 0.8;
   }
   updateCamera();
-  runAnimators(player.room, elapsed, dt, camera);
-  gator?.update(dt, elapsed, player, state);
-  if (state === 'walk') updateHover();
+  perf.time('animators', () => runAnimators(player.room, elapsed, dt, camera));
+  perf.time('gator', () => gator?.update(dt, elapsed, player, state));
+  if (state === 'walk') perf.time('hover', updateHover);
   else if (state !== 'inspect') setHint('');
   updateDecals(dt);
   updateMarker(dt);
+}
+
+// `sync` (for checks) waits for the GPU before the frame is counted done.
+function runFrame(dt, sync = null) {
+  perf.begin();
+  simulate(dt);
+  perf.time('uploads', pumpUploads);
+  perf.time('previews', () => refreshPreviews(dt));
+  // The alligator's room grids, a little each frame.
+  if (state !== 'loading') perf.time('grids', () => gator?.buildGrids(2.5));
+  perf.time('draw', draw);
+  miniTimer += dt;
+  if (miniTimer > 0.066) {
+    miniTimer = 0;
+    perf.time('minimap', drawMinimap);
+  }
+  if (sync) perf.time('gpu', sync);
+  perf.end();
 }
 
 function frame() {
   requestAnimationFrame(frame);
   const dt = Math.min(clock.getDelta(), 0.05);
   if (!world) return;
-  simulate(dt);
-  refreshPreviews();
-  draw();
-  miniTimer += dt;
-  if (miniTimer > 0.066) {
-    miniTimer = 0;
-    drawMinimap();
-  }
+  runFrame(dt);
 }
 requestAnimationFrame(frame);
 
@@ -1832,8 +2105,23 @@ window.museum = {
     forcedTransition = name;
   },
   // For checks: how many works have their full image, and what's still queued.
+  // Frame timing: stats(), summary(), reset(), and bench(frames), which runs
+  // frames back to back and waits for the GPU after each (so a hidden pane,
+  // which otherwise draws no frames, can still be measured).
+  perf: {
+    stats: () => perf.stats(),
+    summary: () => perf.summary(),
+    reset: () => perf.reset(),
+    bench(frames = 120, dt = 1 / 60) {
+      const gl = renderer.getContext();
+      const px = new Uint8Array(4);
+      const sync = () => gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      for (let i = 0; i < frames; i++) runFrame(dt, sync);
+      return perf.stats();
+    },
+  },
   get loading() {
-    return { loaded: [...collectionArt.values()].filter((e) => e.loaded).length, total: collectionArt.size, queued: loads.order.length, active: loads.active, previews: previewQueue.length };
+    return { loaded: [...collectionArt.values()].filter((e) => e.loaded).length, total: collectionArt.size, queued: loads.order.length, active: loads.active, previews: stalePreviews.size, uploading: uploads.art.length, warming: [...uploads.warm.values()].reduce((n, l) => n + l.length, 0) };
   },
   // For checks: works that something hides from a viewer standing in front
   // of them (a wall they poke into, a column, an easel). Casts rays to a grid
@@ -1900,7 +2188,8 @@ window.museum = {
   tick(seconds = 1) {
     for (let t = 0; t < seconds; t += 1 / 60) {
       simulate(1 / 60);
-      refreshPreviews();
+      pumpUploads();
+      refreshPreviews(1 / 60);
     }
     draw();
   },

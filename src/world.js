@@ -577,7 +577,7 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     const own = layout?.wings?.[key]?.works || Object.keys(WORKS).filter((id) => WORKS[id].wing === key && !WORKS[id].generated);
     const id = own.find((w) => art.has(w));
     if (id) world.featured.add(id);
-    return { key, kicker, title: wing.name, subtitle: wing.subtitle, accent: wing.accent || '#8a6d3b', workId: id, image: () => (id ? art.get(id).texture.image : null) };
+    return { key, kicker, title: wing.name, subtitle: wing.subtitle, accent: wing.accent || '#8a6d3b', workId: id, image: () => (id ? uprightImage(art.get(id).texture) : null) };
   }
 
   // ------------------------------------------------------ Entrance Hall
@@ -1229,6 +1229,19 @@ function heightOn(s, x, z, yRef) {
 
 // Every floor height at (x, z): several where a balcony overhangs a hall or
 // the spiral ramp passes over itself (for the alligator's nav grid).
+// A work's image the right way up for drawing on a canvas. (Images decoded as
+// ImageBitmaps are stored flipped, ready for WebGL.)
+function uprightImage(texture) {
+  const img = texture.image;
+  if (texture.flipY || typeof ImageBitmap === 'undefined' || !(img instanceof ImageBitmap)) return img;
+  const c = TX.makeCanvas(img.width, img.height);
+  const ctx = c.getContext('2d');
+  ctx.translate(0, c.height);
+  ctx.scale(1, -1);
+  ctx.drawImage(img, 0, 0);
+  return c;
+}
+
 export function heightsAt(room, x, z) {
   const out = [];
   for (const s of room.floors) {

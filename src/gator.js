@@ -12,7 +12,7 @@
 // diagonal "high walk".
 import * as THREE from 'three';
 import * as TX from './textures.js';
-import { buildNav } from './nav.js';
+import { navSteps } from './nav.js';
 
 const LEN = 3.2; // snout to tail tip
 const SEGS = 90;
@@ -632,8 +632,10 @@ export function makeGator({ world, ground, walkable, heightsAt, floorTop, faceAh
   }
   // Can he walk straight from where he is to `p`?
   const straightTo = (p) => ignoringHimself(() => navOf(g.room).clear({ x: g.x, z: g.z, y: g.y }, p));
-  // Somewhere to put him down: a node of the room's grid with room around it.
+  // Somewhere to put him down: a node of the room's grid with room around it
+  // (or, before the grid is ready, anywhere he fits).
   function spot(awayFrom) {
+    if (!navReady(g.room)) return looseSpot(awayFrom);
     const nav = navOf(g.room);
     if (!nav.nodes.length) return null;
     for (let i = 0; i < 80; i++) {
@@ -645,15 +647,61 @@ export function makeGator({ world, ground, walkable, heightsAt, floorTop, faceAh
     }
     return null;
   }
+  function looseSpot(awayFrom) {
+    const b = world.rooms[g.room].bounds;
+    for (let i = 0; i < 80; i++) {
+      const x = b.type === 'circle' ? b.x + (Math.random() * 2 - 1) * b.r : b.x0 + Math.random() * (b.x1 - b.x0);
+      const z = b.type === 'circle' ? b.z + (Math.random() * 2 - 1) * b.r : b.z0 + Math.random() * (b.z1 - b.z0);
+      if (awayFrom && Math.hypot(x - awayFrom.x, z - awayFrom.z) < 6) continue;
+      const h = free(x, z);
+      if (h !== null) return { x, z, y: h };
+    }
+    return null;
+  }
   const headingTo = (dx, dz) => Math.atan2(-dz, dx);
-  // Each room's navigation grid (nav.js), built the first time he's there.
+
+  // Each room's navigation grid (nav.js). They're built in the background, a
+  // few milliseconds a frame (buildGrids), the room you're entering first;
+  // anything that needs one before then finishes it on the spot.
   const navs = new Map();
+  const building = new Map(); // roomId -> the build, part done
+  const navOpts = { walkable, heightsAt, faceAhead };
+  let gridOrder = [...rooms];
+  // Build `roomId`'s grid until it's done (true) or it's time to stop.
+  function advance(roomId, until) {
+    if (!building.has(roomId)) building.set(roomId, navSteps(world.rooms[roomId], navOpts));
+    const steps = building.get(roomId);
+    return ignoringHimself(() => {
+      for (;;) {
+        const r = steps.next();
+        if (r.done) {
+          navs.set(roomId, r.value);
+          building.delete(roomId);
+          return true;
+        }
+        if (performance.now() >= until) return false;
+      }
+    });
+  }
+  const navReady = (roomId) => navs.has(roomId);
   function navOf(roomId) {
-    if (!navs.has(roomId)) navs.set(roomId, ignoringHimself(() => buildNav(world.rooms[roomId], { walkable, heightsAt, faceAhead })));
+    if (!navs.has(roomId)) advance(roomId, Infinity);
     return navs.get(roomId);
+  }
+  // Put a room's grid first in line, then its neighbours'.
+  function wantGrid(roomId) {
+    const next = [roomId, ...world.rooms[roomId].portals.map((p) => p.dest)];
+    gridOrder = [...new Set([...next, ...gridOrder])].filter((id) => world.rooms[id] && id !== 'outside' && !navs.has(id));
+  }
+  function buildGrids(budgetMs) {
+    const until = performance.now() + budgetMs;
+    while (gridOrder.length && performance.now() < until) {
+      if (navs.has(gridOrder[0]) || advance(gridOrder[0], until)) gridOrder.shift();
+    }
   }
   // Doors he can walk to from where he is (any level: the stairs are fine).
   function reachableDoors() {
+    if (!navReady(g.room)) return [];
     const nav = navOf(g.room);
     const here = nav.nearest(g.x, g.z, g.y);
     if (here < 0) return [];
@@ -667,6 +715,11 @@ export function makeGator({ world, ground, walkable, heightsAt, floorTop, faceAh
   // at the grid point nearest him; he heads for the next one if he can walk
   // straight there, else to that first one.
   function plan(goal) {
+    // (Until his room's grid is ready, he rests.)
+    if (!navReady(g.room)) {
+      wantGrid(g.room);
+      return null;
+    }
     const nav = navOf(g.room);
     const here = nav.nearest(g.x, g.z, g.y);
     const to = goal ? nav.nearest(goal.x, goal.z, goal.y) : nav.pick(here, { minDist: 3, climb: nav.levels > 1 && Math.random() < 0.4 });
@@ -693,8 +746,8 @@ export function makeGator({ world, ground, walkable, heightsAt, floorTop, faceAh
   // The player just arrived in `roomId` (through `arrival`, if by a door).
   function entered(roomId, arrival, t) {
     if (!g.enabled || !ready || roomId === 'outside') return;
-    // The room's grid now, in the transition, rather than mid-walk later.
-    navOf(roomId);
+    // This room's grid next.
+    wantGrid(roomId);
     g.y = arrival ? arrival.pos.y : 0;
     const from = arrival ? { x: arrival.pos.x + arrival.normal.x * 2.4, z: arrival.pos.z + arrival.normal.z * 2.4 } : null;
     if (g.room === roomId) {
@@ -1045,6 +1098,7 @@ export function makeGator({ world, ground, walkable, heightsAt, floorTop, faceAh
     },
     update,
     entered,
+    buildGrids,
     get state() {
       return { room: g.room, mode: g.mode, x: +g.x.toFixed(2), z: +g.z.toFixed(2), heading: +g.heading.toFixed(2), speed: +g.speed.toFixed(2), hissing: g.hissing, enabled: g.enabled };
     },

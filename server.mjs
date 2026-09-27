@@ -40,8 +40,9 @@ const types = {
   '.glb': 'model/gltf-binary',
   '.mp4': 'video/mp4',
   '.svg': 'image/svg+xml',
+  '.webmanifest': 'application/manifest+json',
 };
-const allowed = [/^\/src\/[\w-]+\.js$/, /^\/data\/[\w-]+\.json$/, /^\/content\/[\w-]+\.json$/, /^\/content\/art\/[\w-]+(\.sheet|\.sm)?\.(jpg|png|webp|mp4|glb)$/, /^\/robots\.txt$/];
+const allowed = [/^\/app\/[\w-]+\.(png|webmanifest)$/, /^\/src\/[\w-]+\.js$/, /^\/data\/[\w-]+\.json$/, /^\/content\/[\w-]+\.json$/, /^\/content\/art\/[\w-]+(\.sheet|\.sm)?\.(jpg|png|webp|mp4|glb)$/, /^\/robots\.txt$/];
 
 http
   .createServer(async (req, res) => {
@@ -53,13 +54,21 @@ http
       res.end();
       return;
     }
-    const url = new URL(req.url, 'http://localhost');
+    let url;
+    let rel;
+    try {
+      url = new URL(req.url, 'http://localhost');
+      rel = decodeURIComponent(url.pathname);
+    } catch {
+      res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end(req.method === 'HEAD' ? undefined : 'Invalid request URL.');
+      return;
+    }
     if (url.pathname === '/healthz') {
       res.writeHead(200, { 'Content-Type': types['.json'], 'Cache-Control': 'no-store' });
       res.end(JSON.stringify({ ok: true, app: 'coolimages', sha: buildSha }));
       return;
     }
-    let rel = decodeURIComponent(url.pathname);
     if (rel === '/' || rel === '/index.html') rel = '/index.html';
     else if (!allowed.some((re) => re.test(rel))) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });

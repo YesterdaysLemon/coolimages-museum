@@ -16,11 +16,34 @@ export function makeCanvas(w, h) {
   const c = document.createElement('canvas');
   c.width = Math.max(1, Math.round(w));
   c.height = Math.max(1, Math.round(h));
+  // Kept in memory, not on the GPU: these become textures, and uploading a
+  // plain copy is quicker and steadier than handing over a GPU canvas (and
+  // reading pixels back, for noise and the salt flat, is far faster).
+  c.getContext('2d', { willReadFrequently: true });
   return c;
 }
 
+// Phones and small-memory devices keep canvas textures at a fraction of their
+// size (setDetail(0.5): a quarter of the memory; a phone's Safari stops a page
+// whose canvases take more than a few hundred MB). Every texture is still
+// drawn at full size, then copied down, so the drawing code needn't know.
+let detail = 1;
+export function setDetail(value) {
+  detail = value;
+}
+function reduce(canvas) {
+  if (detail >= 1 || Math.max(canvas.width, canvas.height) <= 256) return canvas;
+  const small = makeCanvas(canvas.width * detail, canvas.height * detail);
+  const ctx = small.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(canvas, 0, 0, small.width, small.height);
+  // (Each canvas becomes one texture: the full-size one can go now.)
+  canvas.width = canvas.height = 0;
+  return small;
+}
+
 export function toTexture(canvas, { srgb = true, repeat = null, nearest = false } = {}) {
-  const t = new THREE.CanvasTexture(canvas);
+  const t = new THREE.CanvasTexture(nearest ? canvas : reduce(canvas));
   if (srgb) t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = anisotropy;
   if (repeat) {

@@ -10,6 +10,7 @@ FROM node:22-alpine
 WORKDIR /app
 COPY --from=build /app/index.html /app/robots.txt /app/server.mjs /app/build-sha.txt ./
 COPY --from=build /app/src ./src
+COPY --from=build /app/app ./app
 COPY --from=build /app/data ./data
 ENV PORT=8080 NODE_ENV=production
 USER node

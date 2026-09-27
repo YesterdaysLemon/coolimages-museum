@@ -60,7 +60,18 @@ function heap() {
   };
 }
 
-export function buildNav(room, { walkable, heightsAt, faceAhead = null }) {
+// The whole grid at once (for checks).
+export function buildNav(room, opts) {
+  const steps = navSteps(room, opts);
+  for (;;) {
+    const r = steps.next();
+    if (r.done) return r.value;
+  }
+}
+
+// The grid built a little at a time: a generator that yields every so often
+// (so it can be spread over frames) and returns the grid.
+export function* navSteps(room, { walkable, heightsAt, faceAhead = null }) {
   const open = (x, z, y, r) => !faceAhead || DIRS.every(([ux, uz]) => !faceAhead(room, x, z, y, ux, uz, r));
   const b = room.bounds;
   const [x0, x1, z0, z1] = b.type === 'circle' ? [b.x - b.r, b.x + b.r, b.z - b.r, b.z + b.r] : [b.x0, b.x1, b.z0, b.z1];
@@ -84,6 +95,7 @@ export function buildNav(room, { walkable, heightsAt, faceAhead = null }) {
       }
       if (here.length) fitCells.set(key(i, j), here);
     }
+    yield;
   }
   // ...that also has room for his head and tail. Anything he'd put his head
   // into is within BODY of a place he doesn't fit; so where every cell out to
@@ -101,7 +113,9 @@ export function buildNav(room, { walkable, heightsAt, faceAhead = null }) {
   };
   const nodes = [];
   const cells = new Map(); // i,j -> node indices
-  for (const n of fits) {
+  for (let f = 0; f < fits.length; f++) {
+    const n = fits[f];
+    if (f % 16 === 15) yield;
     if (!surrounded(n) && !open(n.x, n.z, n.y, BODY)) continue;
     const k = key(n.i, n.j);
     if (!cells.has(k)) cells.set(k, []);
@@ -109,7 +123,9 @@ export function buildNav(room, { walkable, heightsAt, faceAhead = null }) {
     nodes.push(n);
   }
   // Links: to the 8 neighbours, if the step (and the ground halfway) holds.
-  for (const n of nodes) {
+  for (let f = 0; f < nodes.length; f++) {
+    const n = nodes[f];
+    if (f % 32 === 31) yield;
     for (let di = -1; di <= 1; di++) {
       for (let dj = -1; dj <= 1; dj++) {
         if (!di && !dj) continue;
