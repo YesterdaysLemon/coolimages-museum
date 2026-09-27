@@ -529,6 +529,9 @@ async function boot() {
     floorTop,
     faceAhead,
     modelUrl: manifest.gator || null,
+    // His name, if you've learned it here before (gator.js: by following him).
+    known: guideKnown(),
+    onName: introduce,
     // Compile his materials as soon as he arrives, not on first sight.
     onReady: (root) => renderer.compile(root, camera, scene),
   });
@@ -966,7 +969,7 @@ function updateHover() {
       }
     }
   }
-  setHint(hint);
+  setHint(hint || guideHint());
 }
 
 // Callout labels: on the work you're looking at (the default), on every
@@ -1080,11 +1083,53 @@ function startPortal(portal) {
 }
 
 let bannerTimer = null;
+
+// The alligator has a name you learn by following him (gator.js). Once you
+// have, it's remembered on this device (not the name: that you know it), and
+// looking at him shows it.
+const GUIDE_KEY = 'coolimages:guide';
+function guideKnown() {
+  try {
+    return localStorage.getItem(GUIDE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+function introduce(name) {
+  try {
+    localStorage.setItem(GUIDE_KEY, '1');
+  } catch {
+    // (private browsing: he'll just have to tell you again)
+  }
+  // After the room's own banner has had a moment, as he turns to face you.
+  setTimeout(() => {
+    const el = $('#banner');
+    el.querySelector('h2').textContent = name;
+    el.querySelector('p').textContent = 'You followed him far enough to learn his name.';
+    el.classList.remove('show');
+    void el.offsetWidth;
+    el.classList.add('show', 'long');
+    clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(() => el.classList.remove('show'), 6500);
+  }, 2200);
+}
+// Looking straight at him, close enough, once you know him.
+function guideHint() {
+  const name = gator?.name;
+  const at = name && gator.where;
+  if (!at || at.room !== player.room || Math.abs(at.y - player.y) > 1.5) return '';
+  const dx = at.x - player.x;
+  const dz = at.z - player.z;
+  const dist = Math.hypot(dx, dz);
+  if (dist > 9 || dist < 0.5) return '';
+  const facing = (-Math.sin(player.yaw) * dx - Math.cos(player.yaw) * dz) / dist;
+  return facing > 0.96 ? `<b>${escapeHtml(name)}</b><span>Your guide</span>` : '';
+}
 function showBanner(id) {
   const el = $('#banner');
   el.querySelector('h2').textContent = WINGS[id].name;
   el.querySelector('p').textContent = WINGS[id].subtitle;
-  el.classList.remove('show');
+  el.classList.remove('show', 'long');
   void el.offsetWidth;
   el.classList.add('show');
   clearTimeout(bannerTimer);

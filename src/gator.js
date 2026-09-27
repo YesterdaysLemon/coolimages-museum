@@ -540,7 +540,15 @@ async function loadReal(url) {
 }
 
 // ------------------------------------------------------------- the animal
-export function makeGator({ world, ground, walkable, heightsAt, floorTop, faceAhead, modelUrl = null, onReady = null }) {
+// His name. It isn't written anywhere you'd come across it: you learn it by
+// following him, as Dante followed his guide. Walk after him into the
+// painting he's just gone through, and he leads you on to another door;
+// the third time in a row, he stops, turns and tells you (onName).
+const NAME = atob('VmlyZ2ls');
+const FOLLOWS = 3;
+const FOLLOW_WITHIN = 25; // seconds after he's gone through
+
+export function makeGator({ world, ground, walkable, heightsAt, floorTop, faceAhead, modelUrl = null, onReady = null, onName = null, known = false }) {
   const m = build();
   // Until the real one loads he isn't anywhere; if it can't, the stand-in walks.
   let active = {
@@ -590,6 +598,8 @@ export function makeGator({ world, ground, walkable, heightsAt, floorTop, faceAh
     pause: 0,
     hissing: false,
     wantHiss: false,
+    left: null, // the door he last went through: { from, to, at }
+    follows: 0, // how many doors in a row you've followed him through
     hissCool: 0,
     seed: Math.random() * 10,
   };
@@ -748,6 +758,12 @@ export function makeGator({ world, ground, walkable, heightsAt, floorTop, faceAh
     if (!g.enabled || !ready || roomId === 'outside') return;
     // This room's grid next.
     wantGrid(roomId);
+    // Did you follow him? (Through the painting he just went through, soon
+    // after him.) Anything else breaks the run.
+    const left = g.left;
+    g.left = null;
+    if (left && g.room === roomId && left.to === roomId && arrival?.dest === left.from && t - left.at < FOLLOW_WITHIN && lead(roomId, arrival)) return;
+    g.follows = 0;
     g.y = arrival ? arrival.pos.y : 0;
     const from = arrival ? { x: arrival.pos.x + arrival.normal.x * 2.4, z: arrival.pos.z + arrival.normal.z * 2.4 } : null;
     if (g.room === roomId) {
@@ -759,6 +775,46 @@ export function makeGator({ world, ground, walkable, heightsAt, floorTop, faceAh
     stage(roomId, arrival);
     g.lastStaged = t;
   }
+  // You followed him in: he's a few steps ahead of you, walking on to
+  // another door for you to follow him through; or, the third time, turned
+  // round to face you, and he tells you his name.
+  function lead(roomId, arrival) {
+    const y = arrival.pos.y;
+    let at = null;
+    for (const d of [5.5, 4.5, 7]) {
+      const x = arrival.pos.x + arrival.normal.x * d;
+      const z = arrival.pos.z + arrival.normal.z * d;
+      if (free(x, z, 0, 0, y) !== null) {
+        at = { x, z };
+        break;
+      }
+    }
+    if (!at) return false;
+    g.follows++;
+    Object.assign(g, at, { y, omega: 0, placed: true, path: null, target: null, look: 0 });
+    if (g.follows >= FOLLOWS) {
+      g.follows = 0;
+      g.heading = headingTo(-arrival.normal.x, -arrival.normal.z);
+      g.speed = 0;
+      g.mode = 'idle';
+      g.timer = 9;
+      g.wantHiss = true;
+      g.hissCool = 0;
+      known = true;
+      onName?.(NAME);
+      return true;
+    }
+    const on = doorsOf(roomId, y).filter((p) => p !== arrival);
+    if (!on.length) return false;
+    g.heading = headingTo(arrival.normal.x, arrival.normal.z);
+    g.speed = 0.5;
+    g.door = pick(on);
+    g.mode = 'toDoor';
+    // (Leading, he doesn't stop to hiss at you.)
+    g.hissCool = 60;
+    return true;
+  }
+
   function stage(roomId, arrival) {
     const y = arrival ? arrival.pos.y : 0;
     g.y = y;
@@ -813,7 +869,10 @@ export function makeGator({ world, ground, walkable, heightsAt, floorTop, faceAh
       } else {
         // Plan a route (around benches and columns, through arches, up and
         // down stairs), then follow its waypoints.
-        if (!g.path) {
+        if (!g.path && g.mode === 'toDoor' && !navReady(g.room)) {
+          // (Leading you somewhere, he waits for the room's grid rather than give up.)
+          wantGrid(g.room);
+        } else if (!g.path) {
           const door = g.mode === 'toDoor' ? { x: g.door.pos.x + g.door.normal.x * 1.8, z: g.door.pos.z + g.door.normal.z * 1.8, y: g.door.pos.y } : null;
           if (!plan(door)) {
             g.mode = 'idle';
@@ -821,6 +880,8 @@ export function makeGator({ world, ground, walkable, heightsAt, floorTop, faceAh
             return;
           }
         }
+      }
+      if (g.path && (g.mode === 'wander' || g.mode === 'toDoor')) {
         const last = g.pathIdx >= g.path.length - 1;
         const wp = g.path[Math.min(g.pathIdx, g.path.length - 1)];
         const dx = wp.x - g.x;
@@ -877,7 +938,9 @@ export function makeGator({ world, ground, walkable, heightsAt, floorTop, faceAh
         // Gone: he's in the next room now.
         const next = g.door.dest;
         detach();
+        const from = g.room;
         g.room = world.rooms[next] && next !== 'outside' ? next : g.room;
+        g.left = { from, to: g.room, at: t };
         g.mode = 'away';
         g.timer = 25 + Math.random() * 45;
         g.speed = 0;
@@ -1100,7 +1163,15 @@ export function makeGator({ world, ground, walkable, heightsAt, floorTop, faceAh
     entered,
     buildGrids,
     get state() {
-      return { room: g.room, mode: g.mode, x: +g.x.toFixed(2), z: +g.z.toFixed(2), heading: +g.heading.toFixed(2), speed: +g.speed.toFixed(2), hissing: g.hissing, enabled: g.enabled };
+      return { room: g.room, mode: g.mode, x: +g.x.toFixed(2), z: +g.z.toFixed(2), heading: +g.heading.toFixed(2), speed: +g.speed.toFixed(2), hissing: g.hissing, enabled: g.enabled, door: g.door?.dest ?? null, follows: g.follows };
+    },
+    // Where he is, if he's in a room you could see him in (for looking at him).
+    get where() {
+      return g.attachedTo ? { room: g.room, x: g.x, y: g.y, z: g.z } : null;
+    },
+    // His name, once you've learned it.
+    get name() {
+      return known ? NAME : null;
     },
     set enabled(v) {
       g.enabled = !!v;
