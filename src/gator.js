@@ -505,12 +505,11 @@ async function loadReal(url) {
         axis.set(0, 1, 0).applyQuaternion(q.invert());
         bone.quaternion.premultiply(turn.setFromAxisAngle(axis, delta));
       }
-      // Nothing of him goes into the floor. Down the tail, segment by
-      // segment: if its end or middle is closer to what's built under it
-      // than the tail's thickness there, lift it just enough. A segment
-      // hanging well clear (going down stairs) droops a little toward the
-      // steps, then is checked again, since drooping swings it over
-      // whatever's beneath. Then the chin.
+      // Nothing of him goes into the floor. His tail carries on the line of
+      // his spine as the clips hold it (high off the floor as he walks);
+      // only where a segment's end or middle would come nearer what's built
+      // under it than the tail's thickness there is it lifted, just enough.
+      // Then the chin.
       if (!top) return;
       root.updateMatrixWorld(true);
       for (let i = 0; i < chain.length; i++) {
@@ -527,10 +526,6 @@ async function loadReal(url) {
             need = shortfall(i);
             if (need > 0) lift(chain[i], at, tip, need);
           }
-        } else if (need < -0.3) {
-          lift(chain[i], at, tip, Math.max(-0.15, need + 0.25));
-          need = shortfall(i);
-          if (need > 0) lift(chain[i], at, tip, need);
         }
       }
       if (neck && chin) {
