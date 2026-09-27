@@ -326,10 +326,21 @@ async function loadReal(url) {
   root.traverse((o) => (o.userData.gator = true));
   const mixer = new THREE.AnimationMixer(model);
   const clip = (re) => gltf.animations.find((c) => re.test(c.name));
-  const idle = mixer.clipAction(clip(/Idle/));
-  const trot = mixer.clipAction(clip(/Trot/));
-  idle.play();
-  trot.play();
+  // The "Idle" clip is a hiss: he raises his head and gapes from 1.5 s to
+  // 5.3 s. Its calm last stretch, rocked back and forth slowly, is his rest.
+  const idleClip = clip(/Idle/);
+  const rest = mixer.clipAction(THREE.AnimationUtils.subclip(idleClip, 'rest', 162, 182, 30));
+  rest.setLoop(THREE.LoopPingPong);
+  rest.timeScale = 0.35;
+  const hiss = mixer.clipAction(idleClip);
+  hiss.setLoop(THREE.LoopOnce, 1);
+  hiss.clampWhenFinished = true;
+  const walk = mixer.clipAction(clip(/Trot/));
+  rest.play();
+  walk.play();
+  let mw = 0; // walking weight
+  let hw = 0; // hissing weight
+  let hissing = false;
   const turnBones = [[model.getObjectByName('Neck02'), 0.35], [model.getObjectByName('Head'), 0.65]].filter(([b]) => b);
   const q = new THREE.Quaternion();
   const axis = new THREE.Vector3();
@@ -338,10 +349,20 @@ async function loadReal(url) {
   return {
     root,
     pose(t, dt, g) {
-      const moving = Math.min(1, g.speed / SPEED);
-      trot.setEffectiveWeight(moving);
-      idle.setEffectiveWeight(1 - moving);
-      trot.setEffectiveTimeScale(Math.max(0.05, g.speed / TROT_SPEED));
+      mw += (Math.min(1, g.speed / 0.3) - mw) * Math.min(1, dt * 4);
+      if (g.hissing && !hissing) {
+        hissing = true;
+        hiss.reset().play();
+      }
+      if (hissing && (!hiss.isRunning() || hiss.time >= idleClip.duration - 0.05)) {
+        hissing = false;
+        g.hissing = false;
+      }
+      hw += ((hissing ? 1 : 0) - hw) * Math.min(1, dt * (hissing ? 3 : 1.5));
+      walk.setEffectiveWeight(mw * (1 - hw));
+      rest.setEffectiveWeight((1 - mw) * (1 - hw));
+      hiss.setEffectiveWeight(hw);
+      walk.setEffectiveTimeScale(Math.max(0.25, g.speed / TROT_SPEED));
       mixer.update(dt);
       // Turn the neck and head (about the world's up, after the clips).
       look += (g.look - look) * Math.min(1, dt * 3);
@@ -360,7 +381,13 @@ async function loadReal(url) {
 export function makeGator({ world, ground, walkable, modelUrl = null, onReady = null }) {
   const m = build();
   // Until the real one loads he isn't anywhere; if it can't, the stand-in walks.
-  let active = { root: m.root, pose: (t) => pose(t) };
+  let active = {
+    root: m.root,
+    pose: (t, dt, gg) => {
+      gg.hissing = false;
+      pose(t);
+    },
+  };
   let ready = !modelUrl;
   if (modelUrl) {
     loadReal(modelUrl)
@@ -393,6 +420,12 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
     look: 0,
     lastStaged: -1e9,
     attachedTo: null,
+    omega: 0, // turning speed, rad/s
+    pause: 0,
+    hissing: false,
+    wantHiss: false,
+    hissCool: 0,
+    seed: Math.random() * 10,
   };
   // He takes up floor: three circles along his body, so you can't walk through him.
   const blocks = [0.9, 0, -0.95].map((dx) => ({ type: 'circle', x: 0, z: 0, r: 0.42, dx, gator: true }));
@@ -475,47 +508,76 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
     return false;
   }
 
-  function steer(want, dt, rate = 1.3) {
+  // Turning eases in and out (no snapping): an angular velocity that follows
+  // the wanted one, capped.
+  function steer(want, dt, maxRate = 1.0) {
     let diff = want - g.heading;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    g.heading += Math.max(-rate * dt, Math.min(rate * dt, diff));
+    const desired = Math.max(-maxRate, Math.min(maxRate, diff * 1.8));
+    g.omega += (desired - g.omega) * Math.min(1, dt * 3);
+    g.heading += g.omega * dt;
     return Math.abs(diff);
   }
+  function settle(dt) {
+    g.omega -= g.omega * Math.min(1, dt * 3);
+    g.heading += g.omega * dt;
+  }
+  // His pace drifts: two slow waves, so he's never quite the same speed.
+  const cruise = (t) => Math.max(0.7, Math.min(1.25, 0.95 + 0.22 * Math.sin(t * 0.23 + g.seed) + 0.14 * Math.sin(t * 0.61 + g.seed * 2.3)));
 
-  function think(dt, player) {
+  function think(dt, player, t) {
     const fx = Math.cos(g.heading);
     const fz = -Math.sin(g.heading);
+    const px = player.x - g.x;
+    const pz = player.z - g.z;
+    const near = Math.hypot(px, pz);
+    let rel = headingTo(px, pz) - g.heading;
+    rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+    g.hissCool -= dt;
     let want = 0;
     if (g.mode === 'wander' || g.mode === 'toDoor') {
-      if (!g.target) g.target = spot(null);
-      if (!g.target) {
+      // Step close in front of him and he stops to hiss at you.
+      if (g.mode === 'wander' && near < 3.4 && Math.abs(rel) < 1.3 && g.hissCool <= 0) {
         g.mode = 'idle';
-        g.timer = 3;
-        return;
-      }
-      const dx = g.target.x - g.x;
-      const dz = g.target.z - g.z;
-      const off = steer(headingTo(dx, dz), dt);
-      want = off < 0.9 ? SPEED : 0.15;
-      if (Math.hypot(dx, dz) < 0.6) {
-        if (g.mode === 'toDoor') {
-          g.mode = 'exit';
-        } else {
+        g.timer = 7;
+        g.wantHiss = true;
+        g.target = null;
+      } else {
+        if (!g.target) g.target = spot(null);
+        if (!g.target) {
           g.mode = 'idle';
-          g.timer = 3 + Math.random() * 6;
-          g.target = null;
-          want = 0;
+          g.timer = 3;
+          return;
+        }
+        const dx = g.target.x - g.x;
+        const dz = g.target.z - g.z;
+        const off = steer(headingTo(dx, dz), dt);
+        // Blocked: stand and turn toward somewhere else before moving on.
+        if (g.pause > 0) g.pause -= dt;
+        else want = off < 0.7 ? cruise(t) : off < 1.6 ? 0.35 : 0;
+        if (Math.hypot(dx, dz) < 0.7) {
+          if (g.mode === 'toDoor') g.mode = 'exit';
+          else {
+            g.mode = 'idle';
+            g.timer = 3 + Math.random() * 5;
+            g.target = null;
+            want = 0;
+          }
         }
       }
     } else if (g.mode === 'idle') {
+      settle(dt);
+      if (near < 7) g.look = Math.max(-0.75, Math.min(0.75, rel));
+      else g.look = Math.sin(t * 0.5 + g.seed) * 0.45;
+      // Once he has come to a halt: hiss, if you're close (or he meant to).
+      if (!g.hissing && g.speed < 0.06 && (g.wantHiss || (near < 4.5 && g.hissCool <= 0))) {
+        g.hissing = true;
+        g.wantHiss = false;
+        g.hissCool = 14;
+        g.timer = Math.max(g.timer, 1.5);
+      }
+      if (g.hissing) g.timer = Math.max(g.timer, 1.2);
       g.timer -= dt;
-      const px = player.x - g.x;
-      const pz = player.z - g.z;
-      if (Math.hypot(px, pz) < 7) {
-        let rel = headingTo(px, pz) - g.heading;
-        rel = Math.atan2(Math.sin(rel), Math.cos(rel));
-        g.look = Math.max(-0.75, Math.min(0.75, rel));
-      } else g.look = Math.sin(g.timer * 0.9) * 0.5;
       if (g.timer <= 0) {
         g.look = 0;
         g.bored++;
@@ -523,15 +585,15 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
         if (g.bored >= 2 + Math.floor(Math.random() * 3) && doors.length) {
           g.bored = 0;
           g.door = pick(doors);
-          g.target = { x: g.door.pos.x + g.door.normal.x * 1.6, z: g.door.pos.z + g.door.normal.z * 1.6 };
+          g.target = { x: g.door.pos.x + g.door.normal.x * 1.8, z: g.door.pos.z + g.door.normal.z * 1.8 };
           g.mode = 'toDoor';
         } else g.mode = 'wander';
       }
     } else if (g.mode === 'exit') {
-      steer(headingTo(-g.door.normal.x, -g.door.normal.z), dt, 2);
-      want = SPEED;
+      steer(headingTo(-g.door.normal.x, -g.door.normal.z), dt, 0.9);
+      want = cruise(t);
       const along = (g.x - g.door.pos.x) * g.door.normal.x + (g.z - g.door.pos.z) * g.door.normal.z;
-      if (along < -2.1) {
+      if (along < -2.4) {
         // Gone: he's in the next room now.
         const next = g.door.dest;
         detach();
@@ -539,28 +601,32 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
         g.mode = 'away';
         g.timer = 25 + Math.random() * 45;
         g.speed = 0;
+        g.omega = 0;
         return;
       }
     } else if (g.mode === 'emerge') {
-      want = SPEED;
+      settle(dt);
+      want = cruise(t);
       const along = (g.x - g.door.pos.x) * g.door.normal.x + (g.z - g.door.pos.z) * g.door.normal.z;
       if (along > 2.6) {
         g.mode = 'wander';
         g.target = null;
       }
     }
-    g.speed += (want - g.speed) * Math.min(1, dt * 2.5);
+    // Speed eases too: he gathers pace and comes to a halt, never jumps.
+    g.speed += (want - g.speed) * Math.min(1, dt * (want > g.speed ? 1.6 : 2.4));
     const nx = g.x + fx * g.speed * dt;
     const nz = g.z + fz * g.speed * dt;
     if (g.mode === 'exit' || g.mode === 'emerge') {
       g.x = nx;
       g.z = nz;
-    } else {
-      const h = free(nx + fx * 1.2, nz + fz * 1.2) !== null ? free(nx, nz) : null;
+    } else if (g.speed > 0.001) {
+      const h = free(nx + fx * 1.3, nz + fz * 1.3) !== null ? free(nx, nz) : null;
       if (h === null) {
-        g.target = null;
-        g.speed = 0;
-        g.heading += (Math.random() < 0.5 ? -1 : 1) * 0.6;
+        // Something's in the way: stop, pick somewhere else, turn to it.
+        g.speed *= 0.5;
+        g.target = spot(null);
+        g.pause = 0.8;
       } else {
         g.x = nx;
         g.z = nz;
@@ -700,7 +766,7 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
       if (g.room !== player.room || g.mode === 'away') return;
     }
     attach();
-    if (state !== 'transition') think(Math.min(dt, 0.05), player);
+    if (state !== 'transition') think(Math.min(dt, 0.05), player, t);
     active.root.position.set(g.x, g.y, g.z);
     active.root.rotation.y = g.heading;
     const fx = Math.cos(g.heading);
@@ -709,7 +775,7 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
       b.x = g.x + fx * b.dx;
       b.z = g.z + fz * b.dx;
     }
-    if (g.mode !== 'idle' && g.mode !== 'wander') g.look = 0;
+    if (g.mode !== 'idle') g.look = 0;
     active.pose(t, Math.min(dt, 0.1), g);
   }
 
@@ -726,7 +792,7 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
     update,
     entered,
     get state() {
-      return { room: g.room, mode: g.mode, x: +g.x.toFixed(2), z: +g.z.toFixed(2), enabled: g.enabled };
+      return { room: g.room, mode: g.mode, x: +g.x.toFixed(2), z: +g.z.toFixed(2), heading: +g.heading.toFixed(2), speed: +g.speed.toFixed(2), hissing: g.hissing, enabled: g.enabled };
     },
     set enabled(v) {
       g.enabled = !!v;

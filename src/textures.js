@@ -842,23 +842,54 @@ export function wallText({ kicker, title, subtitle, body, width = 3.4, style = '
   return { texture: toTexture(c), width, height: H / ppm };
 }
 
+// A door's sign. Everything fits: the name shrinks to the width (its letter
+// spacing with it), the subtitle shrinks and then wraps onto a second line,
+// and the canvas grows to hold it.
 export function signTexture(title, subtitle, style = 'dark') {
   const W = 1600;
-  const H = 400;
+  const room = W - 120;
+  const hand = style === 'hand';
+  const ink = INK[style] || INK.dark;
+  const font = hand ? FONT.hand : FONT.serif;
+  const probe = makeCanvas(8, 8).getContext('2d');
+  const name = hand ? title : title.toUpperCase();
+  let size = hand ? 130 : 116;
+  let spacing = hand ? 2 : 22;
+  const nameFont = (px) => (hand ? `${px}px ${font}` : `500 ${px}px ${font}`);
+  for (;;) {
+    probe.font = nameFont(size);
+    spaced(probe, spacing);
+    if (probe.measureText(name).width <= room || size <= 56) break;
+    size -= 4;
+    spacing = Math.max(hand ? 1 : 6, spacing * 0.93);
+  }
+  spaced(probe, 0);
+  let sub = hand ? 64 : 66;
+  const subFont = (px) => (hand ? `${px}px ${font}` : `italic ${px}px ${font}`);
+  let lines = [subtitle];
+  for (;;) {
+    probe.font = subFont(sub);
+    if (probe.measureText(subtitle).width <= room) break;
+    if (sub > 50) {
+      sub -= 3;
+      continue;
+    }
+    lines = wrapLines(probe, subtitle, room).slice(0, 2);
+    break;
+  }
+  const H = 400 + (lines.length - 1) * Math.round(sub * 1.15);
   const c = makeCanvas(W, H);
   const ctx = c.getContext('2d');
-  const ink = INK[style] || INK.dark;
-  const font = style === 'hand' ? FONT.hand : FONT.serif;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = ink.ink;
-  ctx.font = style === 'hand' ? `130px ${font}` : `500 116px ${font}`;
-  spaced(ctx, style === 'hand' ? 2 : 22);
-  ctx.fillText(style === 'hand' ? title : title.toUpperCase(), W / 2, 140);
+  ctx.font = nameFont(size);
+  spaced(ctx, spacing);
+  ctx.fillText(name, W / 2 + spacing / 2, 140);
   spaced(ctx, 0);
   ctx.fillStyle = ink.soft;
-  ctx.font = style === 'hand' ? `64px ${font}` : `italic 66px ${font}`;
-  ctx.fillText(subtitle, W / 2, 290);
+  ctx.font = subFont(sub);
+  lines.forEach((line, i) => ctx.fillText(line, W / 2, 290 + i * sub * 1.15));
   return { texture: toTexture(c), aspect: W / H };
 }
 

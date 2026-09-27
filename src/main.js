@@ -6,6 +6,7 @@ import * as TX from './textures.js';
 import { buildWorld, walkable, ground, EYE_HEIGHT, formatSaved, TEMPLATES } from './world.js';
 import { MuseumAudio } from './audio.js';
 import { makeGator } from './gator.js';
+import { makeFx, pickTransition, TRANSITIONS } from './transitions.js';
 
 const $ = (sel) => document.querySelector(sel);
 const params = new URLSearchParams(location.search);
@@ -37,6 +38,9 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
+// Screen effects for going through doors (transitions.js); idle otherwise.
+const fx = makeFx(renderer);
+let forcedTransition = null;
 TX.setAnisotropy(Math.min(8, renderer.capabilities.getMaxAnisotropy()));
 
 const scene = new THREE.Scene();
@@ -59,7 +63,6 @@ let hovered = null;
 let anim = null;
 let camPose = null;
 let inspect = null;
-let rollSign = 1;
 const keys = new Set();
 const player = { x: 0, z: 19.6, y: 0, ey: 0, yaw: 0, pitch: -0.04, roll: 0, vx: 0, vz: 0, bob: 0, stepAcc: 0, room: 'lobby' };
 const touchMove = { x: 0, y: 0 };
@@ -90,6 +93,11 @@ function stepAnim(dt) {
 
 function setFade(v) {
   $('#fade').style.opacity = String(v);
+}
+
+function draw() {
+  if (fx.on) fx.render(scene, camera);
+  else renderer.render(scene, camera);
 }
 
 // ------------------------------------------------------------------ loading
@@ -322,7 +330,7 @@ async function boot() {
     bar.style.width = `${(done / total) * 100}%`;
     setStatus(`Hanging the entrance · ${done} / ${total}`);
   });
-  renderer.render(scene, camera);
+  draw();
   state = 'ready';
   setStatus(acquisitions.length ? `${manifest.items.length} works on view · ${acquisitions.length} new acquisition${acquisitions.length > 1 ? 's' : ''}` : `${manifest.items.length} works on view`);
   const enter = $('#enter');
@@ -764,23 +772,26 @@ function startPortal(portal) {
   state = 'transition';
   setHint('');
   audio.whoosh();
-  rollSign = -rollSign;
-  const sign = rollSign;
+  // A different way through each time (transitions.js); a plain fade for
+  // reduced motion.
+  const way = reducedMotion ? null : pickTransition(forcedTransition);
+  forcedTransition = null;
+  const apply = (o) => {
+    player.roll = o.roll || 0;
+    camera.fov = baseFov + (o.fov || 0);
+    setFade(o.fade || 0);
+    fx.set(o.fx || 0, o.amount || 0, o.dir ?? way?.dir ?? 1);
+  };
   const from = { x: player.x, z: player.z, yaw: player.yaw, pitch: player.pitch };
   const targetYaw = Math.atan2(portal.normal.x, portal.normal.z);
   const through = { x: portal.pos.x - portal.normal.x * 0.1, z: portal.pos.z - portal.normal.z * 0.1 };
-  const roll = !reducedMotion;
-  runAnim(roll ? 1.0 : 0.45, (t) => {
+  runAnim(way ? way.dur[0] : 0.45, (t) => {
     const e = t * t * t;
     player.x = lerp(from.x, through.x, e);
     player.z = lerp(from.z, through.z, e);
     player.yaw = lerpAngle(from.yaw, targetYaw, smooth(Math.min(1, t * 1.6)));
     player.pitch = lerp(from.pitch, 0, smooth(t));
-    if (roll) {
-      player.roll = sign * (Math.PI / 2) * smoother(t);
-      camera.fov = baseFov + 24 * e;
-    }
-    setFade(smoothstep(0.55, 0.97, t));
+    apply(way ? way.out(t, way.dir) : { fade: smoothstep(0.3, 1, t) });
   }, () => {
     enterRoom(portal.dest);
     gator?.entered(portal.dest, arrival, elapsed);
@@ -792,21 +803,16 @@ function startPortal(portal) {
     player.yaw = s.yaw;
     player.pitch = 0;
     player.vx = player.vz = 0;
-    runAnim(roll ? 1.1 : 0.45, (t) => {
+    runAnim(way ? way.dur[1] : 0.45, (t) => {
       const e = 1 - Math.pow(1 - t, 3);
       player.x = lerp(start.x, s.x, e);
       player.z = lerp(start.z, s.z, e);
       settle(portal.dest);
       player.ey = player.y;
-      if (roll) {
-        player.roll = -sign * (Math.PI / 2) * (1 - smoother(t));
-        camera.fov = baseFov + 24 * (1 - e);
-      }
-      setFade(1 - smoothstep(0, 0.55, t));
+      apply(way ? way.in(t, way.dir) : { fade: 1 - smoothstep(0, 0.7, t) });
     }, () => {
-      player.roll = 0;
+      apply({});
       camera.fov = baseFov;
-      setFade(0);
       state = 'walk';
       showBanner(portal.dest);
     });
@@ -1747,7 +1753,7 @@ function frame() {
   if (!world) return;
   simulate(dt);
   refreshPreviews();
-  renderer.render(scene, camera);
+  draw();
   miniTimer += dt;
   if (miniTimer > 0.066) {
     miniTimer = 0;
@@ -1808,6 +1814,11 @@ window.museum = {
     },
     summon: () => gator.summon(player.room),
     meet: () => gator.meet(player.room, player),
+  },
+  // The ways through a door, and one to use for the next door (for checks).
+  transitions: Object.keys(TRANSITIONS),
+  set nextTransition(name) {
+    forcedTransition = name;
   },
   // For checks: how many works have their full image, and what's still queued.
   get loading() {
@@ -1880,7 +1891,7 @@ window.museum = {
       simulate(1 / 60);
       refreshPreviews();
     }
-    renderer.render(scene, camera);
+    draw();
   },
   press(code, down = true) {
     if (down) keys.add(code);
