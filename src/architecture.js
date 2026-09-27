@@ -421,6 +421,11 @@ export function makeArchitecture(ctx) {
       rail(room, [V3(X(sx * 2.75), 0, Z(-0.75)), V3(X(sx * 2.75), UP, Z(-8.6))], railMat);
     }
     rail(room, [V3(X(-8.0), 0, Z(6.5)), V3(X(-8.0), 0, Z(-0.4)), V3(X(-10.8), 0, Z(-0.4))], railMat);
+    // The balustrades are solid: the flights are entered from their ends,
+    // not stepped onto over the rail where the first steps are still low.
+    // (Height-limited, so the balcony above stays open.)
+    for (const sx of [-1, 1]) room.obstacles.push({ type: 'rect', x0: X(sx * 2.75) - 0.06, x1: X(sx * 2.75) + 0.06, z0: Z(-8.6), z1: Z(-0.75), y0: -0.5, y1: UP - 0.3 });
+    room.obstacles.push({ type: 'rect', x0: X(-8.0) - 0.06, x1: X(-8.0) + 0.06, z0: Z(-0.4), z1: Z(6.5), y0: DOWN, y1: 0.5 });
     // A runner up the middle of the grand flight.
     const runner = std(0x7a1f2b, 1);
     const n = Math.round(UP / 0.17);

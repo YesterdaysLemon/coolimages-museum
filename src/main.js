@@ -3,7 +3,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { WINGS, WORKS } from './catalog.js';
 import { CREDITS, REMOVAL_URL } from './credits.js';
 import * as TX from './textures.js';
-import { buildWorld, walkable, ground, EYE_HEIGHT, formatSaved, TEMPLATES } from './world.js';
+import { buildWorld, walkable, ground, heightsAt, floorTop, faceAhead, EYE_HEIGHT, formatSaved, TEMPLATES } from './world.js';
 import { MuseumAudio } from './audio.js';
 import { makeGator } from './gator.js';
 import { makeFx, pickTransition, TRANSITIONS } from './transitions.js';
@@ -312,6 +312,9 @@ async function boot() {
     world,
     ground,
     walkable,
+    heightsAt,
+    floorTop,
+    faceAhead,
     modelUrl: manifest.gator || null,
     // Compile his materials as soon as he arrives, not on first sight.
     onReady: (root) => renderer.compile(root, camera, scene),
@@ -1814,6 +1817,14 @@ window.museum = {
     },
     summon: () => gator.summon(player.room),
     meet: () => gator.meet(player.room, player),
+    navStats: (id) => gator.navStats(id),
+    walkTo: (x, z, y) => gator.walkTo(x, z, y),
+    get clearance() {
+      return gator.clearance;
+    },
+    get y() {
+      return gator.y;
+    },
   },
   // The ways through a door, and one to use for the next door (for checks).
   transitions: Object.keys(TRANSITIONS),

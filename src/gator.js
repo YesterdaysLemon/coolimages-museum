@@ -12,6 +12,7 @@
 // diagonal "high walk".
 import * as THREE from 'three';
 import * as TX from './textures.js';
+import { buildNav } from './nav.js';
 
 const LEN = 3.2; // snout to tail tip
 const SEGS = 90;
@@ -367,9 +368,95 @@ async function loadReal(url) {
   const turn = new THREE.Quaternion();
   const targets = new Map();
   let look = 0;
+  // Keeping out of the floor: the tail chain (to its tip) and the chin.
+  const chain = [hips && B('Tail01') ? B('Tail01') : null, B('Tail02'), B('Tail03'), B('Tail04'), B('Tail05')].filter(Boolean);
+  const tailEnd = B('Tail05')?.children.find((c) => c.isBone) || null;
+  // How far each tail joint's centre must stay above the floor, from Tail01
+  // to the tip: half the tail's thickness there at this scale, plus a little.
+  const JOINT_CLEAR = [0.18, 0.16, 0.13, 0.1, 0.075, 0.05];
+  const neck = B('Neck02');
+  const chin = B('fJaw_end') || B('fJaw') || B('Head');
+  const at = new THREE.Vector3();
+  const tip = new THREE.Vector3();
+  const seg = new THREE.Vector3();
+  const liftAxis = new THREE.Vector3();
+  const UPV = new THREE.Vector3(0, 1, 0);
+  // The joint after chain[i] (the tail tip after the last), in world space.
+  const tipOf = (i, out) => {
+    if (i + 1 < chain.length) return chain[i + 1].getWorldPosition(out);
+    if (tailEnd) return tailEnd.getWorldPosition(out);
+    chain[i].getWorldPosition(out);
+    const prevPos = chain[i - 1].getWorldPosition(new THREE.Vector3());
+    return out.add(out.clone().sub(prevPos).multiplyScalar(0.9));
+  };
+  // Rotate `bone` (at `from`) about the horizontal axis across its segment so
+  // the point `to` rises by `need` metres (or sinks, if negative).
+  const lift = (bone, from, to, need) => {
+    seg.subVectors(to, from);
+    const len = seg.length();
+    if (len < 1e-3) return;
+    const now = Math.asin(Math.max(-1, Math.min(1, seg.y / len)));
+    const want = Math.asin(Math.max(-0.98, Math.min(0.98, (seg.y + need) / len)));
+    liftAxis.crossVectors(seg, UPV);
+    if (liftAxis.lengthSq() < 1e-8) return;
+    liftAxis.normalize();
+    bone.parent.getWorldQuaternion(q);
+    liftAxis.applyQuaternion(q.invert());
+    bone.quaternion.premultiply(turn.setFromAxisAngle(liftAxis, want - now));
+    bone.updateMatrixWorld(true);
+  };
+  let top = null;
+  const mid = new THREE.Vector3();
+  const along = new THREE.Vector3();
+  // The highest built surface under a point and a little either side of it
+  // along the tail (so a step's edge between samples can't poke through):
+  // `back` metres toward the joint, `on` past it.
+  const floorUnder = (point, dir, back, on) => {
+    let best = null;
+    for (const o of [0, -back, on]) {
+      const f = top(point.x + dir.x * o, point.z + dir.z * o, point.y + 0.2);
+      if (f !== null && (best === null || f > best)) best = f;
+    }
+    return best;
+  };
+  // How much segment i (joint i to the next) must rise at its far end to keep
+  // both its end and its middle clear (negative: that much room to spare).
+  const shortfall = (i) => {
+    chain[i].getWorldPosition(at);
+    tipOf(i, tip);
+    along.subVectors(tip, at).setY(0).normalize();
+    mid.addVectors(at, tip).multiplyScalar(0.5);
+    const half = Math.hypot(tip.x - at.x, tip.z - at.z) / 2;
+    const fEnd = floorUnder(tip, along, Math.min(0.12, half), JOINT_CLEAR[i + 1]);
+    const fMid = floorUnder(mid, along, half, half);
+    let need = -Infinity;
+    if (fEnd !== null) need = Math.max(need, fEnd + JOINT_CLEAR[i + 1] - tip.y);
+    // Turning about its joint, the middle rises half as much as the end.
+    if (fMid !== null) need = Math.max(need, 2 * (fMid + (JOINT_CLEAR[i] + JOINT_CLEAR[i + 1]) / 2 - mid.y));
+    return need;
+  };
+  const chinShortfall = () => {
+    chin.getWorldPosition(tip);
+    const f = top(tip.x, tip.z, tip.y + 0.2);
+    return f === null ? -Infinity : f + 0.05 - tip.y;
+  };
+  // For checks: how far each tail segment (end and middle) and the chin sit
+  // above what they must clear; negative would be in the floor.
+  const clearance = () => {
+    if (!top) return null;
+    root.updateMatrixWorld(true);
+    const out = chain.map((b, i) => -shortfall(i)).filter(Number.isFinite);
+    if (chin) {
+      const c = chinShortfall();
+      if (Number.isFinite(c)) out.push(-c);
+    }
+    return out.map((v) => +v.toFixed(3));
+  };
   return {
     root,
-    pose(t, dt, g) {
+    clearance,
+    pose(t, dt, g, floorAt) {
+      top = floorAt || null;
       // His legs step whenever he moves or turns, even on the spot.
       const turning = Math.abs(g.omega);
       mw += (Math.min(1, Math.max(g.speed / 0.3, turning / 0.45)) - mw) * Math.min(1, dt * 4);
@@ -418,12 +505,47 @@ async function loadReal(url) {
         axis.set(0, 1, 0).applyQuaternion(q.invert());
         bone.quaternion.premultiply(turn.setFromAxisAngle(axis, delta));
       }
+      // Nothing of him goes into the floor. Down the tail, segment by
+      // segment: if its end or middle is closer to what's built under it
+      // than the tail's thickness there, lift it just enough. A segment
+      // hanging well clear (going down stairs) droops a little toward the
+      // steps, then is checked again, since drooping swings it over
+      // whatever's beneath. Then the chin.
+      if (!top) return;
+      root.updateMatrixWorld(true);
+      for (let i = 0; i < chain.length; i++) {
+        let need = shortfall(i);
+        if (!Number.isFinite(need)) continue;
+        if (need > 0) {
+          lift(chain[i], at, tip, need);
+          need = shortfall(i);
+          // Too short to get clear by itself (its joint is down against a
+          // step): raise the joint, from the segment before, and try again.
+          if (need > 0.005 && i > 0) {
+            shortfall(i - 1);
+            lift(chain[i - 1], at, tip, need);
+            need = shortfall(i);
+            if (need > 0) lift(chain[i], at, tip, need);
+          }
+        } else if (need < -0.3) {
+          lift(chain[i], at, tip, Math.max(-0.15, need + 0.25));
+          need = shortfall(i);
+          if (need > 0) lift(chain[i], at, tip, need);
+        }
+      }
+      if (neck && chin) {
+        const need = chinShortfall();
+        if (need > 0) {
+          neck.getWorldPosition(at);
+          lift(neck, at, tip, need);
+        }
+      }
     },
   };
 }
 
 // ------------------------------------------------------------- the animal
-export function makeGator({ world, ground, walkable, modelUrl = null, onReady = null }) {
+export function makeGator({ world, ground, walkable, heightsAt, floorTop, faceAhead, modelUrl = null, onReady = null }) {
   const m = build();
   // Until the real one loads he isn't anywhere; if it can't, the stand-in walks.
   let active = {
@@ -466,6 +588,10 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
     lastStaged: -1e9,
     attachedTo: null,
     omega: 0, // turning speed, rad/s
+    path: null, // waypoints from nav.js
+    pathIdx: 0,
+    pitch: 0, // tilt on slopes
+    lift: 0, // how far the stairs' steps stand above the ramp under him
     pause: 0,
     hissing: false,
     wantHiss: false,
@@ -490,26 +616,70 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
     room.obstacles = room.obstacles.filter((o) => !o.gator);
     g.attachedTo = null;
   }
-  // Floor height where he could stand, ignoring himself.
-  function free(x, z) {
-    const room = world.rooms[g.room];
-    for (const b of blocks) b.r = -100; // (the check pads every circle)
-    const h = walkable(room, x, z, 0.75, g.y);
-    for (const b of blocks) b.r = 0.42;
-    return h;
+  // Checks of the room made as if he weren't in it (they pad every circle).
+  function ignoringHimself(check) {
+    for (const b of blocks) b.r = -100;
+    try {
+      return check();
+    } finally {
+      for (const b of blocks) b.r = 0.42;
+    }
   }
+  // Floor height where he could stand; with a heading (fx, fz), also with
+  // nothing where his snout would go.
+  const SNOUT = 1.35;
+  function free(x, z, fx = 0, fz = 0, y = g.y) {
+    const room = world.rooms[g.room];
+    return ignoringHimself(() => {
+      const h = walkable(room, x, z, 0.75, y);
+      return h !== null && (fx || fz) && faceAhead(room, x, z, h, fx, fz, SNOUT) ? null : h;
+    });
+  }
+  // Can he walk straight from where he is to `p`?
+  const straightTo = (p) => ignoringHimself(() => navOf(g.room).clear({ x: g.x, z: g.z, y: g.y }, p));
+  // Somewhere to put him down: a node of the room's grid with room around it.
   function spot(awayFrom) {
-    const b = world.rooms[g.room].bounds;
+    const nav = navOf(g.room);
+    if (!nav.nodes.length) return null;
     for (let i = 0; i < 80; i++) {
-      const x = b.type === 'circle' ? b.x + (Math.random() * 2 - 1) * b.r : b.x0 + Math.random() * (b.x1 - b.x0);
-      const z = b.type === 'circle' ? b.z + (Math.random() * 2 - 1) * b.r : b.z0 + Math.random() * (b.z1 - b.z0);
-      if (awayFrom && Math.hypot(x - awayFrom.x, z - awayFrom.z) < 6) continue;
-      const h = free(x, z);
-      if (h !== null) return { x, z, y: h };
+      const k = Math.floor(Math.random() * nav.nodes.length);
+      const n = nav.nodes[k];
+      if (awayFrom && Math.hypot(n.x - awayFrom.x, n.z - awayFrom.z) < 6) continue;
+      if (i < 60 && !nav.roomy(k)) continue;
+      if (free(n.x, n.z, 0, 0, n.y) !== null) return { x: n.x, z: n.z, y: n.y };
     }
     return null;
   }
   const headingTo = (dx, dz) => Math.atan2(-dz, dx);
+  // Each room's navigation grid (nav.js), built the first time he's there.
+  const navs = new Map();
+  function navOf(roomId) {
+    if (!navs.has(roomId)) navs.set(roomId, ignoringHimself(() => buildNav(world.rooms[roomId], { walkable, heightsAt, faceAhead })));
+    return navs.get(roomId);
+  }
+  // Doors he can walk to from where he is (any level: the stairs are fine).
+  function reachableDoors() {
+    const nav = navOf(g.room);
+    const here = nav.nearest(g.x, g.z, g.y);
+    if (here < 0) return [];
+    return world.rooms[g.room].portals.filter((d) => {
+      if (d.dest === 'outside' || !world.rooms[d.dest]) return false;
+      const k = nav.nearest(d.pos.x + d.normal.x * 1.8, d.pos.z + d.normal.z * 1.8, d.pos.y);
+      return k >= 0 && nav.nodes[k].comp === nav.nodes[here].comp && Math.abs(nav.nodes[k].y - d.pos.y) < 0.5;
+    });
+  }
+  // A route (waypoints) to (x, z, y), or somewhere of his choosing. It starts
+  // at the grid point nearest him; he heads for the next one if he can walk
+  // straight there, else to that first one.
+  function plan(goal) {
+    const nav = navOf(g.room);
+    const here = nav.nearest(g.x, g.z, g.y);
+    const to = goal ? nav.nearest(goal.x, goal.z, goal.y) : nav.pick(here, { minDist: 3, climb: nav.levels > 1 && Math.random() < 0.4 });
+    const path = here >= 0 && to >= 0 ? nav.route(here, to) : null;
+    g.path = path;
+    g.pathIdx = path && path.length > 1 && straightTo(path[1]) ? 1 : 0;
+    return path;
+  }
   const doorsOf = (roomId, y) => world.rooms[roomId].portals.filter((p) => p.dest !== 'outside' && world.rooms[p.dest] && Math.abs(p.pos.y - y) < 0.5);
 
   // Into the painting, facing its wall, from `dist` metres out.
@@ -522,16 +692,19 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
     g.mode = 'exit';
     g.omega = 0;
     g.placed = true;
+    g.path = null;
   }
 
   // The player just arrived in `roomId` (through `arrival`, if by a door).
   function entered(roomId, arrival, t) {
     if (!g.enabled || !ready || roomId === 'outside') return;
+    // The room's grid now, in the transition, rather than mid-walk later.
+    navOf(roomId);
     g.y = arrival ? arrival.pos.y : 0;
     const from = arrival ? { x: arrival.pos.x + arrival.normal.x * 2.4, z: arrival.pos.z + arrival.normal.z * 2.4 } : null;
     if (g.room === roomId) {
       const s = spot(from);
-      if (s) Object.assign(g, s, { mode: 'wander', target: null, heading: Math.random() * TAU, omega: 0, placed: true });
+      if (s) Object.assign(g, s, { mode: 'wander', target: null, heading: Math.random() * TAU, omega: 0, placed: true, path: null });
       return;
     }
     if (t - g.lastStaged < 60 || Math.random() > 0.22) return;
@@ -590,24 +763,36 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
         g.wantHiss = true;
         g.target = null;
       } else {
-        if (!g.target) g.target = spot(null);
-        if (!g.target) {
-          g.mode = 'idle';
-          g.timer = 3;
-          return;
+        // Plan a route (around benches and columns, through arches, up and
+        // down stairs), then follow its waypoints.
+        if (!g.path) {
+          const door = g.mode === 'toDoor' ? { x: g.door.pos.x + g.door.normal.x * 1.8, z: g.door.pos.z + g.door.normal.z * 1.8, y: g.door.pos.y } : null;
+          if (!plan(door)) {
+            g.mode = 'idle';
+            g.timer = 2 + Math.random() * 2;
+            return;
+          }
         }
-        const dx = g.target.x - g.x;
-        const dz = g.target.z - g.z;
+        const last = g.pathIdx >= g.path.length - 1;
+        const wp = g.path[Math.min(g.pathIdx, g.path.length - 1)];
+        const dx = wp.x - g.x;
+        const dz = wp.z - g.z;
         const off = steer(headingTo(dx, dz), dt);
-        // Blocked: stand and turn toward somewhere else before moving on.
+        // Waiting (something in the way): stand and turn before moving on.
         if (g.pause > 0) g.pause -= dt;
-        else want = off < 0.7 ? cruise(t) : off < 1.6 ? 0.4 : 0.18;
-        if (Math.hypot(dx, dz) < 0.7) {
-          if (g.mode === 'toDoor') g.mode = 'exit';
-          else {
+        else want = (off < 0.7 ? cruise(t) : off < 1.6 ? 0.4 : 0.18) * (Math.abs(g.pitch) > 0.15 ? 0.7 : 1);
+        // On to the next waypoint a little before this one, if he can walk
+        // straight there from here (no cutting corners into anything).
+        const d = Math.hypot(dx, dz);
+        if (!last && (d < 0.35 || (d < 1.0 && straightTo(g.path[g.pathIdx + 1])))) g.pathIdx++;
+        else if (last && d < 0.6) {
+          if (g.mode === 'toDoor') {
+            g.path = null;
+            g.mode = 'exit';
+          } else {
+            g.path = null;
             g.mode = 'idle';
             g.timer = 3 + Math.random() * 5;
-            g.target = null;
             want = 0;
           }
         }
@@ -628,11 +813,11 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
       if (g.timer <= 0) {
         g.look = 0;
         g.bored++;
-        const doors = doorsOf(g.room, g.y);
+        const doors = reachableDoors();
+        g.path = null;
         if (g.bored >= 2 + Math.floor(Math.random() * 3) && doors.length) {
           g.bored = 0;
           g.door = pick(doors);
-          g.target = { x: g.door.pos.x + g.door.normal.x * 1.8, z: g.door.pos.z + g.door.normal.z * 1.8 };
           g.mode = 'toDoor';
         } else g.mode = 'wander';
       }
@@ -668,15 +853,28 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
       g.x = nx;
       g.z = nz;
     } else if (g.speed > 0.001) {
-      const h = free(nx + fx * 1.3, nz + fz * 1.3) !== null ? free(nx, nz) : null;
-      if (h === null) {
-        // Something's in the way: stop, pick somewhere else, turn to it.
+      const blockedByYou = Math.hypot(player.x - (g.x + fx * 1.6), player.z - (g.z + fz * 1.6)) < 0.9 && Math.abs(player.y - g.y) < 1;
+      let to = blockedByYou ? null : [nx, nz];
+      let h = to && free(nx, nz, fx, fz);
+      // Brushing a corner, he slides along it (as you do).
+      if (to && h === null) {
+        to = null;
+        for (const [sx, sz] of [[nx, g.z], [g.x, nz]]) {
+          if (Math.hypot(sx - g.x, sz - g.z) < g.speed * dt * 0.3) continue;
+          h = free(sx, sz, fx, fz);
+          if (h !== null) {
+            to = [sx, sz];
+            break;
+          }
+        }
+      }
+      if (!to) {
+        // Something's in the way: stop, wait a moment, then plan again.
         g.speed *= 0.5;
-        g.target = spot(null);
-        g.pause = 0.8;
+        g.pause = blockedByYou ? 1.2 : 0.8;
+        g.path = null;
       } else {
-        g.x = nx;
-        g.z = nz;
+        [g.x, g.z] = to;
         g.y = h;
       }
     }
@@ -711,6 +909,7 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
     g.mode = 'emerge';
     g.omega = 0;
     g.placed = true;
+    g.path = null;
   }
 
   const tmp = new THREE.Vector3();
@@ -816,16 +1015,27 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
     }
     attach();
     if (state !== 'transition') think(Math.min(dt, 0.05), player, t);
-    active.root.position.set(g.x, g.y, g.z);
-    active.root.rotation.y = g.heading;
     const fx = Math.cos(g.heading);
     const fz = -Math.sin(g.heading);
+    // On slopes and stairs his torso tilts to the steps between hips and
+    // shoulders, and rides on the steps' tops (not the ramp inside them).
+    const room = world.rooms[g.room];
+    const back = floorTop(room, g.x - fx * 0.45, g.z - fz * 0.45, g.y);
+    const fore = floorTop(room, g.x + fx * 0.75, g.z + fz * 0.75, g.y);
+    const mid = floorTop(room, g.x, g.z, g.y);
+    const wantPitch = back !== null && fore !== null ? Math.atan2(fore - back, 1.2) : 0;
+    const k = Math.min(1, dt * 5);
+    g.pitch += (Math.max(-0.6, Math.min(0.6, wantPitch)) - g.pitch) * k;
+    const raise = Math.max(mid ?? g.y, back ?? g.y, fore ?? g.y, g.y) - g.y;
+    g.lift += (Math.min(0.3, raise) - g.lift) * k;
+    active.root.position.set(g.x, g.y + g.lift, g.z);
+    active.root.rotation.set(0, g.heading, g.pitch);
     for (const b of blocks) {
       b.x = g.x + fx * b.dx;
       b.z = g.z + fz * b.dx;
     }
     if (g.mode !== 'idle') g.look = 0;
-    active.pose(t, Math.min(dt, 0.1), g);
+    active.pose(t, Math.min(dt, 0.1), g, (x, z, y) => floorTop(room, x, z, y));
   }
 
   return {
@@ -855,12 +1065,48 @@ export function makeGator({ world, ground, walkable, modelUrl = null, onReady = 
       g.enabled = true;
       return stage(roomId, arrival);
     },
+    // For checks: his room's grid, a walk to a point, and his clearances.
+    navStats(roomId = g.room) {
+      const t0 = performance.now();
+      const nav = navOf(roomId);
+      const ms = +(performance.now() - t0).toFixed(1);
+      // Each door's approach (where he heads to leave by it): on the grid, and in which part.
+      const parts = world.rooms[roomId].portals
+        .filter((d) => d.dest !== 'outside' && world.rooms[d.dest])
+        .map((d) => {
+          const ax = d.pos.x + d.normal.x * 1.8;
+          const az = d.pos.z + d.normal.z * 1.8;
+          const k = nav.nearest(ax, az, d.pos.y);
+          const n = nav.nodes[k];
+          return k >= 0 && Math.abs(n.y - d.pos.y) < 0.5 && Math.hypot(n.x - ax, n.z - az) < 1.2 ? n.comp : -1;
+        });
+      return {
+        nodes: nav.nodes.length,
+        levels: nav.levels,
+        comps: new Set(nav.nodes.map((n) => n.comp)).size,
+        ms,
+        doors: parts.length,
+        doorsOff: parts.filter((c) => c < 0).length,
+        doorParts: new Set(parts.filter((c) => c >= 0)).size,
+      };
+    },
+    walkTo(x, z, y = 0) {
+      g.mode = 'wander';
+      g.hissCool = 60;
+      return plan({ x, z, y })?.length || 0;
+    },
+    get clearance() {
+      return active.clearance ? active.clearance() : null;
+    },
+    get y() {
+      return +g.y.toFixed(2);
+    },
     // For checks: have him already wandering in a room, away from `near`.
     meet(roomId, near) {
       g.enabled = true;
       g.room = roomId;
       const s = spot(near);
-      if (s) Object.assign(g, s, { mode: 'wander', target: null, omega: 0, placed: true });
+      if (s) Object.assign(g, s, { mode: 'wander', target: null, omega: 0, placed: true, path: null });
       return !!s;
     },
   };

@@ -1227,6 +1227,42 @@ function heightOn(s, x, z, yRef) {
   return s.h ?? 0;
 }
 
+// Every floor height at (x, z): several where a balcony overhangs a hall or
+// the spiral ramp passes over itself (for the alligator's nav grid).
+export function heightsAt(room, x, z) {
+  const out = [];
+  for (const s of room.floors) {
+    if (!inShape(s, x, z)) continue;
+    if (s.type === 'helix') {
+      const turn = ((((Math.atan2(z - s.z, x - s.x) - s.a0) % TAU) + TAU) % TAU) / TAU;
+      for (let k = 0; k <= Math.ceil(s.turns); k++) if (turn + k <= s.turns) out.push(s.h0 + s.rise * (turn + k));
+    } else out.push(heightOn(s, x, z, 0));
+  }
+  return out.sort((a, b) => a - b).filter((h, i, a) => i === 0 || h - a[i - 1] > 0.05);
+}
+
+// The top of what's actually built under (x, z), nearest to yRef (within
+// 0.9 m): like ground(), except that a flight of steps stands above the ramp
+// you walk on by up to a step (flight() in architecture.js). For keeping the
+// alligator's belly and tail out of the stairs.
+export function floorTop(room, x, z, yRef = 0) {
+  let best = null;
+  for (const s of room.floors) {
+    if (!inShape(s, x, z)) continue;
+    let h = heightOn(s, x, z, yRef);
+    if (h === null) continue;
+    if (s.ramp) {
+      const r = s.ramp;
+      const n = Math.max(1, Math.round(Math.abs(r.h1 - r.h0) / 0.17));
+      const t = Math.min(1, Math.max(0, ((r.axis === 'x' ? x : z) - r.from) / (r.to - r.from)));
+      h = Math.max(h, r.h0 + ((Math.min(n - 1, Math.floor(t * n)) + 1) * (r.h1 - r.h0)) / n);
+    }
+    if (Math.abs(h - yRef) > 0.9) continue;
+    if (best === null || Math.abs(h - yRef) < Math.abs(best - yRef)) best = h;
+  }
+  return best;
+}
+
 // The floor height under (x, z) nearest to yRef, if within a step of it.
 export function ground(room, x, z, yRef = 0) {
   let best = null;
@@ -1239,18 +1275,15 @@ export function ground(room, x, z, yRef = 0) {
   return best;
 }
 
-// Movement collision: the floor height at (x, z) for someone of radius `pad`
-// standing near height y, or null where they can't stand.
-export function walkable(room, x, z, pad = 0.38, y = 0) {
-  const h = ground(room, x, z, y);
-  if (h === null) return null;
-  for (const [ux, uz] of SAMPLES) if (ground(room, x + ux * pad, z + uz * pad, h) === null) return null;
+// Is someone of radius `pad` standing at (x, z) on height h inside an
+// obstacle (a column, a bench, a balustrade)?
+function obstructed(room, x, z, pad, h) {
   for (const o of room.obstacles) {
     if (o.y0 !== undefined && (h < o.y0 || h > o.y1)) continue;
     if (o.type === 'circle') {
-      if (Math.hypot(x - o.x, z - o.z) < o.r + pad) return null;
+      if (Math.hypot(x - o.x, z - o.z) < o.r + pad) return true;
     } else if (o.type === 'rect') {
-      if (x > o.x0 - pad && x < o.x1 + pad && z > o.z0 - pad && z < o.z1 + pad) return null;
+      if (x > o.x0 - pad && x < o.x1 + pad && z > o.z0 - pad && z < o.z1 + pad) return true;
     } else if (o.type === 'sector') {
       const dx = x - o.x;
       const dz = z - o.z;
@@ -1258,9 +1291,45 @@ export function walkable(room, x, z, pad = 0.38, y = 0) {
       if (dist > o.r0 - pad && dist < o.r1) {
         let diff = Math.atan2(dx, -dz) - o.a;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-        if (Math.abs(diff) < o.half + pad / Math.max(dist, 1)) return null;
+        if (Math.abs(diff) < o.half + pad / Math.max(dist, 1)) return true;
       }
     }
   }
-  return h;
+  return false;
+}
+
+// Movement collision: the floor height at (x, z) for someone of radius `pad`
+// standing near height y, or null where they can't stand.
+export function walkable(room, x, z, pad = 0.38, y = 0) {
+  const h = ground(room, x, z, y);
+  if (h === null) return null;
+  for (const [ux, uz] of SAMPLES) if (ground(room, x + ux * pad, z + uz * pad, h) === null) return null;
+  return obstructed(room, x, z, pad, h) ? null : h;
+}
+
+// For the alligator, whose snout and tail reach well past where he stands:
+// is there something within `reach` of (x, z) at height y, toward (dx, dz),
+// that his head would go into? Following the floor out (up and down stairs as
+// they go): a wall, an obstacle, a floor built up solid from below (the side
+// of a flight of steps, the wall of a pit seen from inside), or a ledge at
+// head height. A drop, or a balcony far overhead, is not.
+export function faceAhead(room, x, z, y, dx, dz, reach = 1.35) {
+  let prev = y;
+  const n = Math.ceil(reach / 0.25);
+  for (let i = 1; i <= n; i++) {
+    const d = (i * reach) / n;
+    const sx = x + dx * d;
+    const sz = z + dz * d;
+    const h = ground(room, sx, sz, prev);
+    if (h !== null) {
+      if (obstructed(room, sx, sz, 0.1, h)) return true;
+      prev = h;
+      continue;
+    }
+    const hs = heightsAt(room, sx, sz);
+    if (!hs.length) return true;
+    if (hs[0] > prev + 0.3) return true;
+    return hs.some((v) => v > prev + 0.3 && v < prev + 0.9);
+  }
+  return false;
 }
