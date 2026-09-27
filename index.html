@@ -551,6 +551,49 @@
         border-color: var(--ink);
       }
 
+      /* the graphics dropped out (main.js, webglcontextlost) */
+      #recovery {
+        position: fixed;
+        inset: 0;
+        z-index: 12;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: calc(16px + var(--safe-top)) calc(16px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(16px + var(--safe-left));
+        background: rgba(247, 245, 240, 0.86);
+      }
+      #recovery[hidden] {
+        display: none;
+      }
+      #recovery .card {
+        width: min(420px, 100%);
+        padding: 28px 28px 24px;
+        border-radius: 6px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        border-top: 5px solid var(--accent);
+        text-align: center;
+      }
+      #recovery h2 {
+        margin: 0 0 12px;
+        font-weight: 500;
+        font-size: 30px;
+        letter-spacing: 0.06em;
+      }
+      #recovery p {
+        margin: 0 0 20px;
+        font-size: 17px;
+      }
+      #recovery button {
+        min-height: 46px;
+        padding: 8px 22px;
+        border-radius: 999px;
+        border: 1px solid var(--ink);
+        background: var(--ink);
+        color: var(--paper);
+        font-size: 18px;
+      }
+
       /* credits */
       #caption .credit {
         margin: 8px 0 0;
@@ -1165,6 +1208,14 @@
         </p>
         <div id="credit-list"></div>
         <button id="credits-close" type="button">Close</button>
+      </div>
+    </section>
+
+    <section id="recovery" hidden role="alertdialog" aria-labelledby="recovery-title" aria-describedby="recovery-note">
+      <div class="card">
+        <h2 id="recovery-title">Lights out</h2>
+        <p id="recovery-note" aria-live="polite">The graphics dropped out for a moment. The museum reopens as soon as they're back.</p>
+        <button id="recovery-retry" type="button">Reopen the museum</button>
       </div>
     </section>
 

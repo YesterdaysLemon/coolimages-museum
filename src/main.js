@@ -48,14 +48,43 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 // Screen effects for going through doors (transitions.js); idle otherwise.
 const fx = makeFx(renderer);
-// Once textures' own images have been let go (art.js, gpu.js), a lost WebGL
-// context (a phone can drop it while the page is in the background) can't be
-// rebuilt: start over instead.
-canvas.addEventListener('webglcontextlost', (e) => {
-  if (!art?.released && !gpu?.released) return;
-  e.preventDefault();
+// A lost WebGL context (a phone can drop it while the page is in the
+// background; a GPU reset can drop it any time) takes more with it than
+// three.js rebuilds: door pictures and the environment light are render
+// targets, and textures' own images may have been let go (art.js, gpu.js).
+// So start over, once the GPU is back and the page is in view (reloading
+// before that can't get a context). Never twice within a minute, though: a
+// context that keeps dropping gets a button instead of a reload loop.
+const RELOADED = 'coolimages.context-reload';
+let contextBack = false;
+function reopen() {
+  try {
+    sessionStorage.setItem(RELOADED, String(Date.now()));
+  } catch {}
   location.reload();
+}
+function afterContextLoss() {
+  if (!contextBack || document.hidden) return;
+  let last = 0;
+  try {
+    last = Number(sessionStorage.getItem(RELOADED)) || 0;
+  } catch {}
+  if (Date.now() - last > 60_000) return reopen();
+  $('#recovery-note').textContent = 'The graphics dropped out again. Reopen the museum when you like.';
+  $('#recovery-retry').focus({ preventScroll: true });
+}
+canvas.addEventListener('webglcontextlost', (e) => {
+  e.preventDefault(); // ask for it back
+  contextBack = false;
+  if (document.pointerLockElement) document.exitPointerLock();
+  $('#recovery').hidden = false;
 });
+canvas.addEventListener('webglcontextrestored', () => {
+  contextBack = true;
+  afterContextLoss();
+});
+document.addEventListener('visibilitychange', afterContextLoss);
+$('#recovery-retry').addEventListener('click', reopen);
 // Frame timing (perf.js): `?perf` shows it; `museum.perf` has the numbers.
 const perf = makePerf(renderer, { show: params.has('perf') });
 let forcedTransition = null;
@@ -1456,7 +1485,9 @@ function runFrame(dt, sync = null) {
 function frame() {
   requestAnimationFrame(frame);
   const dt = Math.min(clock.getDelta(), 0.05);
-  if (!world) return;
+  // Nothing to draw with while the context is gone (it's gone before
+  // webglcontextlost fires; the page reloads once it's back).
+  if (!world || renderer.getContext().isContextLost()) return;
   runFrame(dt);
 }
 requestAnimationFrame(frame);
