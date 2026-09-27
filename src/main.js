@@ -8,6 +8,10 @@ import { MuseumAudio } from './audio.js';
 import { makeGator } from './gator.js';
 import { makeFx, pickTransition, TRANSITIONS } from './transitions.js';
 import { makePerf } from './perf.js';
+import { makeArt } from './art.js';
+import { makeGpu, arrivalFor, spawnFrom } from './gpu.js';
+import { makeVideos } from './videos.js';
+import { drawMinimap } from './minimap.js';
 
 const $ = (sel) => document.querySelector(sel);
 const params = new URLSearchParams(location.search);
@@ -43,6 +47,14 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 // Screen effects for going through doors (transitions.js); idle otherwise.
 const fx = makeFx(renderer);
+// Once textures' own images have been let go (art.js, gpu.js), a lost WebGL
+// context (a phone can drop it while the page is in the background) can't be
+// rebuilt: start over instead.
+canvas.addEventListener('webglcontextlost', (e) => {
+  if (!art?.released && !gpu?.released) return;
+  e.preventDefault();
+  location.reload();
+});
 // Frame timing (perf.js): `?perf` shows it; `museum.perf` has the numbers.
 const perf = makePerf(renderer, { show: params.has('perf') });
 let forcedTransition = null;
@@ -59,7 +71,9 @@ if (params.has('mute')) audio.muted = true;
 let world = null;
 let gator = null; // the alligator (gator.js)
 let collection = null;
-let collectionArt = new Map(); // id -> { ...manifest item, work, texture, loaded }
+let art = null; // the works' images (art.js)
+let gpu = null; // warming rooms, door pictures (gpu.js)
+let videos = null; // moving images (videos.js)
 // Where works were saved from (the collector extension's notes).
 let SOURCES = {};
 const traced = (src) => src?.url && (src.match === 'exact' || src.match === 'page');
@@ -111,351 +125,6 @@ function setStatus(text) {
   $('#load-status').textContent = text;
 }
 
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.decoding = 'async';
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`Could not load ${src}`));
-    img.src = src;
-  });
-}
-
-function ovalMask(img) {
-  const c = TX.makeCanvas(img.width, img.height);
-  const ctx = c.getContext('2d');
-  ctx.beginPath();
-  ctx.ellipse(img.width / 2, img.height / 2, img.width * 0.492, img.height * 0.495, 0, 0, Math.PI * 2);
-  ctx.clip();
-  ctx.drawImage(img, 0, 0);
-  return c;
-}
-
-// Downscale anything larger than this device should hold on the GPU.
-function fitTexture(img) {
-  const s = MAX_TEXTURE / Math.max(img.width, img.height);
-  if (s >= 1) return img;
-  const c = TX.makeCanvas(Math.round(img.width * s), Math.round(img.height * s));
-  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-  return c;
-}
-
-// Every work starts as its blurred preview (the manifest's `blur`, a tiny
-// inline WebP) and sharpens when its image arrives: the Entrance Hall's works
-// first, then room by room outward from wherever you are (planLoads).
-async function prepareArt(items) {
-  const art = new Map();
-  await Promise.all(
-    items.map(async (item) => {
-      const work = WORKS[item.id] || null;
-      let img = null;
-      if (item.blur) img = await loadImage(item.blur).catch(() => null);
-      if (!img) {
-        img = TX.makeCanvas(4, 4);
-        const ctx = img.getContext('2d');
-        ctx.fillStyle = item.color || '#d9d3c7';
-        ctx.fillRect(0, 0, 4, 4);
-      }
-      const texture = new THREE.Texture(work?.oval ? ovalMask(img) : img);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-      texture.needsUpdate = true;
-      art.set(item.id, { ...item, work, texture, aspect: item.width / item.height, oval: !!work?.oval, loaded: false, requested: false });
-    }),
-  );
-  return art;
-}
-
-const MAX_LOADS = lowPower ? 3 : 6;
-const loads = { active: 0, order: [], rooms: new Map(), waiters: [] };
-
-// Can createImageBitmap flip an image as it decodes? (Where it can't, or
-// isn't there, images go the <img> way.)
-let bitmapsFlip = null;
-function canFlipBitmaps() {
-  bitmapsFlip ||= flipTest();
-  return bitmapsFlip;
-}
-async function flipTest() {
-  try {
-    const c = TX.makeCanvas(1, 2);
-    const ctx = c.getContext('2d');
-    ctx.fillStyle = '#f00';
-    ctx.fillRect(0, 0, 1, 1);
-    ctx.fillStyle = '#00f';
-    ctx.fillRect(0, 1, 1, 1);
-    const b = await createImageBitmap(c, { imageOrientation: 'flipY' });
-    const out = TX.makeCanvas(1, 2).getContext('2d');
-    out.drawImage(b, 0, 0);
-    return out.getImageData(0, 0, 1, 1).data[2] > 128;
-  } catch {
-    return false; // (no createImageBitmap, or no options for it)
-  }
-}
-
-// A work's image, decoded off the main thread and scaled to fit this device
-// where the browser can (an ImageBitmap, already flipped for WebGL); else an
-// <img>, scaled on a canvas.
-async function decodeArt(entry) {
-  const url = lowPower && entry.small ? entry.small : entry.file;
-  if (!entry.oval && (await canFlipBitmaps())) {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Could not load ${url}`);
-      let bmp = await createImageBitmap(await res.blob(), { imageOrientation: 'flipY', premultiplyAlpha: 'none' });
-      const s = MAX_TEXTURE / Math.max(bmp.width, bmp.height);
-      if (s < 1) {
-        const fit = await createImageBitmap(bmp, {
-          resizeWidth: Math.round(bmp.width * s),
-          resizeHeight: Math.round(bmp.height * s),
-          resizeQuality: entry.work?.pixel ? 'pixelated' : 'high',
-          premultiplyAlpha: 'none',
-        });
-        bmp.close();
-        bmp = fit;
-      }
-      return { image: bmp, flipY: false };
-    } catch (err) {
-      console.warn(err);
-    }
-  }
-  const img = await loadImage(url);
-  return { image: entry.oval ? ovalMask(fitTexture(img)) : fitTexture(img), flipY: true };
-}
-
-// Getting things onto the GPU, spread out so no frame does much of it: new
-// images wait in `uploads.art` and go one per frame. Otherwise rooms are
-// warmed ahead of need, the room you're in and its neighbours first: their
-// own textures (walls, floors, plaques) go up a few milliseconds a frame
-// (uploads.warm: room id -> textures still to go), then the room is drawn
-// once, unseen, into each kind of target it will be drawn into (warmDraw). A
-// door's picture waits until its room is warm.
-const uploads = { art: [], warm: new Map(), drawn: new Map() }; // drawn: room id -> targets drawn into
-
-async function sharpen(entry) {
-  try {
-    const job = { entry, ...(await decodeArt(entry)) };
-    // (Before the doors open nothing is on view, so straight up.)
-    if (state === 'loading') upload(job);
-    else uploads.art.push(job);
-  } catch (err) {
-    console.warn(err);
-    arrived(entry);
-  }
-}
-
-function upload({ entry, image, flipY }) {
-  const t = entry.texture;
-  // A new size needs new GPU storage: drop the placeholder's first.
-  t.dispose();
-  t.image = image;
-  t.flipY = flipY;
-  if (entry.work?.pixel) t.magFilter = THREE.NearestFilter;
-  t.needsUpdate = true;
-  renderer.initTexture(t);
-  perf.note(`image ${image.width}px`);
-  arrived(entry);
-  // On the GPU now (and drawn on any banner that wanted it): the decoded copy
-  // can go. (Should the GPU's copy be lost, the page reloads: see below.)
-  if (typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap) {
-    image.close();
-    uploadsReleased = true;
-  }
-}
-
-// Once textures' own images have been let go, a lost WebGL context (a phone
-// can drop it while the page is in the background) can't be rebuilt: start
-// over instead.
-let uploadsReleased = false;
-canvas.addEventListener('webglcontextlost', (e) => {
-  if (!uploadsReleased) return;
-  e.preventDefault();
-  location.reload();
-});
-
-function pumpUploads() {
-  if (uploads.art.length) {
-    upload(uploads.art.shift());
-    // (While the welcome screen is up there's time for more.)
-    if (state !== 'ready') return;
-  }
-  if (state === 'loading' || state === 'transition') return;
-  const until = performance.now() + (state === 'ready' ? 12 : 3);
-  if (releaseCanvases(until)) return;
-  for (const id of roomsFrom(player.room)) {
-    if (roomWarm(id)) continue;
-    const list = uploads.warm.get(id);
-    while (list?.length && performance.now() < until) renderer.initTexture(list.shift());
-    if (list?.length) return;
-    uploads.warm.delete(id);
-    // One draw a frame (while walking, only when the last frame was quick).
-    if (state !== 'ready' && perf.last > 20) return;
-    warmDraw(id, state === 'ready' ? 2 : 1);
-    if (state !== 'ready' || performance.now() >= until) return;
-  }
-}
-const roomWarm = (id) => uploads.drawn.get(id) === 2;
-
-// On phones, once every room is warm, the canvases the rooms' textures were
-// drawn on are let go (after making sure each texture is on the GPU): together
-// they're a few hundred MB a phone's Safari would rather have back. True while
-// there's still some to do this frame.
-let released = !lowPower;
-let toRelease = null;
-function releaseCanvases(until) {
-  if (released || uploads.drawn.size < Object.keys(world.rooms).length || [...uploads.drawn.values()].some((n) => n < 2)) return false;
-  toRelease ||= Object.values(world.rooms).flatMap(roomTextures);
-  while (toRelease.length && performance.now() < until) renderer.initTexture(toRelease.pop());
-  if (toRelease.length) return true;
-  for (const room of Object.values(world.rooms)) {
-    for (const t of roomTextures(room)) {
-      if (t.image instanceof HTMLCanvasElement) t.image.width = t.image.height = 0;
-    }
-  }
-  released = uploadsReleased = true;
-  perf.note('canvases released');
-  return false;
-}
-
-// Draw a room once where it can't be seen, with nothing culled: into a tiny
-// target of the kind door previews and the transitions draw into, and onto a
-// single pixel of the screen. (Chrome on Windows draws WebGL through
-// Direct3D, which finishes compiling a shader the first time it draws into
-// each kind of target: this is where that happens, rather than mid-walk.)
-// `count` draws of the two, the target first.
-let warmTarget = null;
-function warmDraw(id, count = 2) {
-  warmTarget ||= new THREE.WebGLRenderTarget(16, 16, { type: fx.target.texture.type, samples: 4 });
-  const done = uploads.drawn.get(id) || 0;
-  const to = Math.min(2, done + count);
-  const room = world.rooms[id];
-  applyRoom(id);
-  // (The alligator too, unless he's out in a room: then he's drawn anyway.)
-  const borrow = !gator.root.parent;
-  if (borrow) {
-    gator.root.position.set(0, -60, 0);
-    room.group.add(gator.root);
-  }
-  const culled = [];
-  room.group.traverse((o) => {
-    if (!o.frustumCulled) return;
-    o.frustumCulled = false;
-    culled.push(o);
-  });
-  if (done < 1) {
-    renderer.setRenderTarget(warmTarget);
-    renderer.render(scene, camera);
-    renderer.setRenderTarget(null);
-  }
-  if (to > 1) {
-    renderer.setScissorTest(true);
-    renderer.setScissor(0, 0, 1, 1);
-    renderer.render(scene, camera);
-    renderer.setScissorTest(false);
-  }
-  for (const o of culled) o.frustumCulled = true;
-  if (borrow) room.group.remove(gator.root);
-  uploads.drawn.set(id, to);
-  // (Drawing it put up anything of its own still waiting.)
-  uploads.warm.delete(id);
-  perf.note(`warmed ${id} ${to}/2`);
-  applyRoom(player.room);
-}
-
-// The textures a room's own materials use.
-const TEXTURE_SLOTS = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'alphaMap', 'aoMap', 'bumpMap', 'lightMap'];
-function roomTextures(room) {
-  const out = new Set();
-  room.group.traverse((o) => {
-    for (const m of [o.material].flat()) {
-      for (const slot of TEXTURE_SLOTS) {
-        const t = m?.[slot];
-        if (t?.isTexture && t.image && !t.isRenderTargetTexture && !t.isVideoTexture) out.add(t);
-      }
-    }
-  });
-  return [...out];
-}
-
-// A work has its image (or won't get one).
-function arrived(entry) {
-  entry.loaded = true;
-  world.artLoaded(entry.id);
-  // A room whose works have all arrived gets fresh previews on its doors.
-  for (const roomId of loads.rooms.get(entry.id) || []) {
-    const room = world.rooms[roomId];
-    if (room.sharp || !room.artworks.every((m) => collectionArt.get(m.userData.id)?.loaded)) continue;
-    room.sharp = true;
-    for (const p of world.portals) if (p.dest === roomId) stalePreviews.add(p);
-  }
-  for (const w of loads.waiters) w();
-}
-
-// Every room, by how many doors away from `roomId` it is (the last asked
-// for is kept).
-let roomsFromCache = null;
-function roomsFrom(roomId) {
-  if (roomsFromCache?.id === roomId) return roomsFromCache.order;
-  const seen = new Set([roomId]);
-  const queue = [roomId];
-  for (let i = 0; i < queue.length; i++) {
-    for (const p of world.rooms[queue[i]].portals) {
-      if (seen.has(p.dest) || !world.rooms[p.dest]) continue;
-      seen.add(p.dest);
-      queue.push(p.dest);
-    }
-  }
-  for (const id of Object.keys(world.rooms)) if (!seen.has(id)) queue.push(id);
-  roomsFromCache = { id: roomId, order: queue };
-  return queue;
-}
-
-// Load order: `first`, then the works of each room by how many doors away it is.
-function planLoads(roomId, first = []) {
-  if (!loads.rooms.size) {
-    for (const m of world.artworks) {
-      const set = loads.rooms.get(m.userData.id) || new Set();
-      set.add(m.userData.room);
-      loads.rooms.set(m.userData.id, set);
-    }
-  }
-  const queue = roomsFrom(roomId);
-  const ids = [...first, ...queue.flatMap((id) => world.rooms[id].artworks.map((m) => m.userData.id)), ...collectionArt.keys()];
-  loads.order = [...new Set(ids)].filter((id) => collectionArt.has(id) && !collectionArt.get(id).requested);
-  pumpLoads();
-}
-
-function pumpLoads() {
-  while (loads.active < MAX_LOADS && loads.order.length) {
-    const entry = collectionArt.get(loads.order.shift());
-    if (entry.requested) continue;
-    entry.requested = true;
-    loads.active++;
-    sharpen(entry).finally(() => {
-      loads.active--;
-      pumpLoads();
-    });
-  }
-}
-
-// Resolves when all of `ids` have arrived (or failed), or after `ms`.
-function whenLoaded(ids, ms, onProgress) {
-  return new Promise((resolve) => {
-    const check = () => {
-      const done = ids.filter((id) => collectionArt.get(id)?.loaded).length;
-      onProgress?.(done, ids.length);
-      if (done < ids.length) return;
-      loads.waiters = loads.waiters.filter((w) => w !== check);
-      resolve();
-    };
-    loads.waiters.push(check);
-    setTimeout(() => {
-      loads.waiters = loads.waiters.filter((w) => w !== check);
-      resolve();
-    }, ms);
-    check();
-  });
-}
 
 async function loadFonts() {
   if (!document.fonts) return;
@@ -499,8 +168,8 @@ async function boot() {
   for (const [id, credit] of Object.entries(CREDITS)) if (WORKS[id]) WORKS[id].credit = credit;
   collection = manifest;
   await loadFonts();
-  const art = await prepareArt(manifest.items);
-  collectionArt = art;
+  art = makeArt({ renderer, perf, works: WORKS, lowPower, maxTexture: MAX_TEXTURE, isLoading: () => state === 'loading' });
+  await art.prepare(manifest.items);
   setStatus('Lighting the rooms…');
   await new Promise((r) => setTimeout(r, 30));
   // Anything no room has claimed goes on the Entrance Hall's acquisition easels.
@@ -510,7 +179,7 @@ async function boot() {
   const withheld = new Set(manifest.withheld || []);
   world = buildWorld({
     scene,
-    art,
+    art: art.entries,
     acquisitions,
     withheld,
     layout,
@@ -535,17 +204,19 @@ async function boot() {
     // Compile his materials as soon as he arrives, not on first sight.
     onReady: (root) => renderer.compile(root, camera, scene),
   });
-  registerVideos();
+  gpu = makeGpu({ renderer, scene, camera, fx, perf, world, gator, lowPower, previewHeight: PREVIEW_H, applyRoom, runAnimators, player, state: () => state });
+  art.attach(world, { onRoomArrived: (id) => gpu.roomChanged(id) });
+  videos = makeVideos({ world, audio, paused: !!collection.videosPaused });
   renderCredits();
   enterRoom('lobby');
-  await prepareGpu();
+  await gpu.prepare();
   arriveAtStart(world.rooms.lobby);
   updateCamera();
   // The way in loads first; everything else keeps arriving while you walk.
   const entrance = [...new Set([...world.rooms.lobby.artworks.map((m) => m.userData.id), ...world.featured])];
-  planLoads('lobby', entrance);
+  art.plan('lobby', entrance);
   const bar = $('#load-bar span');
-  await whenLoaded(entrance, 12000, (done, total) => {
+  await art.whenLoaded(entrance, 12000, (done, total) => {
     bar.style.width = `${(done / total) * 100}%`;
     setStatus(`Hanging the entrance · ${done} / ${total}`);
   });
@@ -559,6 +230,9 @@ async function boot() {
 }
 
 // ------------------------------------------------------------------- rooms
+// Keep only the room you're in playing (and nothing while the page is hidden).
+document.addEventListener('visibilitychange', () => videos?.sync(player.room));
+
 function applyRoom(id) {
   for (const [rid, room] of Object.entries(world.rooms)) room.group.visible = rid === id;
   const env = world.rooms[id].env;
@@ -572,123 +246,20 @@ function applyRoom(id) {
 }
 
 function enterRoom(id) {
-  if (world.rooms[id].pleinAir && !world.rooms[id].painted) {
-    world.rooms[id].painted = true;
-    paintPleinAir();
-  }
+  if (world.rooms[id].pleinAir) gpu.paintPleinAir();
   player.room = id;
   autoWalk = null;
   markVisited(id);
   applyRoom(id);
-  syncVideos();
-  if (state !== 'loading') planLoads(id);
+  videos.sync(id);
+  if (state !== 'loading') art.plan(id);
   document.documentElement.style.setProperty('--accent', accentFor(id));
   $('#room-name').textContent = WINGS[id].name;
   audio.setMood(moodFor(id));
 }
 
-// ------------------------------------------------------------------ videos
-// A video shows its poster until its room is entered, then loops silently.
-// Looking closer (E) turns its sound on, unless sound is off.
-const videos = new Map(); // id -> { entry, meshes, el, texture }
-
-function registerVideos() {
-  for (const mesh of world.artworks) {
-    const { id, entry } = mesh.userData;
-    if (!entry.video) continue;
-    if (!videos.has(id)) videos.set(id, { entry, meshes: [], el: null, texture: null });
-    videos.get(id).meshes.push(mesh);
-  }
-}
-
-// When a video can't be served (the media Worker is over its free daily
-// allowance, or videos are paused in the manifest), its frame shows a plea.
-let pleaded = false;
-function videoUnavailable(v) {
-  if (v.poor) return;
-  v.poor = true;
-  v.el?.pause();
-  const texture = TX.toTexture(TX.poorNotice(v.entry.width / v.entry.height));
-  for (const mesh of v.meshes) {
-    mesh.material.map = texture;
-    mesh.material.needsUpdate = true;
-  }
-  if (pleaded) return;
-  pleaded = true;
-  const note = $('#poor');
-  note.hidden = false;
-  setTimeout(() => note.classList.add('show'), 30);
-  setTimeout(() => note.classList.remove('show'), 12000);
-}
-
-function videoElement(v) {
-  if (v.el || v.poor) return v.el;
-  if (collection.videosPaused) {
-    videoUnavailable(v);
-    return null;
-  }
-  const el = document.createElement('video');
-  // Videos come from the media host; CORS lets WebGL use their frames.
-  el.crossOrigin = 'anonymous';
-  el.addEventListener('error', () => videoUnavailable(v));
-  Object.assign(el, { muted: true, loop: true, playsInline: true, preload: 'auto', src: v.entry.video });
-  // Keep the poster until a real frame has been decoded, so a slow start
-  // never shows a black screen.
-  const swap = () => {
-    if (v.texture) return;
-    v.texture = new THREE.VideoTexture(el);
-    v.texture.colorSpace = THREE.SRGBColorSpace;
-    for (const mesh of v.meshes) {
-      mesh.material.map = v.texture;
-      mesh.material.needsUpdate = true;
-    }
-  };
-  el.addEventListener(
-    'playing',
-    () => {
-      if (el.requestVideoFrameCallback) el.requestVideoFrameCallback(swap);
-      else el.addEventListener('timeupdate', swap, { once: true });
-    },
-    { once: true },
-  );
-  v.el = el;
-  return el;
-}
-
-function syncVideos() {
-  for (const v of videos.values()) {
-    const here = !document.hidden && v.meshes.some((m) => m.userData.room === player.room);
-    if (here) videoElement(v)?.play().catch(() => {});
-    else v.el?.pause();
-  }
-}
-document.addEventListener('visibilitychange', () => world && syncVideos());
-
-function videoSound(mesh, on) {
-  const v = mesh && videos.get(mesh.userData.id);
-  if (!v?.el || !v.entry.audio) return;
-  const audible = on && !audio.muted;
-  v.el.muted = !audible;
-  audio.duck(audible);
-}
-
 const clockTime = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 
-// Where a portal lets you out: the destination's door back to where you came
-// from, else its landing (the Stair Hall's balcony), else its entrance.
-function arrivalFor(portal) {
-  const dest = world.rooms[portal.dest];
-  return dest.portals.find((p) => p.dest === portal.room) || dest.landing || dest.portals.find((p) => p.entrance) || dest.portals[0];
-}
-
-function spawnFrom(portal, dist = 2.4) {
-  return {
-    x: portal.pos.x + portal.normal.x * dist,
-    z: portal.pos.z + portal.normal.z * dist,
-    y: portal.pos.y || 0,
-    yaw: Math.atan2(-portal.normal.x, -portal.normal.z),
-  };
-}
 
 function settle(roomId) {
   const h = ground(world.rooms[roomId], player.x, player.z, player.y);
@@ -699,133 +270,6 @@ function runAnimators(roomId, t, dt, cam) {
   for (const a of world.animators) if (a.room === roomId) a.fn(t, dt, cam);
 }
 
-// Each door shows a picture of the room behind it, rendered into a shared
-// multisampled target and copied into the door's own small texture. Doors are
-// rendered once at load, and again when their room's works have all arrived.
-const preview = { cam: null, shared: new Map(), copyMat: null, copyScene: null, copyCam: null };
-function renderPreview(portal) {
-  const arrival = arrivalFor(portal);
-  if (!arrival) return;
-  if (!preview.cam) {
-    preview.cam = new THREE.PerspectiveCamera(62, 1, 0.05, 140);
-    preview.copyMat = new THREE.MeshBasicMaterial({ toneMapped: false, depthTest: false });
-    preview.copyScene = new THREE.Scene();
-    preview.copyScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), preview.copyMat));
-    preview.copyCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  }
-  const { cam, shared, copyMat, copyScene, copyCam } = preview;
-  const aspect = portal.w / portal.h;
-  const W = Math.round(PREVIEW_H * aspect);
-  const key = `${W}`;
-  if (!shared.has(key)) shared.set(key, new THREE.WebGLRenderTarget(W, PREVIEW_H, { type: fx.target.texture.type, samples: 4 }));
-  const big = shared.get(key);
-  const s = spawnFrom(arrival, 2.6);
-  const destRoom = world.rooms[portal.dest];
-  const floorY = ground(destRoom, s.x, s.z, s.y) ?? s.y;
-  cam.aspect = aspect;
-  cam.far = destRoom.env.far || 140;
-  cam.updateProjectionMatrix();
-  cam.position.set(s.x, floorY + EYE_HEIGHT, s.z);
-  cam.rotation.set(-0.02, s.yaw, 0, 'YXZ');
-  cam.updateMatrixWorld();
-  applyRoom(portal.dest);
-  runAnimators(portal.dest, 1.5, 1 / 60, cam);
-  renderer.setRenderTarget(big);
-  renderer.render(scene, cam);
-  portal.previewTarget ||= new THREE.WebGLRenderTarget(W, PREVIEW_H, { depthBuffer: false });
-  copyMat.map = big.texture;
-  renderer.setRenderTarget(portal.previewTarget);
-  renderer.render(copyScene, copyCam);
-  renderer.setRenderTarget(null);
-  if (portal.surface.material.map !== portal.previewTarget.texture) {
-    portal.surface.material.map = portal.previewTarget.texture;
-    portal.surface.material.needsUpdate = true;
-  }
-}
-
-function paintPleinAir() {
-  const room = Object.values(world.rooms).find((r) => r.pleinAir);
-  if (!room) return;
-  const { material, from, to, hide } = room.pleinAir;
-  const cam = new THREE.PerspectiveCamera(40, 4 / 3, 0.1, room.env.far || 140);
-  cam.position.copy(from);
-  cam.lookAt(to);
-  cam.updateMatrixWorld();
-  applyRoom(room.id);
-  runAnimators(room.id, 30, 1 / 60, cam);
-  const target = new THREE.WebGLRenderTarget(640, 480, { samples: 4 });
-  // The easel paints the view past itself, not itself.
-  hide.visible = false;
-  renderer.setRenderTarget(target);
-  renderer.render(scene, cam);
-  renderer.setRenderTarget(null);
-  hide.visible = true;
-  material.color.set(0xffffff);
-  material.map = target.texture;
-  material.needsUpdate = true;
-}
-
-// Doors whose picture is missing or out of date (their room's works have
-// since arrived). A door's picture only matters in its own room, so they're
-// drawn as they're needed: a blank door in the room you're in straight away
-// (one a frame), then the rest of that room's and its neighbours' in frames
-// with time to spare, a few a second.
-const stalePreviews = new Set();
-let previewWait = 0;
-function refreshPreviews(dt) {
-  if (!stalePreviews.size || state === 'transition' || state === 'loading') return;
-  previewWait -= dt;
-  const here = world.rooms[player.room];
-  const ready = (p) => stalePreviews.has(p) && roomWarm(p.dest);
-  let next = here.portals.find((p) => ready(p) && !p.previewTarget);
-  if (!next) {
-    if (previewWait > 0 || perf.last > 20) return;
-    const near = new Set([player.room, ...here.portals.map((p) => p.dest)]);
-    next = here.portals.find(ready) || [...stalePreviews].find((p) => near.has(p.room) && roomWarm(p.dest));
-    if (!next) return;
-  }
-  stalePreviews.delete(next);
-  previewWait = 0.2;
-  perf.note(`preview ${next.dest}`);
-  renderPreview(next);
-  applyRoom(player.room);
-}
-
-// Up front, while the welcome screen is up: every door is stale, every room
-// is to be warmed, and the shaders for every kind of room (by its fog and
-// lights) are compiled, the alligator's with them.
-async function prepareGpu() {
-  for (const p of world.portals) stalePreviews.add(p);
-  for (const [id, room] of Object.entries(world.rooms)) uploads.warm.set(id, roomTextures(room));
-  gator.root.position.set(0, -60, 0);
-  const kinds = new Map();
-  for (const [id, room] of Object.entries(world.rooms)) {
-    let lights = 0;
-    room.group.traverse((o) => {
-      if (o.isLight) lights++;
-    });
-    // (The outside is a kind of its own: its ground and sky are like nothing else.)
-    const kind = id === 'outside' ? id : `${room.env.fog.type}:${lights}`;
-    if (!kinds.has(kind)) kinds.set(kind, id);
-  }
-  // Each kind twice: for the screen, and for drawing into a target (door
-  // previews and the transitions' effects), which three.js compiles apart.
-  for (const id of kinds.values()) {
-    applyRoom(id);
-    world.rooms[id].group.add(gator.root);
-    for (const target of [null, fx.target]) {
-      renderer.setRenderTarget(target);
-      const ready = renderer.compileAsync(scene, camera);
-      renderer.setRenderTarget(null);
-      await ready.catch(() => {});
-    }
-    world.rooms[id].group.remove(gator.root);
-    // Drawing a room of each kind takes the most compiling: that's now, too.
-    warmDraw(id);
-  }
-  fx.warm();
-  applyRoom(player.room);
-}
 
 // ------------------------------------------------------------------ camera
 function updateCamera() {
@@ -1029,7 +473,7 @@ function escapeHtml(s) {
 
 // --------------------------------------------------------------- portals
 function startPortal(portal) {
-  const arrival = arrivalFor(portal);
+  const arrival = arrivalFor(world, portal);
   if (!arrival) return;
   autoWalk = null;
   state = 'transition';
@@ -1187,7 +631,7 @@ function startInspect(mesh) {
   }
   camPose = { ...from };
   showCaption(mesh.userData);
-  videoSound(mesh, true);
+  videos.sound(mesh, true);
   runAnim(reducedMotion ? 0.2 : 1.05, (t) => {
     camPose = lerpPose(from, to, smoother(t));
   }, () => {
@@ -1216,12 +660,12 @@ function inspectStep(dir) {
   const list = roomOrder(inspect.mesh.userData.room);
   if (list.length < 2) return;
   const next = list[(list.indexOf(inspect.mesh) + dir + list.length) % list.length];
-  videoSound(inspect.mesh, false);
+  videos.sound(inspect.mesh, false);
   const from = { ...camPose };
   const to = inspectPose(next);
   inspect.mesh = next;
   showCaption(next.userData);
-  videoSound(next, true);
+  videos.sound(next, true);
   audio.chime();
   state = 'transition';
   runAnim(reducedMotion ? 0.2 : 0.9, (t) => {
@@ -1234,7 +678,7 @@ function inspectStep(dir) {
 function endInspect(immediate = false, relock = true) {
   if (!inspect) return;
   hideCaption();
-  videoSound(inspect.mesh, false);
+  videos.sound(inspect.mesh, false);
   const back = inspect.from;
   const from = camPose ? { ...camPose } : back;
   inspect = null;
@@ -1267,7 +711,7 @@ function showCaption(ud) {
     ? `${formatSaved(entry.saved)} · Moving image, ${clockTime(entry.duration || 0)}${sound}`
     : formatSaved(entry.saved);
   renderCaptionCredit(panel.querySelector('.credit'), work, SOURCES[ud.id]);
-  if (videos.get(ud.id)?.poor) {
+  if (videos.poor(ud.id)) {
     const plea = document.createElement('span');
     plea.className = 'plea';
     plea.append('Not playing right now: the server is super poor. ', link(SPONSORS, 'Please donate to help \u2665'));
@@ -1487,7 +931,7 @@ function toggleMute() {
   $('#mute').setAttribute('aria-pressed', String(!audio.muted));
   $('#pause-mute').textContent = audio.muted ? 'Turn sound on' : 'Turn sound off';
   if (inspect) {
-    videoSound(inspect.mesh, true);
+    videos.sound(inspect.mesh, true);
     showCaption(inspect.mesh.userData);
   }
 }
@@ -1942,99 +1386,6 @@ function sizeMinimap() {
 sizeMinimap();
 
 const tmpV = new THREE.Vector3();
-function drawMinimap() {
-  const room = world.rooms[player.room];
-  const S = mini.width;
-  const b = room.wrap ? { type: 'rect', x0: player.x - 60, x1: player.x + 60, z0: player.z - 60, z1: player.z + 60 } : room.bounds;
-  const [minX, maxX, minZ, maxZ] = b.type === 'circle' ? [b.x - b.r, b.x + b.r, b.z - b.r, b.z + b.r] : [b.x0, b.x1, b.z0, b.z1];
-  const pad = S * 0.1;
-  const scale = (S - pad * 2) / Math.max(maxX - minX, maxZ - minZ);
-  const ox = S / 2 - ((minX + maxX) / 2) * scale;
-  const oz = S / 2 - ((minZ + maxZ) / 2) * scale;
-  const X = (x) => ox + x * scale;
-  const Z = (z) => oz + z * scale;
-  mctx.clearRect(0, 0, S, S);
-  const levelOf = (f) => (f.type === 'helix' ? player.y : f.ramp ? Math.max(f.ramp.h0, f.ramp.h1) : f.h ?? 0);
-  const floors = [...room.floors].sort((a, c) => Math.abs(levelOf(c) - player.y) - Math.abs(levelOf(a) - player.y));
-  for (const f of floors) {
-    const near = Math.abs(levelOf(f) - player.y) < 1.5 || (f.ramp && player.y >= Math.min(f.ramp.h0, f.ramp.h1) - 0.5 && player.y <= Math.max(f.ramp.h0, f.ramp.h1) + 0.5);
-    mctx.fillStyle = near ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.45)';
-    mctx.beginPath();
-    if (f.type === 'rect') mctx.rect(X(f.x0), Z(f.z0), (f.x1 - f.x0) * scale, (f.z1 - f.z0) * scale);
-    else if (f.type === 'circle') mctx.arc(X(f.x), Z(f.z), f.r * scale, 0, Math.PI * 2);
-    else {
-      const a0 = f.type === 'sector' ? f.a0 : 0;
-      const a1 = f.type === 'sector' ? f.a0 + f.span : Math.PI * 2;
-      mctx.arc(X(f.x), Z(f.z), f.r1 * scale, a0, a1);
-      mctx.arc(X(f.x), Z(f.z), f.r0 * scale, a1, a0, true);
-      mctx.closePath();
-    }
-    mctx.fill();
-    if (f.ramp) {
-      mctx.strokeStyle = 'rgba(40,32,24,0.25)';
-      mctx.lineWidth = S * 0.006;
-      const steps = 8;
-      for (let i = 1; i < steps; i++) {
-        mctx.beginPath();
-        if (f.ramp.axis === 'z') {
-          const z = f.z0 + ((f.z1 - f.z0) * i) / steps;
-          mctx.moveTo(X(f.x0), Z(z));
-          mctx.lineTo(X(f.x1), Z(z));
-        } else {
-          const x = f.x0 + ((f.x1 - f.x0) * i) / steps;
-          mctx.moveTo(X(x), Z(f.z0));
-          mctx.lineTo(X(x), Z(f.z1));
-        }
-        mctx.stroke();
-      }
-    }
-  }
-  mctx.strokeStyle = 'rgba(40,32,24,0.55)';
-  mctx.lineWidth = S * 0.012;
-  mctx.beginPath();
-  if (b.type === 'circle') mctx.arc(X(b.x), Z(b.z), b.r * scale, 0, Math.PI * 2);
-  else mctx.rect(X(b.x0), Z(b.z0), (b.x1 - b.x0) * scale, (b.z1 - b.z0) * scale);
-  mctx.stroke();
-  mctx.fillStyle = 'rgba(40,32,24,0.12)';
-  for (const o of room.obstacles) {
-    if (o.y0 !== undefined && (player.y < o.y0 || player.y > o.y1)) continue;
-    mctx.beginPath();
-    if (o.type === 'circle') mctx.arc(X(o.x), Z(o.z), o.r * scale, 0, Math.PI * 2);
-    else if (o.type === 'rect') mctx.rect(X(o.x0), Z(o.z0), (o.x1 - o.x0) * scale, (o.z1 - o.z0) * scale);
-    mctx.fill();
-  }
-  const accent = accentFor(player.room);
-  mctx.fillStyle = accent;
-  for (const m of room.artworks) {
-    m.getWorldPosition(tmpV);
-    mctx.fillRect(X(tmpV.x) - S * 0.018, Z(tmpV.z) - S * 0.018, S * 0.036, S * 0.036);
-  }
-  mctx.strokeStyle = '#c9a24c';
-  mctx.lineWidth = S * 0.03;
-  for (const p of room.portals) {
-    mctx.globalAlpha = Math.abs(p.pos.y - player.y) < 1.5 ? 1 : 0.3;
-    const tx = p.normal.z * (p.w / 2);
-    const tz = -p.normal.x * (p.w / 2);
-    mctx.beginPath();
-    mctx.moveTo(X(p.pos.x - tx), Z(p.pos.z - tz));
-    mctx.lineTo(X(p.pos.x + tx), Z(p.pos.z + tz));
-    mctx.stroke();
-  }
-  mctx.globalAlpha = 1;
-  const px = X(player.x);
-  const pz = Z(player.z);
-  mctx.save();
-  mctx.translate(px, pz);
-  mctx.rotate(-player.yaw);
-  mctx.fillStyle = '#1d1a16';
-  mctx.beginPath();
-  mctx.moveTo(0, -S * 0.05);
-  mctx.lineTo(S * 0.032, S * 0.035);
-  mctx.lineTo(-S * 0.032, S * 0.035);
-  mctx.closePath();
-  mctx.fill();
-  mctx.restore();
-}
 
 // ------------------------------------------------------------------- loop
 const clock = new THREE.Clock();
@@ -2061,15 +1412,15 @@ function simulate(dt) {
 function runFrame(dt, sync = null) {
   perf.begin();
   simulate(dt);
-  perf.time('uploads', pumpUploads);
-  perf.time('previews', () => refreshPreviews(dt));
+  perf.time('uploads', () => gpu.pump(art.pump()));
+  perf.time('previews', () => gpu.refreshPreviews(dt));
   // The alligator's room grids, a little each frame.
   if (state !== 'loading') perf.time('grids', () => gator?.buildGrids(2.5));
   perf.time('draw', draw);
   miniTimer += dt;
   if (miniTimer > 0.066) {
     miniTimer = 0;
-    perf.time('minimap', drawMinimap);
+    perf.time('minimap', () => drawMinimap(mctx, world.rooms[player.room], player, accentFor(player.room)));
   }
   if (sync) perf.time('gpu', sync);
   perf.end();
@@ -2101,7 +1452,7 @@ window.museum = {
     return hovered?.userData.id || null;
   },
   get portals() {
-    return world.portals.map((p) => ({ room: p.room, dest: p.dest, entrance: !!p.entrance, x: p.pos.x, y: p.pos.y, z: p.pos.z, nx: p.normal.x, nz: p.normal.z, subtitle: p.subtitle, arrives: arrivalFor(p)?.room === p.dest }));
+    return world.portals.map((p) => ({ room: p.room, dest: p.dest, entrance: !!p.entrance, x: p.pos.x, y: p.pos.y, z: p.pos.z, nx: p.normal.x, nz: p.normal.z, subtitle: p.subtitle, arrives: arrivalFor(world, p)?.room === p.dest }));
   },
   start: begin,
   teleport(roomId, dist = 2.4) {
@@ -2166,7 +1517,7 @@ window.museum = {
     },
   },
   get loading() {
-    return { loaded: [...collectionArt.values()].filter((e) => e.loaded).length, total: collectionArt.size, queued: loads.order.length, active: loads.active, previews: stalePreviews.size, uploading: uploads.art.length, warming: [...uploads.warm.values()].reduce((n, l) => n + l.length, 0) };
+    return { ...art.stats(), ...gpu.stats() };
   },
   // For checks: works that something hides from a viewer standing in front
   // of them (a wall they poke into, a column, an easel). Casts rays to a grid
@@ -2233,8 +1584,8 @@ window.museum = {
   tick(seconds = 1) {
     for (let t = 0; t < seconds; t += 1 / 60) {
       simulate(1 / 60);
-      pumpUploads();
-      refreshPreviews(1 / 60);
+      gpu.pump(art.pump());
+      gpu.refreshPreviews(1 / 60);
     }
     draw();
   },

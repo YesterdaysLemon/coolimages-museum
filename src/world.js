@@ -1229,6 +1229,26 @@ function heightOn(s, x, z, yRef) {
 
 // Every floor height at (x, z): several where a balcony overhangs a hall or
 // the spiral ramp passes over itself (for the alligator's nav grid).
+// Every room of the world, by how many doors away from `roomId` it is (rooms
+// no door leads to last). The last answer for each world is kept.
+const roomsFromCache = new WeakMap();
+export function roomsFrom(world, roomId) {
+  const cached = roomsFromCache.get(world);
+  if (cached?.id === roomId) return cached.order;
+  const seen = new Set([roomId]);
+  const order = [roomId];
+  for (let i = 0; i < order.length; i++) {
+    for (const p of world.rooms[order[i]].portals) {
+      if (seen.has(p.dest) || !world.rooms[p.dest]) continue;
+      seen.add(p.dest);
+      order.push(p.dest);
+    }
+  }
+  for (const id of Object.keys(world.rooms)) if (!seen.has(id)) order.push(id);
+  roomsFromCache.set(world, { id: roomId, order });
+  return order;
+}
+
 // A work's image the right way up for drawing on a canvas. (Images decoded as
 // ImageBitmaps are stored flipped, ready for WebGL.)
 function uprightImage(texture) {
