@@ -1,9 +1,15 @@
 // The museum's alligator. He has his own business: he wanders a room, pauses
-// to look around, and leaves by one of its doors, walking straight into the
-// painting. Now and then the room you've just walked into is the one he's
-// leaving. Built procedurally: a skinned tube for the body (deformed every
-// frame so it sways with his walk), four jointed legs in the diagonal "high
-// walk" of a real alligator, and eyes that stare back.
+// to look around (at you, if you're close), and leaves by one of its doors,
+// walking straight into the painting. Now and then the room you've just
+// walked into is the one he's leaving.
+//
+// He is the WildMesh 3D "ALLIGATOR - Realistic 3D Model (DEMO FREE)"
+// (CC BY-NC 4.0, credited in the museum) when the manifest has it
+// (`gator`, built from models/ by tools/build_assets.py): its idle and trot
+// clips blended by his speed, the trot slowed to match his walk, and his neck
+// and head turned by hand. Without it, a procedural stand-in: a body tube
+// deformed every frame along a swaying spine and four jointed legs in the
+// diagonal "high walk".
 import * as THREE from 'three';
 import * as TX from './textures.js';
 
@@ -292,9 +298,82 @@ function glowCanvas() {
   return c;
 }
 
+// ------------------------------------------------------------ the real one
+const SCALE = 0.9; // the model is 3.9 m long
+// Its trot moves a planted foot about 0.73 m in 0.41 s: the speed the clip
+// was made for, so feet don't slide at whatever speed he walks.
+const TROT_SPEED = (0.73 / 0.41) * SCALE;
+
+async function loadReal(url) {
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  const gltf = await new GLTFLoader().loadAsync(url);
+  const model = gltf.scene;
+  model.scale.setScalar(SCALE);
+  model.rotation.y = Math.PI / 2; // it faces +z; he walks along +x
+  model.position.x = 0.1 * SCALE; // his position is mid-body
+  model.traverse((o) => {
+    if (o.isSkinnedMesh) o.frustumCulled = false;
+  });
+  const root = new THREE.Group();
+  root.add(model);
+  const shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(3.9, 1.3),
+    new THREE.MeshBasicMaterial({ map: TX.toTexture(glowCanvas()), color: 0x000000, transparent: true, opacity: 0.32, depthWrite: false }),
+  );
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.set(-0.1, 0.012, 0);
+  root.add(shadow);
+  root.traverse((o) => (o.userData.gator = true));
+  const mixer = new THREE.AnimationMixer(model);
+  const clip = (re) => gltf.animations.find((c) => re.test(c.name));
+  const idle = mixer.clipAction(clip(/Idle/));
+  const trot = mixer.clipAction(clip(/Trot/));
+  idle.play();
+  trot.play();
+  const turnBones = [[model.getObjectByName('Neck02'), 0.35], [model.getObjectByName('Head'), 0.65]].filter(([b]) => b);
+  const q = new THREE.Quaternion();
+  const axis = new THREE.Vector3();
+  const turn = new THREE.Quaternion();
+  let look = 0;
+  return {
+    root,
+    pose(t, dt, g) {
+      const moving = Math.min(1, g.speed / SPEED);
+      trot.setEffectiveWeight(moving);
+      idle.setEffectiveWeight(1 - moving);
+      trot.setEffectiveTimeScale(Math.max(0.05, g.speed / TROT_SPEED));
+      mixer.update(dt);
+      // Turn the neck and head (about the world's up, after the clips).
+      look += (g.look - look) * Math.min(1, dt * 3);
+      if (Math.abs(look) < 0.005) return;
+      root.updateMatrixWorld(true);
+      for (const [bone, share] of turnBones) {
+        bone.parent.getWorldQuaternion(q);
+        axis.set(0, 1, 0).applyQuaternion(q.invert());
+        bone.quaternion.premultiply(turn.setFromAxisAngle(axis, look * share));
+      }
+    },
+  };
+}
+
 // ------------------------------------------------------------- the animal
-export function makeGator({ world, ground, walkable }) {
+export function makeGator({ world, ground, walkable, modelUrl = null, onReady = null }) {
   const m = build();
+  // Until the real one loads he isn't anywhere; if it can't, the stand-in walks.
+  let active = { root: m.root, pose: (t) => pose(t) };
+  let ready = !modelUrl;
+  if (modelUrl) {
+    loadReal(modelUrl)
+      .then((real) => {
+        detach();
+        active = real;
+        onReady?.(real.root);
+      })
+      .catch((err) => console.warn('The alligator model did not load; using the stand-in.', err))
+      .finally(() => {
+        ready = true;
+      });
+  }
   const rooms = Object.keys(world.rooms).filter((id) => id !== 'outside');
   const pick = (list) => list[Math.floor(Math.random() * list.length)];
   const g = {
@@ -322,14 +401,14 @@ export function makeGator({ world, ground, walkable }) {
     if (g.attachedTo === g.room) return;
     detach();
     const room = world.rooms[g.room];
-    room.group.add(m.root);
+    room.group.add(active.root);
     room.obstacles.push(...blocks);
     g.attachedTo = g.room;
   }
   function detach() {
     if (!g.attachedTo) return;
     const room = world.rooms[g.attachedTo];
-    room.group.remove(m.root);
+    room.group.remove(active.root);
     room.obstacles = room.obstacles.filter((o) => !o.gator);
     g.attachedTo = null;
   }
@@ -367,7 +446,7 @@ export function makeGator({ world, ground, walkable }) {
 
   // The player just arrived in `roomId` (through `arrival`, if by a door).
   function entered(roomId, arrival, t) {
-    if (!g.enabled || roomId === 'outside') return;
+    if (!g.enabled || !ready || roomId === 'outside') return;
     g.y = arrival ? arrival.pos.y : 0;
     const from = arrival ? { x: arrival.pos.x + arrival.normal.x * 2.4, z: arrival.pos.z + arrival.normal.z * 2.4 } : null;
     if (g.room === roomId) {
@@ -430,7 +509,13 @@ export function makeGator({ world, ground, walkable }) {
       }
     } else if (g.mode === 'idle') {
       g.timer -= dt;
-      g.look = Math.sin(g.timer * 0.9) * 0.5;
+      const px = player.x - g.x;
+      const pz = player.z - g.z;
+      if (Math.hypot(px, pz) < 7) {
+        let rel = headingTo(px, pz) - g.heading;
+        rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+        g.look = Math.max(-0.75, Math.min(0.75, rel));
+      } else g.look = Math.sin(g.timer * 0.9) * 0.5;
       if (g.timer <= 0) {
         g.look = 0;
         g.bored++;
@@ -604,7 +689,7 @@ export function makeGator({ world, ground, walkable }) {
   }
 
   function update(dt, t, player, state) {
-    if (!g.enabled) {
+    if (!g.enabled || !ready) {
       detach();
       return;
     }
@@ -616,19 +701,28 @@ export function makeGator({ world, ground, walkable }) {
     }
     attach();
     if (state !== 'transition') think(Math.min(dt, 0.05), player);
-    m.root.position.set(g.x, g.y, g.z);
-    m.root.rotation.y = g.heading;
+    active.root.position.set(g.x, g.y, g.z);
+    active.root.rotation.y = g.heading;
     const fx = Math.cos(g.heading);
     const fz = -Math.sin(g.heading);
     for (const b of blocks) {
       b.x = g.x + fx * b.dx;
       b.z = g.z + fz * b.dx;
     }
-    pose(t);
+    if (g.mode !== 'idle' && g.mode !== 'wander') g.look = 0;
+    active.pose(t, Math.min(dt, 0.1), g);
   }
 
   return {
-    root: m.root,
+    get root() {
+      return active.root;
+    },
+    get ready() {
+      return ready;
+    },
+    get model() {
+      return active.root === m.root ? 'stand-in' : 'wildmesh';
+    },
     update,
     entered,
     get state() {

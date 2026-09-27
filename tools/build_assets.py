@@ -247,12 +247,19 @@ def main():
 
     items.sort(key=lambda item: item["saved"])
     keep = {Path(item[key]).name for item in items for key in ("file", "small", "video", "sheet") if key in item}
+    # The alligator's model (models/ is gitignored; see AGENTS.md), if present.
+    gator = ROOT / "models" / "alligator" / "alligator.glb"
+    extras = {}
+    if gator.exists():
+        shutil.copy2(gator, OUT / "alligator.glb")
+        keep.add("alligator.glb")
+        extras["gator"] = "content/art/alligator.glb"
     for stale in OUT.iterdir():
         if stale.name not in keep:
             stale.unlink()
 
     cache_path.write_text(json.dumps(cache), encoding="utf-8")
-    manifest = {"built": datetime.now().isoformat(timespec="seconds"), "count": len(items), "items": items}
+    manifest = {"built": datetime.now().isoformat(timespec="seconds"), "count": len(items), "items": items, **extras}
     (ROOT / "content" / "sources.json").write_text(json.dumps(sources, indent=2, ensure_ascii=False), encoding="utf-8")
     (ROOT / "content" / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     videos = sum(1 for item in items if "video" in item)

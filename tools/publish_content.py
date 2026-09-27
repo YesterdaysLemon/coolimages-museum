@@ -93,6 +93,9 @@ def main():
             public_items.append(item)
         items = public_items
         public = {"built": manifest.get("built"), "count": len(items), "items": items, "withheld": withheld}
+        if manifest.get("gator"):
+            shutil.copy2(ROOT / manifest["gator"], stage / "art" / Path(manifest["gator"]).name)
+            public["gator"] = manifest["gator"]
         if args.pause_videos:
             public["videosPaused"] = True
         # Where each public work was saved from (tools/ingest_inbox.py notes).

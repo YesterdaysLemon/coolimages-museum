@@ -300,7 +300,14 @@ async function boot() {
       range: dateRange(manifest.items),
     },
   });
-  gator = makeGator({ world, ground, walkable });
+  gator = makeGator({
+    world,
+    ground,
+    walkable,
+    modelUrl: manifest.gator || null,
+    // Compile his materials as soon as he arrives, not on first sight.
+    onReady: (root) => renderer.compile(root, camera, scene),
+  });
   registerVideos();
   renderCredits();
   renderPreviews();
@@ -1023,6 +1030,23 @@ function renderCredits() {
       ul.append(li);
     }
     list.append(ul);
+  }
+  if (collection.gator) {
+    const h = document.createElement('h3');
+    h.textContent = 'Also in the museum';
+    const ul = document.createElement('ul');
+    const li = document.createElement('li');
+    li.append(
+      'The alligator: ',
+      link('https://sketchfab.com/3d-models/alligator-realistic-3d-model-demo-free-80af5463728149baba78b12f70f6ff5c', '“ALLIGATOR – Realistic 3D Model (DEMO FREE)”'),
+      ' by ',
+      link('https://sketchfab.com/WildMesh_3D', 'WildMesh 3D'),
+      ', ',
+      link('https://creativecommons.org/licenses/by-nc/4.0/', 'CC BY-NC 4.0'),
+      '. Converted, scaled and set walking by the museum.',
+    );
+    ul.append(li);
+    list.append(h, ul);
   }
 }
 

@@ -7,3 +7,6 @@ logs/
 # Private lab build output (thumbnails of third-party art); the page source lab/index.html is tracked
 lab/works.json
 lab/thumbs/
+
+# Third-party 3D models (licensed, credited in the museum); the built GLB is published with content
+models/

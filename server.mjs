@@ -20,7 +20,8 @@ const csp = [
   "font-src https://fonts.gstatic.com",
   "img-src 'self' data: blob:",
   "media-src 'self' https://coolimages-media.alirezaafshan.com",
-  "connect-src 'self' https://cdn.jsdelivr.net",
+  // blob: for the alligator's model, whose textures GLTFLoader fetches as blobs.
+  "connect-src 'self' blob: https://cdn.jsdelivr.net",
   "object-src 'none'",
   "base-uri 'none'",
   "frame-ancestors 'none'",
@@ -36,10 +37,11 @@ const types = {
   '.jpg': 'image/jpeg',
   '.png': 'image/png',
   '.webp': 'image/webp',
+  '.glb': 'model/gltf-binary',
   '.mp4': 'video/mp4',
   '.svg': 'image/svg+xml',
 };
-const allowed = [/^\/src\/[\w-]+\.js$/, /^\/data\/[\w-]+\.json$/, /^\/content\/[\w-]+\.json$/, /^\/content\/art\/[\w-]+(\.sheet|\.sm)?\.(jpg|png|webp|mp4)$/, /^\/robots\.txt$/];
+const allowed = [/^\/src\/[\w-]+\.js$/, /^\/data\/[\w-]+\.json$/, /^\/content\/[\w-]+\.json$/, /^\/content\/art\/[\w-]+(\.sheet|\.sm)?\.(jpg|png|webp|mp4|glb)$/, /^\/robots\.txt$/];
 
 http
   .createServer(async (req, res) => {
