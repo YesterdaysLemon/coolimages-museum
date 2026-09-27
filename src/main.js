@@ -5,6 +5,7 @@ import { CREDITS, REMOVAL_URL } from './credits.js';
 import * as TX from './textures.js';
 import { buildWorld, walkable, ground, EYE_HEIGHT, formatSaved, TEMPLATES } from './world.js';
 import { MuseumAudio } from './audio.js';
+import { makeGator } from './gator.js';
 
 const $ = (sel) => document.querySelector(sel);
 const params = new URLSearchParams(location.search);
@@ -46,6 +47,7 @@ const camera = new THREE.PerspectiveCamera(baseFov, innerWidth / innerHeight, 0.
 const audio = new MuseumAudio();
 if (params.has('mute')) audio.muted = true;
 let world = null;
+let gator = null; // the alligator (gator.js)
 let collection = null;
 let collectionArt = new Map(); // id -> { ...manifest item, work, texture, loaded }
 // Where works were saved from (the collector extension's notes).
@@ -298,6 +300,7 @@ async function boot() {
       range: dateRange(manifest.items),
     },
   });
+  gator = makeGator({ world, ground, walkable });
   registerVideos();
   renderCredits();
   renderPreviews();
@@ -532,7 +535,11 @@ function renderPreviews() {
   const first = world.portals.filter((p) => p.room === 'lobby');
   previewQueue.push(...first, ...world.portals.filter((p) => p.room !== 'lobby'));
   applyRoom('lobby');
+  // The alligator's materials too, so his first appearance doesn't hitch.
+  gator.root.position.set(0, -60, 0);
+  world.rooms.lobby.group.add(gator.root);
   renderer.compile(scene, camera);
+  world.rooms.lobby.group.remove(gator.root);
 }
 
 // One door per frame, then back to the room you're in.
@@ -769,6 +776,7 @@ function startPortal(portal) {
     setFade(smoothstep(0.55, 0.97, t));
   }, () => {
     enterRoom(portal.dest);
+    gator?.entered(portal.dest, arrival, elapsed);
     const s = spawnFrom(arrival);
     const start = { x: arrival.pos.x + arrival.normal.x * 0.2, z: arrival.pos.z + arrival.normal.z * 0.2 };
     player.x = start.x;
@@ -1316,6 +1324,7 @@ function travelTo(id) {
   runAnim(reducedMotion ? 0.2 : 0.5, (t) => setFade(smooth(t)), () => {
     enterRoom(id);
     arriveAtStart(world.rooms[id]);
+    gator?.entered(id, null, elapsed);
     runAnim(reducedMotion ? 0.2 : 0.6, (t) => setFade(1 - smooth(t)), () => {
       state = 'walk';
       showBanner(id);
@@ -1701,6 +1710,7 @@ function simulate(dt) {
   }
   updateCamera();
   runAnimators(player.room, elapsed, dt, camera);
+  gator?.update(dt, elapsed, player, state);
   if (state === 'walk') updateHover();
   else if (state !== 'inspect') setHint('');
   updateDecals(dt);
@@ -1759,6 +1769,22 @@ window.museum = {
   },
   walkable: (x, z, y) => walkable(world.rooms[player.room], x, z, 0.38, y),
   tap: (x, y) => tapAt(x, y),
+  // The alligator: where he is and what he's doing; `enabled` (turn him off
+  // for door checks, he takes up floor); summon() stages his exit from the
+  // room you're in.
+  gator: {
+    get state() {
+      return gator.state;
+    },
+    set enabled(v) {
+      gator.enabled = v;
+    },
+    get enabled() {
+      return gator.enabled;
+    },
+    summon: () => gator.summon(player.room),
+    meet: () => gator.meet(player.room, player),
+  },
   // For checks: how many works have their full image, and what's still queued.
   get loading() {
     return { loaded: [...collectionArt.values()].filter((e) => e.loaded).length, total: collectionArt.size, queued: loads.order.length, active: loads.active, previews: previewQueue.length };
@@ -1776,7 +1802,7 @@ window.museum = {
       room.group.updateMatrixWorld(true);
       const solids = [];
       room.group.traverse((o) => {
-        if (!o.isMesh || !o.material) return;
+        if (!o.isMesh || !o.material || o.userData.gator) return;
         const m = o.material;
         if (m.blending === THREE.AdditiveBlending || m.depthWrite === false || (m.transparent && m.opacity < 0.5 && !m.alphaTest)) return;
         solids.push(o);

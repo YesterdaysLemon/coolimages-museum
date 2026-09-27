@@ -500,9 +500,9 @@ export function makeArchitecture(ctx) {
   // Spiral: a ramp winding up around an atrium to a landing at the top.
   function spiral({ key, spec, t, accent, ids, cx, z0, doors }) {
     const cz = z0 + 16;
-    const r0 = 4.2;
-    const r1 = 8.2;
-    const rise = 3.5;
+    const r0 = 5.6;
+    const r1 = 10.6;
+    const rise = 4.0;
     const turns = 1.75;
     const a0 = Math.PI / 2;
     const top = rise * turns;
@@ -552,10 +552,10 @@ export function makeArchitecture(ctx) {
       const a = (i / 16) * TAU;
       beam(room, V3(cx + Math.cos(a) * 1.2, roofY - 0.08, cz + Math.sin(a) * 1.2), V3(cx + Math.cos(a) * r1, roofY - 0.08, cz + Math.sin(a) * r1), 0.14, rib);
     }
-    for (const r of [1.2, 4.2]) mesh(room, new THREE.TorusGeometry(r, 0.07, 6, 64).rotateX(Math.PI / 2), rib, cx, roofY - 0.1, cz);
+    for (const r of [1.2, r0]) mesh(room, new THREE.TorusGeometry(r, 0.07, 6, 64).rotateX(Math.PI / 2), rib, cx, roofY - 0.1, cz);
     addLights(room, [0xffffff, 0xe6e2da, 1.25], [
-      [cx, roofY - 1.2, cz, 0xffffff, 40, 30],
-      [cx, 2.4, cz, 0xfff4e6, 10, 12],
+      [cx, roofY - 1.2, cz, 0xffffff, 52, 38],
+      [cx, 2.4, cz, 0xfff4e6, 12, 15],
     ]);
 
     const style = t.ink === 'light' ? 'light' : 'dark';
@@ -586,15 +586,16 @@ export function makeArchitecture(ctx) {
   function basilica({ key, spec, t, kind, accent, ids, cx, z0, doors, form }) {
     const v = form === 'iron' ? 'iron' : form === 'crypt' ? 'crypt' : 'temple';
     const nb = Math.max(2, Math.ceil(ids.length / 2));
-    const bay = v === 'crypt' ? 4.2 : 4.6;
-    const x0 = cx - 7.5;
-    const x1 = cx + 7.5;
-    const colX = 3.3;
-    const zc0 = z0 + 3.5;
-    const z1 = zc0 + nb * bay + 3.0;
+    const bay = v === 'crypt' ? 5.0 : 5.6;
+    const HW = 9.5; // half-width
+    const x0 = cx - HW;
+    const x1 = cx + HW;
+    const colX = 4.2;
+    const zc0 = z0 + 4.5;
+    const z1 = zc0 + nb * bay + 4.0;
     const apse = v !== 'iron';
-    const Hw = { temple: 5.2, iron: 6.5, crypt: 3.4 }[v];
-    const spring = { temple: 6.0, iron: 6.5, crypt: 2.9 }[v];
+    const Hw = { temple: 6.2, iron: 7.4, crypt: 4.2 }[v];
+    const spring = { temple: 7.0, iron: 7.4, crypt: 3.6 }[v];
     const palette = {
       temple: { bg: '#f4f0e8', wall: ['#ebe4d6', '#cfc3ae'], col: 0xefe8dc, floor: 0xece6da, hemi: [0xfff6e8, 0xb9ae98, 0.8], light: 0xfff0dc, ink: 'dark', surface: 'marble' },
       iron: { bg: '#1a1c22', wall: ['#2a2b33', '#17181d'], col: 0x2f3440, floor: 0x2a2b30, hemi: [0x9fb2c8, 0x15151b, 0.75], light: 0xdfe8ff, ink: 'light', surface: 'stone' },
@@ -603,29 +604,29 @@ export function makeArchitecture(ctx) {
     const dark = v !== 'temple';
     const room = makeRoom(key, { type: 'rect', x0, x1, z0, z1: apse ? z1 + colX : z1 }, palette.surface, {
       bg: palette.bg,
-      fog: dark ? { type: 'exp2', color: palette.bg, density: v === 'crypt' ? 0.045 : 0.02 } : { type: 'linear', color: palette.bg, near: 30, far: 80 },
+      fog: dark ? { type: 'exp2', color: palette.bg, density: v === 'crypt' ? 0.036 : 0.017 } : { type: 'linear', color: palette.bg, near: 30, far: 80 },
       envI: dark ? 0.25 : 0.6,
     });
     room.floors = [{ type: 'rect', x0, x1, z0, z1, h: 0 }];
     if (apse) room.floors.push({ type: 'circle', x: cx, z: z1, r: colX, h: 0 });
     const colMat = std(palette.col, v === 'iron' ? 0.45 : 0.7, v === 'iron' ? { metalness: 0.6 } : {});
     const floorMat = v === 'temple'
-      ? new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.tileFloor(), { repeat: [15 / 4, (z1 - z0) / 4] }), roughness: 0.3 })
+      ? new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.tileFloor(), { repeat: [(2 * HW) / 4, (z1 - z0) / 4] }), roughness: 0.3 })
       : std(palette.floor, v === 'iron' ? 0.35 : 0.95, v === 'iron' ? { metalness: 0.25 } : {});
     floorPlane(room, x0, x1, z0, z1, 0, floorMat);
     const wallTex = TX.toTexture(TX.plainWall(Hw, ...palette.wall));
     const L = z1 - z0;
     wall(room, L, Hw, wallTex, x0, (z0 + z1) / 2, V3(1, 0, 0));
     wall(room, L, Hw, wallTex, x1, (z0 + z1) / 2, V3(-1, 0, 0));
-    wall(room, 15, Hw, wallTex, cx, z0, V3(0, 0, 1));
+    wall(room, 2 * HW, Hw, wallTex, cx, z0, V3(0, 0, 1));
     if (apse) {
-      wall(room, 7.5 - colX, Hw, wallTex, cx - (7.5 + colX) / 2, z1, V3(0, 0, -1));
-      wall(room, 7.5 - colX, Hw, wallTex, cx + (7.5 + colX) / 2, z1, V3(0, 0, -1));
-    } else wall(room, 15, Hw, wallTex, cx, z1, V3(0, 0, -1));
+      wall(room, HW - colX, Hw, wallTex, cx - (HW + colX) / 2, z1, V3(0, 0, -1));
+      wall(room, HW - colX, Hw, wallTex, cx + (HW + colX) / 2, z1, V3(0, 0, -1));
+    } else wall(room, 2 * HW, Hw, wallTex, cx, z1, V3(0, 0, -1));
 
     // Colonnades.
-    const colR = { temple: 0.42, iron: 0.17, crypt: 0.45 }[v];
-    const colH = { temple: 5.2, iron: 6.5, crypt: 2.9 }[v];
+    const colR = { temple: 0.46, iron: 0.19, crypt: 0.5 }[v];
+    const colH = { temple: 6.2, iron: 7.4, crypt: 3.6 }[v];
     for (let i = 0; i <= nb; i++) {
       const z = zc0 + i * bay;
       for (const sx of [-1, 1]) column(room, cx + sx * colX, z, 0, colH, colR, colMat, { capital: v !== 'iron' });
@@ -633,8 +634,8 @@ export function makeArchitecture(ctx) {
     if (v === 'temple') {
       // Entablature, aisle ceilings, a coffered barrel vault with a skylight.
       for (const sx of [-1, 1]) {
-        box(room, 0.95, 0.8, L, cx + sx * colX, 5.6, (z0 + z1) / 2, colMat);
-        ceilingPlane(room, sx < 0 ? x0 : cx + colX, sx < 0 ? cx - colX : x1, z0, z1, 5.2, std(0xf3eee4, 1));
+        box(room, 1.05, 0.8, L, cx + sx * colX, Hw + 0.4, (z0 + z1) / 2, colMat);
+        ceilingPlane(room, sx < 0 ? x0 : cx + colX, sx < 0 ? cx - colX : x1, z0, z1, Hw, std(0xf3eee4, 1));
       }
       const vaultTex = TX.toTexture(TX.coffers(), { repeat: [L / 2.2, 5] });
       const vault = new THREE.CylinderGeometry(colX, colX, L, 40, 1, true, Math.PI / 2, Math.PI).rotateX(Math.PI / 2);
@@ -644,55 +645,55 @@ export function makeArchitecture(ctx) {
       // Apse: a half-drum with a gold half-dome.
       mesh(room, new THREE.CylinderGeometry(colX, colX, spring, 32, 1, true, -Math.PI / 2, Math.PI), std(0xefe8da, 0.9, { side: THREE.BackSide }), cx, spring / 2, z1);
       mesh(room, new THREE.SphereGeometry(colX, 32, 12, 0, Math.PI, 0, Math.PI / 2), std(0xc9a24c, 0.45, { metalness: 0.6, side: THREE.BackSide }), cx, spring, z1);
-      box(room, 15, spring - Hw, 0.3, cx, Hw + (spring - Hw) / 2, z0, std(0xf1ece2, 0.95));
+      box(room, 2 * HW, spring - Hw, 0.3, cx, Hw + (spring - Hw) / 2, z0, std(0xf1ece2, 0.95));
       mesh(room, new THREE.CircleGeometry(colX, 32, 0, Math.PI), std(0xf1ece2, 0.95), cx, spring, z0 + 0.02);
     } else if (v === 'iron') {
       // An elliptical glass roof on iron ribs, and rails down the nave.
-      const roof = new THREE.CylinderGeometry(7.5, 7.5, L, 48, 1, true, Math.PI / 2, Math.PI).rotateX(Math.PI / 2);
+      const roof = new THREE.CylinderGeometry(HW, HW, L, 48, 1, true, Math.PI / 2, Math.PI).rotateX(Math.PI / 2);
       roof.scale(1, 0.56, 1);
       mesh(room, roof, new THREE.MeshStandardMaterial({ color: 0xbfcad6, emissive: 0x6b7f93, emissiveIntensity: 0.55, roughness: 0.2, side: THREE.DoubleSide }), cx, Hw, (z0 + z1) / 2);
       for (let i = 0; i <= nb; i++) {
-        const arc = new THREE.TorusGeometry(7.4, 0.08, 6, 48, Math.PI);
+        const arc = new THREE.TorusGeometry(HW - 0.1, 0.08, 6, 48, Math.PI);
         arc.scale(1, 0.56, 1);
         mesh(room, arc, colMat, cx, Hw, zc0 + i * bay);
       }
       for (const a of [0.35, 0.8, 1.2, 1.57, 1.94, 2.34, 2.79]) {
-        box(room, 0.07, 0.07, L, cx + Math.cos(a) * 7.4, Hw + Math.sin(a) * 7.4 * 0.56, (z0 + z1) / 2, colMat);
+        box(room, 0.07, 0.07, L, cx + Math.cos(a) * (HW - 0.1), Hw + Math.sin(a) * (HW - 0.1) * 0.56, (z0 + z1) / 2, colMat);
       }
       for (const sx of [-1, 1]) {
         box(room, 0.08, 0.05, L - 1, cx + sx * 0.72, 0.025, (z0 + z1) / 2, std(0x8a8f99, 0.3, { metalness: 0.9 }));
       }
       for (let z = z0 + 1; z < z1 - 0.5; z += 0.8) box(room, 2.1, 0.03, 0.22, cx, 0.015, z, std(0x3a2f26, 0.9));
       const lunette = new THREE.Shape();
-      lunette.moveTo(-7.5, 0);
-      lunette.absellipse(0, 0, 7.5, 7.5 * 0.56, Math.PI, 0, true);
-      lunette.lineTo(-7.5, 0);
+      lunette.moveTo(-HW, 0);
+      lunette.absellipse(0, 0, HW, HW * 0.56, Math.PI, 0, true);
+      lunette.lineTo(-HW, 0);
       mesh(room, new THREE.ShapeGeometry(lunette, 32), std(0x2a2b33, 0.9, { side: THREE.DoubleSide }), cx, Hw, z0 + 0.02);
       const fan = mesh(room, new THREE.ShapeGeometry(lunette, 32), new THREE.MeshBasicMaterial({ color: 0xcfdcea, toneMapped: false, side: THREE.DoubleSide }), cx, Hw, z1 - 0.02);
       fan.scale.set(0.96, 0.94, 1);
       for (let i = 1; i < 8; i++) {
         const a = (i / 8) * Math.PI;
-        beam(room, V3(cx, Hw, z1 - 0.06), V3(cx + Math.cos(a) * 7.2, Hw + Math.sin(a) * 7.2 * 0.56, z1 - 0.06), 0.09, colMat);
+        beam(room, V3(cx, Hw, z1 - 0.06), V3(cx + Math.cos(a) * (HW - 0.3), Hw + Math.sin(a) * (HW - 0.3) * 0.56, z1 - 0.06), 0.09, colMat);
       }
-      mesh(room, new THREE.TorusGeometry(3.6, 0.06, 6, 32, Math.PI).scale(1, 0.56, 1), colMat, cx, Hw, z1 - 0.07);
+      mesh(room, new THREE.TorusGeometry(HW * 0.48, 0.06, 6, 32, Math.PI).scale(1, 0.56, 1), colMat, cx, Hw, z1 - 0.07);
     } else {
       // Crypt: low barrel vaults over nave and aisles, candles by every work.
       const stone = std(0x4a423a, 0.95, { side: THREE.BackSide });
       const vault = new THREE.CylinderGeometry(colX, colX, L, 32, 1, true, Math.PI / 2, Math.PI).rotateX(Math.PI / 2);
       mesh(room, vault, stone, cx, spring, (z0 + z1) / 2);
       for (const sx of [-1, 1]) {
-        const ar = (7.5 - colX) / 2;
+        const ar = (HW - colX) / 2;
         const aisle = new THREE.CylinderGeometry(ar, ar, L, 24, 1, true, Math.PI / 2, Math.PI).rotateX(Math.PI / 2);
         mesh(room, aisle, stone, cx + sx * (colX + ar), spring, (z0 + z1) / 2);
         box(room, 0.7, spring + 0.9 - colH, L, cx + sx * colX, colH + (spring + 0.9 - colH) / 2, (z0 + z1) / 2, std(0x5a5046, 0.95));
       }
       mesh(room, new THREE.CylinderGeometry(colX, colX, spring, 32, 1, true, -Math.PI / 2, Math.PI), std(0x3d352e, 0.95, { side: THREE.BackSide }), cx, spring / 2, z1);
       mesh(room, new THREE.SphereGeometry(colX, 24, 10, 0, Math.PI, 0, Math.PI / 2), std(0x3d352e, 0.95, { side: THREE.BackSide }), cx, spring, z1);
-      box(room, 15, 3.4, 0.3, cx, Hw + 1.7, z0, std(0x3b342d, 0.95));
+      box(room, 2 * HW, spring + colX + 0.3 - Hw, 0.3, cx, (Hw + spring + colX + 0.3) / 2, z0, std(0x3b342d, 0.95));
     }
     addLights(room, palette.hemi, [
-      [cx, dark ? spring - 0.4 : 8, z0 + L * 0.3, palette.light, v === 'crypt' ? 9 : v === 'temple' ? 20 : 28, v === 'crypt' ? 14 : 26],
-      [cx, dark ? spring - 0.4 : 8, z1 - 2, palette.light, v === 'crypt' ? 9 : v === 'temple' ? 18 : 26, v === 'crypt' ? 14 : 26],
+      [cx, dark ? spring - 0.4 : Hw + 2.8, z0 + L * 0.3, palette.light, v === 'crypt' ? 12 : v === 'temple' ? 26 : 34, v === 'crypt' ? 18 : 32],
+      [cx, dark ? spring - 0.4 : Hw + 2.8, z1 - 2, palette.light, v === 'crypt' ? 12 : v === 'temple' ? 24 : 32, v === 'crypt' ? 18 : 32],
     ]);
 
     const ink = palette.ink;
@@ -701,23 +702,23 @@ export function makeArchitecture(ctx) {
     const slots = apse
       ? [
           { pos: V3(cx, 0, z1 + colX - 0.28), dir: V3(0, 0, -1), w: 2.2, h: dh, signW: 2.4 },
-          { pos: V3(cx - 5.4, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.2, h: dh, signW: 2.4 },
-          { pos: V3(cx + 5.4, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.2, h: dh, signW: 2.4 },
+          { pos: V3(cx - (HW + colX) / 2, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.2, h: dh, signW: 2.4 },
+          { pos: V3(cx + (HW + colX) / 2, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.2, h: dh, signW: 2.4 },
         ]
       : [
           { pos: V3(cx, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.4, h: 3.4, signW: 2.8 },
-          { pos: V3(cx - 5.2, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.4, h: 3.4, signW: 2.8 },
-          { pos: V3(cx + 5.2, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.4, h: 3.4, signW: 2.8 },
+          { pos: V3(cx - HW * 0.68, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.4, h: 3.4, signW: 2.8 },
+          { pos: V3(cx + HW * 0.68, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.4, h: 3.4, signW: 2.8 },
         ];
     hangDoors(room, slots, doors.links, ink);
-    wingText(room, spec, V3(cx - 4.9, v === 'crypt' ? 1.8 : 2.4, z0 + 0.03), V3(0, 0, 1), ink, 2.8);
+    wingText(room, spec, V3(cx - HW * 0.64, v === 'crypt' ? 1.9 : 2.4, z0 + 0.03), V3(0, 0, 1), ink, 2.8);
 
     const common = workStyle(t, accent);
     const wy = { temple: 2.5, iron: 2.8, crypt: 1.8 }[v];
     const wh = { temple: 2.1, iron: 2.3, crypt: 1.45 }[v];
     const flames = [];
     const plan = displayModes(v === 'temple' ? 'basilica' : v, key, ids.length);
-    const env = { dark, inset: 1.7, wireTo: v === 'iron' ? Hw + 0.3 : v === 'crypt' ? 2.8 : Hw - 0.1, leanMax: v === 'crypt' ? 1.6 : 2.0 };
+    const env = { dark, inset: 1.9, wireTo: v === 'iron' ? Hw + 0.3 : v === 'crypt' ? 3.4 : Hw - 0.1, leanMax: v === 'crypt' ? 1.8 : 2.0 };
     ids.forEach((id, k) => {
       const i = Math.floor(k / 2);
       const west = k % 2 === 0;
@@ -749,9 +750,9 @@ export function makeArchitecture(ctx) {
   function octagon({ key, spec, t, accent, ids, cx, z0, doors }) {
     const white = spec.template === 'white';
     const cz = z0 + 10;
-    const A = 7.2;
+    const A = 9.4;
     const R = A / Math.cos(Math.PI / 8);
-    const Hw = 6.4;
+    const Hw = 7.4;
     const room = makeRoom(key, { type: 'circle', x: cx, z: cz, r: A }, 'marble', {
       bg: white ? '#f3f3f1' : '#efe4d0',
       fog: { type: 'linear', color: white ? '#f3f3f1' : '#efe4d0', near: 24, far: 70 },
@@ -793,8 +794,8 @@ export function makeArchitecture(ctx) {
       });
     }
     addLights(room, white ? [0xffffff, 0xdedede, 1.3] : [0xfff0d8, 0x5a4a38, 0.8], [
-      [cx, topY - 1, cz, white ? 0xf4f8ff : 0xffe6bc, 40, 26],
-      [cx, 2.6, cz + 2, white ? 0xffffff : 0xffd9a0, 10, 12],
+      [cx, topY - 1, cz, white ? 0xf4f8ff : 0xffe6bc, 52, 34],
+      [cx, 2.6, cz + 2, white ? 0xffffff : 0xffd9a0, 13, 16],
     ]);
 
     const ink = 'dark';
@@ -842,9 +843,11 @@ export function makeArchitecture(ctx) {
 
   // Enfilade: three salons in a row, joined by arched openings.
   function enfilade({ key, spec, t, accent, ids, cx, z0, doors, kind }) {
-    const D = 8.5;
-    const W = 9;
-    const H = 5.6;
+    const D = 10.5;
+    const W = 12;
+    const H = 6.4;
+    const AW = 3.4; // arch width
+    const AH = 4.8;
     const x0 = cx - W / 2;
     const x1 = cx + W / 2;
     const z1 = z0 + 3 * D;
@@ -863,11 +866,11 @@ export function makeArchitecture(ctx) {
     const gold = std(0xc9a24c, 0.4, { metalness: 0.7 });
     for (const k of [1, 2]) {
       const z = z0 + k * D;
-      archWall(room, { x: cx, z, w: W, H, aw: 2.8, ah: 4.0, depth: 0.5, mat: wallMat });
-      const moulding = new THREE.TorusGeometry(1.45, 0.07, 8, 32, Math.PI);
-      for (const s of [-1, 1]) mesh(room, moulding, gold, cx, 4.0 - 1.4, z + s * 0.26);
-      room.obstacles.push({ type: 'rect', x0, x1: cx - 1.4, z0: z - 0.28, z1: z + 0.28 });
-      room.obstacles.push({ type: 'rect', x0: cx + 1.4, x1, z0: z - 0.28, z1: z + 0.28 });
+      archWall(room, { x: cx, z, w: W, H, aw: AW, ah: AH, depth: 0.5, mat: wallMat });
+      const moulding = new THREE.TorusGeometry(AW / 2 + 0.05, 0.07, 8, 32, Math.PI);
+      for (const s of [-1, 1]) mesh(room, moulding, gold, cx, AH - AW / 2, z + s * 0.26);
+      room.obstacles.push({ type: 'rect', x0, x1: cx - AW / 2, z0: z - 0.28, z1: z + 0.28 });
+      room.obstacles.push({ type: 'rect', x0: cx + AW / 2, x1, z0: z - 0.28, z1: z + 0.28 });
     }
     // A lantern skylight in each salon's ceiling, and an ottoman in the middle one.
     for (let k = 0; k < 3; k++) {
@@ -881,8 +884,8 @@ export function makeArchitecture(ctx) {
     mesh(room, new THREE.CylinderGeometry(0.22, 0.3, 0.7, 16), velvet, cx, 0.6, z0 + 1.5 * D);
     room.obstacles.push({ type: 'circle', x: cx, z: z0 + 1.5 * D, r: 1.0 });
     addLights(room, [0xfff1dc, 0x6e5a44, 0.9], [
-      [cx, H - 1, z0 + 0.5 * D, 0xfff1d8, 20, 14],
-      [cx, H - 1, z0 + 2.5 * D, 0xfff1d8, 20, 14],
+      [cx, H - 1, z0 + 0.5 * D, 0xfff1d8, 26, 18],
+      [cx, H - 1, z0 + 2.5 * D, 0xfff1d8, 26, 18],
     ]);
 
     const ink = 'dark';
@@ -894,7 +897,7 @@ export function makeArchitecture(ctx) {
       { pos: V3(x1 - 0.06, 0, mid), dir: V3(-1, 0, 0), w: 2.4, h: 3.2, signW: 2.8 },
     ];
     const spare = hangDoors(room, slots, doors.links, ink);
-    wingText(room, spec, V3(cx - 3.1, 2.4, z0 + 0.03), V3(0, 0, 1), ink, 2.3);
+    wingText(room, spec, V3(cx - W * 0.35, 2.4, z0 + 0.03), V3(0, 0, 1), ink, 2.5);
 
     // Works: the side walls of the first and last salons, then any free wall.
     const common = workStyle(t, accent);
@@ -908,7 +911,7 @@ export function makeArchitecture(ctx) {
     ];
     if (spare.some((s) => s.dir.z !== 0)) workSlots.push({ pos: V3(cx, 2.4, z1 - 0.04), dir: V3(0, 0, -1), h: 2.3, maxW: 4 });
     for (const k of [1, 2]) {
-      for (const s of [-1, 1]) workSlots.push({ pos: V3(cx + s * 2.95, 2.3, z0 + k * D - 0.27), dir: V3(0, 0, -1), h: 1.35, maxW: 2.0, plaqueSide: 'below', fixed: true });
+      for (const s of [-1, 1]) workSlots.push({ pos: V3(cx + s * (AW / 2 + (W / 2 - AW / 2) / 2), 2.4, z0 + k * D - 0.27), dir: V3(0, 0, -1), h: 1.5, maxW: 2.6, plaqueSide: 'below', fixed: true });
     }
     const plan = displayModes('enfilade', key, ids.length);
     ids.forEach((id, k) => {
@@ -924,13 +927,13 @@ export function makeArchitecture(ctx) {
   // Attic: under a pitched roof with exposed rafters, skylights and fairy
   // lights; polaroids along the knee walls.
   function attic({ key, spec, t, accent, ids, cx, z0, doors }) {
-    const W = 9;
-    const eave = 2.3;
-    const ridge = 5.4;
+    const W = 12;
+    const eave = 2.8;
+    const ridge = 6.6;
     const x0 = cx - W / 2;
     const x1 = cx + W / 2;
     const perSide = Math.max(2, Math.ceil(ids.length / 2));
-    const L = Math.max(14, 6 + perSide * 3.4);
+    const L = Math.max(18, 8 + perSide * 4.4);
     const z1 = z0 + L;
     const zm = (z0 + z1) / 2;
     const room = makeRoom(key, { type: 'rect', x0, x1, z0, z1 }, 'wood', {
@@ -965,7 +968,7 @@ export function makeArchitecture(ctx) {
     const gableMat = std(0xd9c7ef, 0.95, { side: THREE.DoubleSide });
     mesh(room, new THREE.ShapeGeometry(gable), gableMat, cx, 0, z0);
     mesh(room, new THREE.ShapeGeometry(gable), gableMat, cx, 0, z1);
-    const moon = mesh(room, new THREE.CircleGeometry(0.55, 32), new THREE.MeshBasicMaterial({ map: TX.nightWindow(), toneMapped: false }), cx, 4.3, z1 - 0.02);
+    const moon = mesh(room, new THREE.CircleGeometry(0.6, 32), new THREE.MeshBasicMaterial({ map: TX.nightWindow(), toneMapped: false }), cx, ridge - 1.1, z1 - 0.02);
     moon.rotation.y = Math.PI;
     // Rafters, ridge beam, collar ties.
     const timber = std(0x7a5534, 0.8);
@@ -973,7 +976,7 @@ export function makeArchitecture(ctx) {
     for (let z = z0 + 0.6; z < z1 - 0.3; z += 1.2) {
       for (const s of [-1, 1]) beam(room, V3(cx + s * (run - 0.05), eave - 0.02, z), V3(cx + s * 0.1, ridge - 0.08, z), 0.12, timber);
     }
-    for (let z = z0 + 1.8; z < z1 - 1; z += 3.6) box(room, run * 2 * ((ridge - 4.1) / (ridge - eave)), 0.12, 0.12, cx, 4.1, z, timber);
+    for (let z = z0 + 1.8; z < z1 - 1; z += 3.6) box(room, run * 2 * (1.3 / (ridge - eave)), 0.12, 0.12, cx, ridge - 1.3, z, timber);
     // Roof lights on one slope, fairy lights along the ridge.
     const sky = TX.nightWindow();
     for (let z = z0 + 3; z < z1 - 2; z += 5) {
@@ -994,8 +997,8 @@ export function makeArchitecture(ctx) {
       lights.material.opacity = 0.8 + Math.sin(tt * 1.7) * 0.12;
     });
     addLights(room, [0xffe0f0, 0x5a4a7e, 0.85], [
-      [cx, 4.2, z0 + L * 0.28, 0xffd6b0, 12, 12],
-      [cx, 4.2, z0 + L * 0.72, 0xffd6b0, 12, 12],
+      [cx, ridge - 1.2, z0 + L * 0.28, 0xffd6b0, 16, 16],
+      [cx, ridge - 1.2, z0 + L * 0.72, 0xffd6b0, 16, 16],
     ]);
 
     const ink = 'hand';
@@ -1003,20 +1006,20 @@ export function makeArchitecture(ctx) {
     const slots = doors.links.length === 1
       ? [{ pos: V3(cx, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.2, h: 2.9, signW: 2.0 }]
       : [
-          { pos: V3(cx - 1.8, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.0, h: 2.6, signW: 1.8 },
-          { pos: V3(cx + 1.8, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.0, h: 2.6, signW: 1.8 },
+          { pos: V3(cx - 2.2, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.0, h: 2.8, signW: 1.8 },
+          { pos: V3(cx + 2.2, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.0, h: 2.8, signW: 1.8 },
         ];
     hangDoors(room, slots, doors.links, ink);
-    wingText(room, spec, V3(cx - 2.95, 1.55, z0 + 0.03), V3(0, 0, 1), ink, 1.9);
+    wingText(room, spec, V3(cx - 3.7, 1.7, z0 + 0.03), V3(0, 0, 1), ink, 2.0);
 
     const common = workStyle(t, accent);
     const plan = displayModes('attic', key, ids.length);
     ids.forEach((id, k) => {
       const west = k % 2 === 0;
       const i = Math.floor(k / 2);
-      const z = z0 + 4 + i * 3.4;
-      const slot = { pos: V3(west ? x0 + 0.05 : x1 - 0.05, 1.28, z), dir: V3(west ? 1 : -1, 0, 0), h: 1.05, maxW: 1.6, tilt: (TX.hash(id) - 0.5) * 0.14 };
-      hang(room, id, slot, plan[k], common, { inset: 2.0, wireTo: 2.25, leanMax: 1.3 });
+      const z = z0 + 5 + i * 4.4;
+      const slot = { pos: V3(west ? x0 + 0.05 : x1 - 0.05, 1.5, z), dir: V3(west ? 1 : -1, 0, 0), h: 1.2, maxW: 1.8, tilt: (TX.hash(id) - 0.5) * 0.14 };
+      hang(room, id, slot, plan[k], common, { inset: 2.2, wireTo: eave - 0.05, leanMax: 1.5 });
     });
     return room;
   }
@@ -1024,9 +1027,9 @@ export function makeArchitecture(ctx) {
   // The classic box: white void, screening room, or a plain salon/night/pastel room.
   function classic({ key, spec, t, kind, accent, ids, cx, z0, doors, form }) {
     const rows = Math.max(1, Math.ceil(Math.min(ids.length, 6) / 2));
-    const W = 12;
-    const L = 8 + rows * 5;
-    const H = t.height;
+    const W = 15;
+    const L = 10 + rows * 6;
+    const H = t.height * 1.15;
     const x0 = cx - W / 2;
     const x1 = cx + W / 2;
     const z1 = z0 + L;
@@ -1037,12 +1040,12 @@ export function makeArchitecture(ctx) {
     const bg = cinema ? '#0b0507' : dark ? '#0d0c20' : pastel ? '#2a2340' : '#f3f0ea';
     const room = makeRoom(key, { type: 'rect', x0, x1, z0, z1 }, t.surface, {
       bg,
-      fog: dark ? { type: 'exp2', color: bg, density: 0.022 } : { type: 'linear', color: bg, near: white ? 14 : 30, far: white ? 46 : 80 },
+      fog: dark ? { type: 'exp2', color: bg, density: 0.018 } : { type: 'linear', color: bg, near: white ? 18 : 30, far: white ? 58 : 90 },
       envI: dark ? 0.22 : white ? 1.0 : 0.45,
     });
     if (white) {
       mesh(room, new THREE.PlaneGeometry(140, 140).rotateX(-Math.PI / 2), std(0xf7f5f1, 0.95), cx, 0, z0 + L / 2);
-      box(room, 11, 4.8, 0.3, cx, 2.4, z0 - 0.17, M.slab);
+      box(room, 14, 5.4, 0.3, cx, 2.7, z0 - 0.17, M.slab);
     } else {
       const wallCanvas = cinema ? TX.plainWall(H, '#3a0e16', '#1a0609') : dark ? TX.eyesWall(H) : pastel ? TX.bedroomWall(H) : TX.galleryWall(H);
       const floorMat = cinema
@@ -1056,43 +1059,43 @@ export function makeArchitecture(ctx) {
     }
     const hemi = cinema ? [0x9a6a70, 0x080305, 0.5] : dark ? [0x6b5fd6, 0x0a0915, 0.6] : pastel ? [0xffe0f0, 0x5a4a7e, 0.85] : white ? [0xffffff, 0xe8e2d6, 1.6] : [0xfff1dc, 0x6e5a44, 0.9];
     addLights(room, hemi, [
-      [cx, H - 1.2, z0 + L * 0.3, cinema ? 0xffb38a : dark ? accent.getHex() : 0xfff1d8, cinema ? 14 : dark ? 28 : 22, 20],
-      [cx, H - 1.2, z0 + L * 0.75, cinema ? 0xffb38a : dark ? accent.getHex() : 0xfff1d8, cinema ? 12 : dark ? 22 : 26, 20],
+      [cx, H - 1.2, z0 + L * 0.3, cinema ? 0xffb38a : dark ? accent.getHex() : 0xfff1d8, cinema ? 18 : dark ? 36 : 28, 26],
+      [cx, H - 1.2, z0 + L * 0.75, cinema ? 0xffb38a : dark ? accent.getHex() : 0xfff1d8, cinema ? 16 : dark ? 28 : 32, 26],
     ]);
     const tall = H >= 5;
     const ink = dark ? 'light' : pastel ? 'hand' : 'dark';
     addPortal(room, { pos: V3(cx, 0, z0 + 0.06), dir: V3(0, 0, 1), dest: doors.back.dest, subtitle: doors.back.subtitle, w: tall ? 2.6 : 2.4, h: tall ? 3.4 : 3.0, signW: 3.0, style: ink, entrance: true });
     const farH = Math.min(3.2, H - 1.2);
-    const xs = ids.length > 6 ? [3.8, -3.8] : [3.8, -3.8, 0];
+    const xs = ids.length > 6 ? [4.8, -4.8] : [4.8, -4.8, 0];
     const slots = xs.map((dx) => ({ pos: V3(cx + dx, 0, z1 - 0.06), dir: V3(0, 0, -1), w: 2.4, h: farH, signW: 2.8 }));
     doors.links.forEach((d, i) => {
       if (white && slots[i]) box(room, 4.2, 4.6, 0.3, slots[i].pos.x, 2.3, z1 + 0.17, M.slab);
     });
     hangDoors(room, slots, doors.links, ink);
-    wingText(room, spec, V3(cx - 3.9, 2.4, z0 + 0.03), V3(0, 0, 1), ink, 3.0);
+    wingText(room, spec, V3(cx - 4.9, 2.4, z0 + 0.03), V3(0, 0, 1), ink, 3.0);
     if (cinema) {
       // Velvet benches, and ducts along the ceiling: this one is in the basement.
       const velvet = std(0x4a0e17, 0.95);
       for (let r = 0; r < rows; r++) {
-        const z = z0 + 6 + r * 5;
+        const z = z0 + 7 + r * 6;
         box(room, 1.1, 0.42, 2.6, cx, 0.21, z, velvet);
         box(room, 1.0, 0.08, 2.5, cx, 0.04, z, M.black);
         room.obstacles.push({ type: 'rect', x0: cx - 0.55, x1: cx + 0.55, z0: z - 1.3, z1: z + 1.3 });
       }
       const duct = std(0x2b2426, 0.5, { metalness: 0.6 });
-      for (const [dx, r] of [[-4.6, 0.22], [-3.9, 0.12], [4.4, 0.18]]) {
+      for (const [dx, r] of [[-5.8, 0.22], [-4.9, 0.12], [5.5, 0.18]]) {
         mesh(room, new THREE.CylinderGeometry(r, r, L, 16).rotateX(Math.PI / 2), duct, cx + dx, H - 0.35, z0 + L / 2);
       }
     }
     const common = workStyle(t, accent);
     const plan = displayModes(cinema ? 'cinema' : white ? 'void' : 'rect', key, ids.length);
-    const env = { dark, inset: white ? 1.8 : 1.7, wireTo: H - 0.15, leanMax: Math.min(2.1, H - 1.2) };
+    const env = { dark, inset: white ? 2.0 : 1.9, wireTo: H - 0.15, leanMax: Math.min(2.1, H - 1.2) };
     ids.forEach((id, k) => {
       const y = pastel ? 2.1 : 2.2;
       const tilt = pastel ? (TX.hash(id) - 0.5) * 0.12 : 0;
       let slot;
       if (k < 6) {
-        const z = z0 + 6 + Math.floor(k / 2) * 5;
+        const z = z0 + 7 + Math.floor(k / 2) * 6;
         const west = k % 2 === 0;
         slot = { tilt, pos: V3(west ? x0 + 0.04 : x1 - 0.04, cinema ? 2.6 : y, z), dir: V3(west ? 1 : -1, 0, 0), h: cinema ? 2.6 : 1.9, maxW: cinema ? 3.9 : 3.0 };
       } else {
@@ -1134,8 +1137,9 @@ export function makeArchitecture(ctx) {
     animate(room, (t, dt, cam) => {
       g.getWorldPosition(here);
       const d = Math.hypot(cam.position.x - here.x, cam.position.z - here.z);
-      const want = Math.max(0, Math.min(1, (6.5 - d) / 3.8));
-      open += (want - open) * Math.min(1, (dt || 1 / 60) * 3.5);
+      // Only when you walk up to them, not when you pass by.
+      const want = Math.max(0, Math.min(1, (3.2 - d) / 1.8));
+      open += (want - open) * Math.min(1, (dt || 1 / 60) * 5);
       for (const [pivot, sx] of leaves) pivot.rotation.y = sx * open * 1.45;
     });
     return g;
@@ -1155,10 +1159,10 @@ export function makeArchitecture(ctx) {
     const N = -22; // north wall
     const S = 13.8; // hall face of the south wall
     const H = 11;
-    const VX = 3.6; // vestibule half-width
+    const VX = 5.5; // vestibule half-width
     const VS = 14.2; // vestibule face of the south wall
-    const VN = 22; // front doors
-    const VH = 5.2;
+    const VN = 26; // front doors
+    const VH = 6.4;
     const COLX = 6.2;
     const COLZ = [10.5, 4.5, -1.5, -7.5, -13.5];
     const DOORZ = [7.5, -4.5]; // the bays for the near and far doors
@@ -1173,7 +1177,8 @@ export function makeArchitecture(ctx) {
       { type: 'rect', x0: -1.6, x1: 1.6, z0: S - 0.1, z1: VS + 0.1, h: 0 },
       { type: 'rect', x0: -VX, x1: VX, z0: VS, z1: VN, h: 0 },
     ];
-    room.start = { x: 0, z: 19.6, yaw: 0 };
+    // You start facing the way in, well clear of the front doors behind you.
+    room.start = { x: 0, z: VN - 6.2, yaw: 0 };
     const stone = std(0xefe7da, 0.8);
     const warm = std(0xe2d6c1, 0.85);
     const concrete = std(0x8f897f, 0.95);
@@ -1240,16 +1245,16 @@ export function makeArchitecture(ctx) {
     spill.rotation.x = -Math.PI / 2;
     const doormat = mesh(room, new THREE.PlaneGeometry(2.4, 1.2), std(0xffffff, 1, { map: TX.toTexture(TX.doormat()) }), 0, 0.014, VN - 1.15);
     doormat.rotation.x = -Math.PI / 2;
-    glowPoints(room, [-1.8, VH - 0.06, 16.2, 1.8, VH - 0.06, 16.2, -1.8, VH - 0.06, 19.8, 1.8, VH - 0.06, 19.8], 0xfff0d6, 0.45);
-    // "You are here", and how to visit.
-    pictureLight(addWork(room, works.exterior, { pos: V3(-VX + 0.03, 2.05, 18.2), dir: V3(1, 0, 0), h: 1.5, frame: 'museum', plaqueSide: 'below' }));
-    addText(room, { ...text.visit, width: 2.9 }, V3(VX - 0.03, 2.2, 18.2), V3(-1, 0, 0));
+    glowPoints(room, [-2.8, VH - 0.06, VS + 3, 2.8, VH - 0.06, VS + 3, -2.8, VH - 0.06, VN - 3, 2.8, VH - 0.06, VN - 3], 0xfff0d6, 0.45);
+    // Either side of the way in: "you are here", and how to visit.
+    pictureLight(addWork(room, works.exterior, { pos: V3(-3.5, 2.15, VS + 0.03), dir: V3(0, 0, 1), h: 1.6, frame: 'museum', plaqueSide: 'below' }));
+    addText(room, { ...text.visit, width: 2.8 }, V3(3.55, 2.35, VS + 0.03), V3(0, 0, 1));
     const carve = (title, sub, y, z, dir, width, ink) => {
       const t = TX.inscription(title, sub, { width, ink });
       const m = mesh(room, new THREE.PlaneGeometry(t.width, t.height), new THREE.MeshBasicMaterial({ map: t.texture, transparent: true, depthWrite: false, toneMapped: false }), 0, y, z);
       m.rotation.y = facing(dir);
     };
-    carve('COOLIMAGES', 'A MUSEUM OF THINGS THAT STARE BACK', 4.5, VS + 0.02, V3(0, 0, 1), 4.6, '#4f483f');
+    carve('COOLIMAGES', 'A MUSEUM OF THINGS THAT STARE BACK', 4.45, VS + 0.02, V3(0, 0, 1), 4.8, '#4f483f');
     carve('COOLIMAGES', 'FOUNDED MMXXVI · OPEN WHENEVER YOU ARE', 5.5, S - 0.02, V3(0, 0, -1), 6.4, '#7a6b55');
 
     // ---- the nave: two stelae, the hat in a shaft of light, benches
@@ -1337,7 +1342,7 @@ export function makeArchitecture(ctx) {
 
     addLights(room, [0xfff4e4, 0x8f806a, 0.85], [
       [0, 9.4, -2, 0xfff0d8, 80, 42],
-      [0, 4.4, 18.2, 0xffecd2, 7, 10],
+      [0, VH - 1, VS + 5.5, 0xffecd2, 9, 14],
     ]);
 
     // Walking order for stepping between works: the vestibule, up the west

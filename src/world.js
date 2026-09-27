@@ -632,11 +632,11 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
 
   // ------------------------------------------------------- Grand Gallery
   function buildGallery() {
-    const x0 = -6;
-    const x1 = 6;
+    const x0 = -8;
+    const x1 = 8;
     const z0 = -214;
     const z1 = -186;
-    const H = 5.2;
+    const H = 6.0;
     const room = makeRoom('gallery', { type: 'rect', x0, x1, z0, z1 }, 'wood', {
       bg: '#f3efe6',
       fog: { type: 'linear', color: '#f3efe6', near: 30, far: 80 },
@@ -645,38 +645,38 @@ export function buildWorld({ scene, art, acquisitions, withheld = new Set(), lay
     rectRoom(room, {
       x0, x1, z0, z1, H,
       wallCanvas: TX.galleryWall(H),
-      floorMat: new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.parquet(), { repeat: [6, 14] }), roughness: 0.5 }),
-      ceilingMat: new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.coffers(), { repeat: [6, 14] }), roughness: 1 }),
+      floorMat: new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.parquet(), { repeat: [8, 14] }), roughness: 0.5 }),
+      ceilingMat: new THREE.MeshStandardMaterial({ map: TX.toTexture(TX.coffers(), { repeat: [8, 14] }), roughness: 1 }),
     });
     const sky = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 24), new THREE.MeshBasicMaterial({ color: 0xfff8ea, toneMapped: false }));
     sky.rotation.x = Math.PI / 2;
     sky.position.set(0, H - 0.02, -200);
     room.group.add(sky);
     addLights(room, [0xfff1dc, 0x6e5a44, 0.9], [
-      [0, 4.6, -193, 0xffe2b8, 32, 22],
-      [0, 4.6, -207, 0xffe2b8, 32, 22],
+      [0, 5.4, -193, 0xffe2b8, 40, 26],
+      [0, 5.4, -207, 0xffe2b8, 40, 26],
     ]);
     addPortal(room, { pos: V3(0, 0, -186.06), dir: V3(0, 0, -1), dest: 'lobby', entrance: true });
-    addPortal(room, { pos: V3(-4.45, 0, -213.94), dir: V3(0, 0, 1), ...farDoor('gallery'), w: 2.4, h: 3.2, signW: 2.8 });
+    addPortal(room, { pos: V3(-5.6, 0, -213.94), dir: V3(0, 0, 1), ...farDoor('gallery'), w: 2.4, h: 3.2, signW: 2.8 });
     addText(
       room,
       { kicker: 'Wing I', title: WINGS.gallery.name, subtitle: WINGS.gallery.subtitle, body: WINGS.gallery.statement, width: 3.3 },
-      V3(-3.95, 2.5, -186.02),
+      V3(-5.0, 2.5, -186.02),
       V3(0, 0, -1),
     );
     const notice = customPlaque({ title: 'Please do not feed the shark.', artist: 'The Management', medium: '', saved: '' }, 'brass');
-    notice.position.set(3.9, 1.5, -186.02);
+    notice.position.set(5.0, 1.5, -186.02);
     notice.rotation.y = Math.PI;
     room.group.add(notice);
 
     const west = V3(1, 0, 0);
     const east = V3(-1, 0, 0);
-    pictureLight(addWork(room, 'HS-U0fHWgAESaIL', { pos: V3(-5.97, 1.9, -192), dir: west, h: 1.8, frame: 'gilded', plaque: 'brass' }));
-    pictureLight(addWork(room, 'HRsoxy1XwAArjtI', { pos: V3(-5.97, 1.95, -200), dir: west, h: 2.4, frame: 'oval', plaque: 'brass' }));
-    pictureLight(addWork(room, 'HSCmkFiasAAH6W3', { pos: V3(-5.97, 1.9, -208), dir: west, h: 1.75, frame: 'gilded', plaque: 'brass' }));
-    pictureLight(addWork(room, 'HS894oZbQAAA0O0', { pos: V3(5.97, 1.85, -192), dir: east, h: 1.55, frame: 'gilded', plaque: 'brass' }));
-    pictureLight(addWork(room, 'HS3yTUjWgAA1l0l', { pos: V3(5.97, 1.9, -200), dir: east, h: 1.75, frame: 'gilded', plaque: 'brass' }));
-    pictureLight(addWork(room, 'HTAiirQWYAA7g5J', { pos: V3(5.97, 1.9, -208), dir: east, h: 2.0, frame: 'gilded', plaque: 'brass' }));
+    pictureLight(addWork(room, 'HS-U0fHWgAESaIL', { pos: V3(-7.97, 1.9, -192), dir: west, h: 1.8, frame: 'gilded', plaque: 'brass' }));
+    pictureLight(addWork(room, 'HRsoxy1XwAArjtI', { pos: V3(-7.97, 1.95, -200), dir: west, h: 2.4, frame: 'oval', plaque: 'brass' }));
+    pictureLight(addWork(room, 'HSCmkFiasAAH6W3', { pos: V3(-7.97, 1.9, -208), dir: west, h: 1.75, frame: 'gilded', plaque: 'brass' }));
+    pictureLight(addWork(room, 'HS894oZbQAAA0O0', { pos: V3(7.97, 1.85, -192), dir: east, h: 1.55, frame: 'gilded', plaque: 'brass' }));
+    pictureLight(addWork(room, 'HS3yTUjWgAA1l0l', { pos: V3(7.97, 1.9, -200), dir: east, h: 1.75, frame: 'gilded', plaque: 'brass' }));
+    pictureLight(addWork(room, 'HTAiirQWYAA7g5J', { pos: V3(7.97, 1.9, -208), dir: east, h: 2.0, frame: 'gilded', plaque: 'brass' }));
     pictureLight(addWork(room, 'HSnottDbYAAsfeg', { pos: V3(0, 2.45, -213.97), dir: V3(0, 0, 1), h: 3.0, maxW: 6.2, frame: 'gilded', plaque: 'brass' }), 0xffe2b0, 0.18);
 
     for (const bz of [-196, -204]) {
