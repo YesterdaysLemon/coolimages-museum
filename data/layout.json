@@ -13,7 +13,8 @@
         "HS-hXbrWUAAGQu9",
         "HTAzoptW4AA-OMJ",
         "HS6P2bkWMAAdPOr",
-        "HSrvWjAaMAAdMDu"
+        "HSrvWjAaMAAdMDu",
+        "HTLYUxkWIAA6Eja"
       ],
       "form": "spiral"
     },
@@ -113,7 +114,8 @@
       "works": [
         "HS-NaM8W8AAGAkl",
         "HSRG4LHWMAARhob",
-        "HRozTIJa0AACaVv"
+        "HRozTIJa0AACaVv",
+        "HTQW_AcXUAASjMg"
       ],
       "form": "crypt"
     },
@@ -143,7 +145,8 @@
         "2LdDj-0F47hPX7yX",
         "-ONBNTxZyM0QjSsb",
         "4AzNhblWcUyL7tsq",
-        "ifek9I9M0u2-19cQ"
+        "ifek9I9M0u2-19cQ",
+        "ePq2BzEjADNeEHx4"
       ],
       "form": "cinema"
     },
@@ -232,9 +235,27 @@
         "HTLXxQzXIAAq7jH",
         "HTOfKAja8AAnjnk",
         "HQNGrC-XwAAJwc8",
-        "oiL9Q7cWHNxhL-cp"
+        "oiL9Q7cWHNxhL-cp",
+        "HTPS1i3WcAA1xoA",
+        "HTRA8HJXMAABtcO"
       ],
       "form": "rect"
+    },
+    "wing-everything-at-once": {
+      "name": "Everything At Once",
+      "subtitle": "Screens, Fully Loaded",
+      "statement": "Five pictures that refuse to leave any space empty: two maximalist paintings with a taskbar running along the bottom edge, a tapestry of the early internet, a teaching diagram that covers an entire curriculum in one image, and a game world that has ground itself into icons and noise. All of them are organised, in the sense that somebody very clearly had a system. Working out what it was is the visitor's problem.",
+      "template": "white",
+      "accent": "#12b5a5",
+      "created": "2026-09-28T18:00",
+      "works": [
+        "G58hN-4WEAAAZo0",
+        "HTOdJ_JbUAAyn6D",
+        "HTJazV7aUAAVXUE",
+        "kptyRiKzXbz95qNI",
+        "HTSYeMrWcAA58V5"
+      ],
+      "form": "basilica"
     }
   },
   "links": [
@@ -332,6 +353,11 @@
       "wing-understudies",
       "wing-wrong-size",
       "Objects, badly scaled"
+    ],
+    [
+      "wing-everything-at-once",
+      "wing-fine-grain",
+      "More than the eye takes"
     ]
   ],
   "stairs": {

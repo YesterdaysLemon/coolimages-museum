@@ -1871,5 +1871,286 @@
     ],
     "curatedAt": "2026-09-27T22:00",
     "wing": "wing-plain-evidence"
+  },
+  "HTLYUxkWIAA6Eja": {
+    "title": "Four Years, No Particular Hurry",
+    "artist": "Wikipedia contributors",
+    "medium": "Screenshot, encyclopedia entry",
+    "note": "A screenshot of the Wikipedia article \"List of longest walks\", giving 15,509 miles between April 1983 and April 1987 and a one-paragraph summary of Steven Newman's solo walk across 21 countries. His stated motive, quoted flatly, was a deep urge to find out whether the world was really as terrible as everyone said. The last sentence lists arrests, bandits, a drunken construction worker and wild boars, and then reports that he concluded it wasn't.",
+    "callouts": [
+      {
+        "u": 0.42,
+        "v": 0.36,
+        "t": "Length (in miles)"
+      },
+      {
+        "u": 0.62,
+        "v": 0.61,
+        "t": "Motive, sincerely given"
+      },
+      {
+        "u": 0.55,
+        "v": 0.78,
+        "t": "Counter-evidence (dismissed)"
+      }
+    ],
+    "curatedAt": "2026-09-28T18:00",
+    "wing": "wing-commitment"
+  },
+  "ePq2BzEjADNeEHx4": {
+    "title": "Noodles, First Model Available",
+    "artist": "@HAL2400_AI",
+    "medium": "AI-generated video, 10 seconds",
+    "note": "A girl in a checked collar leans over a bowl of orange broth in what reads as a small 1990s noodle shop, lifting a hank of yellow noodles to her mouth; over ten seconds her hair inflates into a black storm cloud and her face descends almost into the bowl before surfacing again. The still it came from is Midjourney's oldest model, all smeared edges and improvised crockery, and a current video model has animated that mush with complete physical confidence. The result is a memory of a meal that nobody had. The artist's own description of the experiment — zero productivity — is the correct wall text.",
+    "callouts": [
+      {
+        "u": 0.62,
+        "v": 0.75,
+        "t": "Broth (never disturbed)"
+      },
+      {
+        "u": 0.2,
+        "v": 0.42,
+        "t": "Second bowl, waiting"
+      }
+    ],
+    "curatedAt": "2026-09-28T18:00",
+    "wing": "wing-escalation"
+  },
+  "G58hN-4WEAAAZo0": {
+    "title": "Past the Breaking Point",
+    "artist": "@Guandanarian",
+    "medium": "Glitch animation, 5 seconds, silent",
+    "note": "A dense band of interface debris — skulls, gems, arrows, tiny health bars — runs across the top and bottom of the frame, and in the middle everything collapses into a jagged grey cavern of dithered noise. Over five seconds the cavern breathes, its edges chewing outward and snapping back while the icon strips stay stubbornly on duty. It looks exactly like a game engine trying to draw a level it no longer has the assets for, and the surviving UI is what makes it funny rather than merely broken.",
+    "callouts": [
+      {
+        "u": 0.5,
+        "v": 0.04,
+        "t": "Toolbar (still employed)"
+      },
+      {
+        "u": 0.5,
+        "v": 0.42,
+        "t": "Where rendering gave up"
+      }
+    ],
+    "curatedAt": "2026-09-28T18:00",
+    "wing": "wing-everything-at-once"
+  },
+  "HTOdJ_JbUAAyn6D": {
+    "title": "Save Me a Bite",
+    "artist": "@infiniteyay",
+    "medium": "Painting, maximalist",
+    "note": "Two figures eat open sandwiches at a table covered in a map of the world: a girl in a gold-collared tunic on the left, and on the right a being whose wings are a sprawl of blue and yellow stars, holding up a phone to photograph the meal. A sun with a single human eye leans in over the girl's shoulder, a crescent moon hangs in the black sky, and a full Windows-style taskbar runs along the bottom edge of the canvas like a predella. Every square inch is occupied, yet the actual event is two people having lunch and one of them taking a picture of it first.",
+    "callouts": [
+      {
+        "u": 0.11,
+        "v": 0.15,
+        "t": "Sun (one eye, attentive)"
+      },
+      {
+        "u": 0.44,
+        "v": 0.25,
+        "t": "Photographing the sandwich"
+      },
+      {
+        "u": 0.35,
+        "v": 0.77,
+        "t": "Grail, holding crumbs"
+      },
+      {
+        "u": 0.5,
+        "v": 0.97,
+        "t": "Taskbar along the bottom"
+      }
+    ],
+    "curatedAt": "2026-09-28T18:00",
+    "wing": "wing-everything-at-once"
+  },
+  "HTPS1i3WcAA1xoA": {
+    "title": "Three Lambs, One Donkey",
+    "artist": "Mario Benigni",
+    "medium": "Photograph, alpine pasture",
+    "note": "A mud-legged donkey stands on a green slope wearing a canvas pack saddle fitted with a row of deep pockets, and out of three of them peer the heads of newborn lambs, ears flat, entirely unbothered. The gear is plainly homemade and plainly refined over many seasons: straps, buckles, a red leather panel, pockets sized exactly to one lamb. The donkey looks directly at the camera with the expression of an animal that has done this route before and would like to keep moving.",
+    "callouts": [
+      {
+        "u": 0.3,
+        "v": 0.32,
+        "t": "Passenger one (asleep)"
+      },
+      {
+        "u": 0.45,
+        "v": 0.56,
+        "t": "Saddle, sized per lamb"
+      },
+      {
+        "u": 0.64,
+        "v": 0.17,
+        "t": "Expression: professional patience"
+      }
+    ],
+    "curatedAt": "2026-09-28T18:00",
+    "wing": "wing-understudies"
+  },
+  "HTQW_AcXUAASjMg": {
+    "title": "You Have No Choice",
+    "artist": "Unknown artist",
+    "medium": "Digital collage",
+    "note": "Clippy, rendered in full glossy 1997 detail on a sheet of ruled paper, offers the speech bubble \"You will be fine. You have no choice.\" To the right, a tower of apples falls apart: one has a woman and a black cat living in the hole bitten out of it, one has a human eye set into its skin, and at the bottom the Earth itself has been eaten down to a core. The tone is the joke — the most cheerful helper software ever made, delivering a line with no exit in it.",
+    "callouts": [
+      {
+        "u": 0.29,
+        "v": 0.42,
+        "t": "Tone: reassuring"
+      },
+      {
+        "u": 0.48,
+        "v": 0.23,
+        "t": "Tenant of the apple"
+      },
+      {
+        "u": 0.73,
+        "v": 0.33,
+        "t": "Apple, looking back"
+      },
+      {
+        "u": 0.7,
+        "v": 0.73,
+        "t": "Earth (core removed)"
+      }
+    ],
+    "curatedAt": "2026-09-28T18:00",
+    "wing": "wing-polite-monsters"
+  },
+  "HTRA8HJXMAABtcO": {
+    "title": "Credited As Camera Operator",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, street level",
+    "note": "A black dog stands on asphalt beside someone's leg, mouth open and happy, while a silver Sony DV camcorder is held at exactly the height and angle that makes it look like the dog is shouldering the rig. The human hand at the top of the frame is the only thing spoiling the illusion, and it isn't spoiling it much. Two white-socked front paws are planted like a tripod, which finishes the job.",
+    "callouts": [
+      {
+        "u": 0.6,
+        "v": 0.14,
+        "t": "Human hand (technically)"
+      },
+      {
+        "u": 0.75,
+        "v": 0.28,
+        "t": "Sony DV, late nineties"
+      },
+      {
+        "u": 0.49,
+        "v": 0.63,
+        "t": "White socks (crew standard)"
+      }
+    ],
+    "curatedAt": "2026-09-28T18:00",
+    "wing": "wing-understudies"
+  },
+  "HTGeWQWbkAAB3uk": {
+    "title": "Went Out Without an Umbrella",
+    "artist": "Unknown artist",
+    "medium": "Oil pastel and crayon",
+    "note": "A small figure in a black coat stands in a field of scribbled pink and blue flowers, one pink eye visible under dark hair, while the entire upper two thirds of the sky is a black spiral vortex ringed by a smeared rainbow. The crayon is worked hard — you can see the waxy drag and the scratched-in black lines — so the sky feels physically scraped open rather than composited. The figure isn't running, which is the part that stays with you.",
+    "callouts": [
+      {
+        "u": 0.35,
+        "v": 0.33,
+        "t": "Sky, opening"
+      },
+      {
+        "u": 0.47,
+        "v": 0.67,
+        "t": "One pink eye"
+      },
+      {
+        "u": 0.16,
+        "v": 0.91,
+        "t": "Flowers (unconcerned)"
+      }
+    ],
+    "curatedAt": "2026-09-28T18:00",
+    "wing": "lobby",
+    "hold": true
+  },
+  "HTJazV7aUAAVXUE": {
+    "title": "Still Working On It",
+    "artist": "@infiniteyay",
+    "medium": "Digital collage, tiled",
+    "note": "A huge dragon face — marbled green and cream, three blue eyes, a mouth of white teeth spilling a rainbow — is assembled out of square tiles, some of which are paintings and some of which are screenshots: illustrated tourist maps, an emoji grid, a game HUD, a colour picker, an open browser window. Underneath it all sits a painted child on a plaid blanket, staring straight out, her own eyes repeated at giant scale in the window at the bottom. The mosaic never resolves into one surface, and the seams are the point: it's a face being loaded rather than a face.",
+    "callouts": [
+      {
+        "u": 0.46,
+        "v": 0.24,
+        "t": "Eyes (three, so far)"
+      },
+      {
+        "u": 0.62,
+        "v": 0.55,
+        "t": "Rainbow leaving mouth"
+      },
+      {
+        "u": 0.17,
+        "v": 0.86,
+        "t": "Child, rendered plainly"
+      },
+      {
+        "u": 0.47,
+        "v": 0.9,
+        "t": "Window left open"
+      }
+    ],
+    "curatedAt": "2026-09-28T18:00",
+    "wing": "wing-everything-at-once"
+  },
+  "kptyRiKzXbz95qNI": {
+    "title": "World Wide Web 1.0",
+    "artist": "Kika Nicolela",
+    "medium": "AI-generated video, 3 seconds, silent",
+    "note": "A teal panel in an ornate border holds a spiderweb of dotted lines strung between hundreds of tiny figures, appliances, swans, monitors and hearts, with a glowing blue orb at the dead centre and a red-lit arch glowing in the lower right corner. Over three seconds nothing travels along the web; instead the little icons flicker, swap and re-render in place, so the whole network shimmers without ever transmitting anything. It looks like a devotional tapestry of the early internet made by someone who only heard it described.",
+    "callouts": [
+      {
+        "u": 0.5,
+        "v": 0.45,
+        "t": "Central server (presumed)"
+      },
+      {
+        "u": 0.79,
+        "v": 0.76,
+        "t": "Sunset, or volcano"
+      }
+    ],
+    "curatedAt": "2026-09-28T18:00",
+    "wing": "wing-everything-at-once"
+  },
+  "HTSYeMrWcAA58V5": {
+    "title": "Introduction to Everything, 2000",
+    "artist": "Dr. William T. Verts",
+    "medium": "Web graphic, circa 2000",
+    "note": "A single course-page image packs in a library catalogue card for a Barbara Kingsolver audiobook, a call-number alphabetising diagram for CAMPBELL and CANFIELD, two abacuses, a ruler in inches, a clock face, a resistor with a ground symbol, three coloured dots and an exploded RGB cube, all on white with a small copyright line at the bottom. Nothing is connected to anything else except by adjacency and a couple of hopeful arrows. It is the entire concept of \"information\" crammed into one GIF by someone who had exactly one image slot on the syllabus page.",
+    "callouts": [
+      {
+        "u": 0.11,
+        "v": 0.12,
+        "t": "CAMPBELL before CANFIELD"
+      },
+      {
+        "u": 0.72,
+        "v": 0.16,
+        "t": "Abacus (two, why not)"
+      },
+      {
+        "u": 0.82,
+        "v": 0.72,
+        "t": "Web-safe colour cube"
+      },
+      {
+        "u": 0.5,
+        "v": 0.94,
+        "t": "Copyright, quietly claimed"
+      }
+    ],
+    "curatedAt": "2026-09-28T18:00",
+    "wing": "wing-everything-at-once"
   }
 }
