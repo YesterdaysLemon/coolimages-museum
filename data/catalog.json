@@ -2152,5 +2152,35 @@
     ],
     "curatedAt": "2026-09-28T18:00",
     "wing": "wing-everything-at-once"
+  },
+  "thomas-wright-field-of-eyes-1750": {
+    "title": "Plate XXXII: The Attentive Universe",
+    "artist": "Unknown artist",
+    "medium": "Copperplate engraving on laid paper, 1750",
+    "note": "A full plate of spheres packed edge to edge, each one radiating fine engraved rays, and each one with a single human eye at its centre. The nine largest are lettered A through I in the manner of a proper astronomical figure, which means somebody expected you to cross-reference this against a page of text. The craft is in the hatching: thousands of short burin strokes making the light look like it is genuinely coming out of each pupil. It is a cosmological diagram and a room full of staring, and it was never asked to choose.",
+    "callouts": [
+      {
+        "u": 0.32,
+        "v": 0.086,
+        "t": "Plate number (as usual)"
+      },
+      {
+        "u": 0.34,
+        "v": 0.227,
+        "t": "Sphere A (looking back)"
+      },
+      {
+        "u": 0.665,
+        "v": 0.475,
+        "t": "Concentric rings, pupil centred"
+      },
+      {
+        "u": 0.42,
+        "v": 0.757,
+        "t": "Sphere C (wide awake)"
+      }
+    ],
+    "curatedAt": "2026-10-04T18:00",
+    "wing": "wing-devotional-diagrams"
   }
 }
