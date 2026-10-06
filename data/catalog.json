@@ -2182,5 +2182,30 @@
     ],
     "curatedAt": "2026-10-04T18:00",
     "wing": "wing-devotional-diagrams"
+  },
+  "HT2Qv38XAAAedac": {
+    "title": "Triangle Wave Test",
+    "artist": "bobaquail",
+    "medium": "Animated digital illustration, 1 second, looping",
+    "note": "A chibi Hatsune Miku stands inside a hand-drawn circuit: two batteries labelled B₁ 3V and B₂ 9V at the top, two resistors drawn as cyan zigzags down the sides, all on a charcoal-grey field. Over the loop she bobs and sways in place, arms drifting, one boot lifted, the circuit around her never moving at all. The joke is in the title: this is an animation exercise about waveform easing, and the artist has drawn the test rig around the subject. The resistance values are specific enough that someone clearly enjoyed picking them.",
+    "callouts": [
+      {
+        "u": 0.78,
+        "v": 0.25,
+        "t": "B₂: 9V (generous)"
+      },
+      {
+        "u": 0.07,
+        "v": 0.5,
+        "t": "Resistor, drawn as zigzag"
+      },
+      {
+        "u": 0.22,
+        "v": 0.73,
+        "t": "Boot, mid-sway"
+      }
+    ],
+    "curatedAt": "2026-10-06T18:00",
+    "wing": "wing-understudies"
   }
 }
