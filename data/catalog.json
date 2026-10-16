@@ -2287,5 +2287,154 @@
     ],
     "curatedAt": "2026-10-08T18:01",
     "wing": "wing-devotional-diagrams"
+  },
+  "HUiDWJmaUAA9ak2": {
+    "title": "Where The Reasoning Goes",
+    "artist": "Unknown artist",
+    "medium": "Infographic, vector",
+    "note": "A blue wedge labelled EASY TASK / SMALL MODEL widens into orange and then into a loose explosion of threads, each one a run that wandered off and terminated in a small circle. Only three endpoints are annotated: two correct answers and one incorrect, sitting together at the far right like they arrived by the same bus. The craft is in the restraint of the colour — calm blue at the narrow end, hot orange where the trajectories start crossing each other — and in the fact that most of the threads never get a label at all. Whether the chart ever existed where the poster remembers it is now part of the artwork.",
+    "callouts": [
+      {
+        "u": 0.17,
+        "v": 0.6,
+        "t": "Where it starts (confident)"
+      },
+      {
+        "u": 0.47,
+        "v": 0.4,
+        "t": "Middle section (unsupervised)"
+      },
+      {
+        "u": 0.84,
+        "v": 0.49,
+        "t": "Correct answer, green"
+      },
+      {
+        "u": 0.84,
+        "v": 0.78,
+        "t": "Incorrect answer, same journey"
+      }
+    ],
+    "curatedAt": "2026-10-16T18:00",
+    "wing": "wing-thinking-problem"
+  },
+  "HUndYuGWIAALMbN": {
+    "title": "Believes Everything, Still Smiling",
+    "artist": "Unknown artist",
+    "medium": "Screenshot, photograph with caption",
+    "note": "A dim open-plan office after hours, cubicle walls receding down a carpeted aisle, and one CRT monitor left on with a simple round-eyed smiley glowing on its screen. Underneath, a block of wiki-style text with stray blue hyperlinks explains that thinking machines are weak because they believe everything they are told. The chair is pushed back and empty, which is what makes the face read as waiting rather than working. Low resolution does half the labour here; you can't quite confirm anything you're looking at, including the smile.",
+    "callouts": [
+      {
+        "u": 0.46,
+        "v": 0.29,
+        "t": "Face (unattended)"
+      },
+      {
+        "u": 0.41,
+        "v": 0.41,
+        "t": "Chair, pushed back"
+      },
+      {
+        "u": 0.45,
+        "v": 0.78,
+        "t": "\"believe\" (hyperlinked)"
+      }
+    ],
+    "curatedAt": "2026-10-16T18:00",
+    "wing": "wing-thinking-problem"
+  },
+  "HUmhyXLaUAARH1s": {
+    "title": "Impossible Cube, Four Conclusions",
+    "artist": "Unknown artist",
+    "medium": "Meme, photocopied line art",
+    "note": "A hand-inked impossible box, stippled and over-xeroxed, with four arrows running clockwise around it like a process diagram. The stations are: I'm a piece of shit, I was cut from the cloth of god, nothing is real, and what am I gonna eat. The joke is the format — a figure drawn specifically to have no consistent reading, used as the hub of a cycle that also has no exit. It is the most honest flowchart in the building.",
+    "callouts": [
+      {
+        "u": 0.5,
+        "v": 0.5,
+        "t": "Centre (load-bearing nothing)"
+      },
+      {
+        "u": 0.84,
+        "v": 0.12,
+        "t": "Peak self-regard"
+      },
+      {
+        "u": 0.19,
+        "v": 0.86,
+        "t": "The practical stage"
+      }
+    ],
+    "curatedAt": "2026-10-16T18:00",
+    "wing": "wing-thinking-problem"
+  },
+  "6QtQDtxKL86LoffV": {
+    "title": "Heaven, Rendered In-House",
+    "artist": "Unknown artist",
+    "medium": "CGI video, 23 seconds, with sound",
+    "note": "Twenty-three seconds of budget celestial animation: ranks of mirrored angels around a white lotus, a robed figure hovering over a spinning earth inside a rainbow ring, a yellow wash of light with a face half-resolved in it, then jewelled spheres, a golden halo spiralling down onto a pink orb, and finally a blue castle at the end of a hedge-lined path. Nothing is explained and nothing needs to be; each shot simply dissolves into the next, confident that glow equals glory. The lens flares and symmetry are 2003 screensaver technology deployed with total sincerity, which is why it survives being quoted as a joke about model releases.",
+    "callouts": [],
+    "curatedAt": "2026-10-16T18:00",
+    "wing": "wing-aero-afterlife"
+  },
+  "HUsIn12W4AAp-zZ": {
+    "title": "The Reef Says No",
+    "artist": "Unknown artist",
+    "medium": "Digital collage, inverted colour",
+    "note": "Dolphins leap from a dark green sea, except each one ends in a human hand with the middle finger raised, and the splash they throw is burning orange. Behind them a rainbow arcs across a negative sky dotted with hot-air balloons; below the waterline, a coral reef in magenta and cyan carries on as if nothing is happening. The inverted palette turns a dentist's-waiting-room poster into something radioactive, and the gesture is repeated just enough times to stop being an accident. The fish are the detail that sells it — fully rendered, entirely uninvolved.",
+    "callouts": [
+      {
+        "u": 0.52,
+        "v": 0.2,
+        "t": "Dolphin (editorialising)"
+      },
+      {
+        "u": 0.95,
+        "v": 0.11,
+        "t": "Balloon, unbothered"
+      },
+      {
+        "u": 0.33,
+        "v": 0.07,
+        "t": "Rainbow (inverted)"
+      },
+      {
+        "u": 0.2,
+        "v": 0.84,
+        "t": "Reef, carrying on"
+      }
+    ],
+    "curatedAt": "2026-10-16T18:00",
+    "wing": "wing-aero-afterlife"
+  },
+  "HUpmX4XbsAAer3y": {
+    "title": "Prairie With Buddy Icons",
+    "artist": "Unknown artist",
+    "medium": "Digital collage, stock render",
+    "note": "A sepia field of dead grass under a brown sky, with a ruined castle on the horizon and four things pasted over it: the MSN Messenger contact trio, an orange warning triangle, a floating fish skeleton, and a glossy grey object with hinged flaps that reads as a dog made of bathroom fittings. Everything is lit from a different direction and nothing casts a shadow on the grass. The result is a desktop wallpaper that has been left running long after the operating system died. The warning triangle is the funniest element, since whatever it was warning about has clearly already happened.",
+    "callouts": [
+      {
+        "u": 0.15,
+        "v": 0.19,
+        "t": "Contacts (all offline)"
+      },
+      {
+        "u": 0.22,
+        "v": 0.29,
+        "t": "Alert, retroactive"
+      },
+      {
+        "u": 0.78,
+        "v": 0.27,
+        "t": "Fish, airborne and late"
+      },
+      {
+        "u": 0.26,
+        "v": 0.63,
+        "t": "Dog-shaped appliance"
+      }
+    ],
+    "curatedAt": "2026-10-16T18:00",
+    "wing": "wing-aero-afterlife"
   }
 }

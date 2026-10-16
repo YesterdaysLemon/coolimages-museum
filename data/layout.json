@@ -261,6 +261,34 @@
         "HTSYeMrWcAA58V5"
       ],
       "form": "basilica"
+    },
+    "wing-thinking-problem": {
+      "name": "The Thinking Problem",
+      "subtitle": "Minds, Losing Track",
+      "statement": "A cone of reasoning that fans out into a thicket and lands on the wrong answer with great confidence, an office monitor that believes everything it is told and smiles about it, and an impossible cube ringed by four incompatible conclusions. All three are diagrams of thought, drawn by people who have noticed that thought does not always arrive anywhere. White walls, because each of them is already mostly diagram.",
+      "template": "white",
+      "accent": "#e4572e",
+      "created": "2026-10-16T18:00",
+      "works": [
+        "HUiDWJmaUAA9ak2",
+        "HUndYuGWIAALMbN",
+        "HUmhyXLaUAARH1s"
+      ],
+      "form": "void"
+    },
+    "wing-aero-afterlife": {
+      "name": "Aero Afterlife",
+      "subtitle": "Y2K, Still Rendering",
+      "statement": "Three images built from the gloss of the early 2000s: a CGI heaven of lotuses and lens flares, a negative-colour reef where the dolphins have opinions, and a dead prairie with the MSN contact list floating over it. Each one was made with tools designed to look expensive and optimistic, and each has outlived the optimism. Dark room, because all of them are lit from inside.",
+      "template": "night",
+      "accent": "#2fd0d8",
+      "created": "2026-10-16T18:00",
+      "works": [
+        "6QtQDtxKL86LoffV",
+        "HUsIn12W4AAp-zZ",
+        "HUpmX4XbsAAer3y"
+      ],
+      "form": "crypt"
     }
   },
   "links": [
@@ -363,6 +391,16 @@
       "wing-everything-at-once",
       "wing-fine-grain",
       "More than the eye takes"
+    ],
+    [
+      "wing-aero-afterlife",
+      "wing-everything-at-once",
+      "Screens, fully loaded"
+    ],
+    [
+      "wing-aero-afterlife",
+      "wing-somewhere-to-stand",
+      "Rendered for nobody"
     ]
   ],
   "stairs": {
