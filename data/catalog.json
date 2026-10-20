@@ -2070,8 +2070,7 @@
       }
     ],
     "curatedAt": "2026-09-28T18:00",
-    "wing": "lobby",
-    "hold": true
+    "wing": "wing-permitted-twilight"
   },
   "HTJazV7aUAAVXUE": {
     "title": "Still Working On It",
@@ -2436,5 +2435,80 @@
     ],
     "curatedAt": "2026-10-16T18:00",
     "wing": "wing-aero-afterlife"
+  },
+  "HU6hBgBXcAAI33t": {
+    "title": "Two Titans In Ganton",
+    "artist": "Unknown artist",
+    "medium": "Screenshot, modded PS2-era game",
+    "note": "Two imported cartoon characters stand on a cracked suburban driveway in San Andreas, each holding a lit blunt rendered as a fat white cylinder with an orange ember texture and a thin ribbon of smoke. The character models are high-detail by 2004 standards and still miles sharper than the beige house, chain-link fence and flat grass behind them, which is what makes the picture funny: they've been dropped into a world with a lower budget than they have. Their expressions are the neutral default faces the models shipped with, which reads here as supreme composure.",
+    "callouts": [
+      {
+        "u": 0.22,
+        "v": 0.66,
+        "t": "Ember (hand-painted)"
+      },
+      {
+        "u": 0.33,
+        "v": 0.21,
+        "t": "Gem, still load-bearing"
+      },
+      {
+        "u": 0.52,
+        "v": 0.12,
+        "t": "Background: considerably cheaper"
+      }
+    ],
+    "curatedAt": "2026-10-20T18:00",
+    "wing": "wing-aero-afterlife"
+  },
+  "HU9_7cbWQAA-5J0": {
+    "title": "Nothing Occult About This",
+    "artist": "Unknown artist",
+    "medium": "Meme, three stacked panels",
+    "note": "A grid of goetic sigils sits on top, a strip of circuit boards sits underneath, and between them a smug figure in an OpenAI cap insists there's nothing occult going on while a logo-branded golem stands inside a summoning circle made of traces, vias and surface-mount components. The joke works because the top and bottom panels are both grids of inscrutable linework and you genuinely have to look twice to tell which is which. The drawing is crude on purpose; the circuit-circle is the one thing the artist clearly took time over.",
+    "callouts": [
+      {
+        "u": 0.13,
+        "v": 0.39,
+        "t": "Cap (brand loyalty)"
+      },
+      {
+        "u": 0.66,
+        "v": 0.69,
+        "t": "Summoning circle, surface-mount"
+      },
+      {
+        "u": 0.47,
+        "v": 0.09,
+        "t": "Sigils, labels too small"
+      }
+    ],
+    "curatedAt": "2026-10-20T18:00",
+    "wing": "wing-permitted-twilight"
+  },
+  "HU8-KVoWsAAjZ-w": {
+    "title": "He Has Permitted The Twilight",
+    "artist": "Unknown photographer",
+    "medium": "Photograph of a printed page",
+    "note": "A single paragraph of Chesterton on cream paper, photographed close enough that the serifs and the slight warmth of the page are the whole image. It argues that the ordinary man stays sane by keeping one foot in fairyland and holding two contradictory truths at once without flinching. Hung in a museum of saved images it functions as a wall text for everything else here: the defence of looking at something strange and declining to explain it.",
+    "callouts": [
+      {
+        "u": 0.33,
+        "v": 0.27,
+        "t": "One foot in fairyland"
+      },
+      {
+        "u": 0.26,
+        "v": 0.71,
+        "t": "Spiritual sight: stereoscopic"
+      },
+      {
+        "u": 0.62,
+        "v": 0.92,
+        "t": "Fate and free will"
+      }
+    ],
+    "curatedAt": "2026-10-20T18:00",
+    "wing": "wing-permitted-twilight"
   }
 }

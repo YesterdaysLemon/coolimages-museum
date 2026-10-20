@@ -286,9 +286,24 @@
       "works": [
         "6QtQDtxKL86LoffV",
         "HUsIn12W4AAp-zZ",
-        "HUpmX4XbsAAer3y"
+        "HUpmX4XbsAAer3y",
+        "HU6hBgBXcAAI33t"
       ],
       "form": "crypt"
+    },
+    "wing-permitted-twilight": {
+      "name": "The Permitted Twilight",
+      "subtitle": "Mystery, Kept Intact",
+      "statement": "A page of Chesterton arguing that sanity depends on keeping one foot in fairyland, a meme pointing out that the machine everyone calls rational is standing in a summoning circle, and a girl strolling through flowers under a hole in the sky. Each one declines to resolve the strange thing it is looking at, and each is healthier for it. The room is dark so the glow comes from the pictures and not from an explanation.",
+      "template": "night",
+      "accent": "#6b4fa8",
+      "created": "2026-10-20T18:00",
+      "works": [
+        "HU9_7cbWQAA-5J0",
+        "HU8-KVoWsAAjZ-w",
+        "HTGeWQWbkAAB3uk"
+      ],
+      "form": "octagon"
     }
   },
   "links": [
@@ -401,6 +416,11 @@
       "wing-aero-afterlife",
       "wing-somewhere-to-stand",
       "Rendered for nobody"
+    ],
+    [
+      "wing-permitted-twilight",
+      "wing-wet-hardware",
+      "The machine has organs"
     ]
   ],
   "stairs": {
