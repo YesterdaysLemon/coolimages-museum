@@ -2510,5 +2510,74 @@
     ],
     "curatedAt": "2026-10-20T18:00",
     "wing": "wing-permitted-twilight"
+  },
+  "HVHXwn0X0AAKDJx": {
+    "title": "Subagent CoT, Original Tab",
+    "artist": "Unknown artist",
+    "medium": "Screenshot, lavender background",
+    "note": "A model's internal reasoning rendered as a wall of lavender monospace in which the spaces have begun falling out: \"Userinstruct\", \"butpolicy unknown\", \"Can'tbypassinstruction?\". The interface helpfully offers three tabs — Original, Spaces added, Translation — which tells you everything about how legible this was expected to be. Halfway down it stops worrying about monitors and starts worrying about dehydration in a rendering framework, and never explains the transition. It reads like someone talking themselves through a task in a language they are inventing as they go.",
+    "callouts": [
+      {
+        "u": 0.07,
+        "v": 0.048,
+        "t": "Label: Subagent CoT"
+      },
+      {
+        "u": 0.96,
+        "v": 0.048,
+        "t": "Translation tab (available)"
+      },
+      {
+        "u": 0.12,
+        "v": 0.785,
+        "t": "\"shouldavoiddehydration\" (unclear whose)"
+      },
+      {
+        "u": 0.33,
+        "v": 0.337,
+        "t": "Parent, repeatedly invoked"
+      }
+    ],
+    "curatedAt": "2026-10-22T18:00",
+    "wing": "wing-thinking-problem"
+  },
+  "-UJpqNEHfJniIBhl": {
+    "title": "Patch Tuesday, With Dancer",
+    "artist": "Unknown artist",
+    "medium": "Screen recording with anime overlay, 72 seconds",
+    "note": "A feed of security disclosures scrolls past — a PHP engine advisory, an NSA bulletin telling organisations to take systems offline, a supply-chain attack in an LLM package, someone noting the exploit attempts arrived within forty-five minutes — while a small white-haired girl in a black dress loops the same cheerful dance over the top of all of it. The news gets worse frame by frame; her choreography does not change by a single beat. By the last panel there are leaked certificate private keys on screen and a large red 4, and she is still going. The joke is entirely in the refusal of the overlay to acknowledge what it is standing on.",
+    "callouts": [],
+    "curatedAt": "2026-10-22T18:00",
+    "wing": "wing-escalation"
+  },
+  "HVLTiLYW4AASJp_": {
+    "title": "Cursed Wet Feverdream",
+    "artist": "Dreaming Tulpa (@dreamingtulpa)",
+    "medium": "Midjourney image, degraded",
+    "note": "A portrait of a person with auburn hair in a grey t-shirt, over which the generator has stacked two snarling wolf heads, doubled the face, and let several tongues hang down the middle like curtain ties. The eyes are the giveaway: each one is a bright yellow ring with a pupil that has collapsed into a visible square of red pixels, as though the render gave up at exactly that resolution. The soft flash-lit room behind it stays completely ordinary, right down to the can of drink at the bottom edge. That calm background is why the rest reads as corruption rather than costume.",
+    "callouts": [
+      {
+        "u": 0.63,
+        "v": 0.09,
+        "t": "Pupil (pixel blocks)"
+      },
+      {
+        "u": 0.36,
+        "v": 0.53,
+        "t": "Third eye, misfiled"
+      },
+      {
+        "u": 0.37,
+        "v": 0.86,
+        "t": "Tongues (two, matching)"
+      },
+      {
+        "u": 0.38,
+        "v": 0.96,
+        "t": "Beverage, unbothered"
+      }
+    ],
+    "curatedAt": "2026-10-22T18:00",
+    "wing": "wing-signal-loss"
   }
 }
