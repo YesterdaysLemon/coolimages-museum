@@ -2579,5 +2579,66 @@
     ],
     "curatedAt": "2026-10-22T18:00",
     "wing": "wing-signal-loss"
+  },
+  "HT_CwMsWwAAd5Tq": {
+    "title": "Perspective Lines, Drawn By Hand",
+    "artist": "Unknown artist",
+    "medium": "Ink drawing over photograph",
+    "note": "A photograph of an ordinary empty room — lace curtains, a window, a bit of dark floorboard — has been overdrawn in thick black ink with the corners of the room traced out and a dashed star of sightlines radiating from the middle. At the centre stands a flat figure in a suit whose head is a single large open eye. Every line in the room obediently converges on it, which is either a lesson in one-point perspective or a diagram of being the only thing in a house that is awake.",
+    "callouts": [
+      {
+        "u": 0.6,
+        "v": 0.46,
+        "t": "Head (one eye, open)"
+      },
+      {
+        "u": 0.47,
+        "v": 0.05,
+        "t": "Sightline, exits ceiling"
+      },
+      {
+        "u": 0.35,
+        "v": 0.27,
+        "t": "Real curtains, inked over"
+      },
+      {
+        "u": 0.17,
+        "v": 0.85,
+        "t": "Room corner, retraced"
+      }
+    ],
+    "curatedAt": "2026-10-24T18:00",
+    "wing": "wing-somewhere-to-stand"
+  },
+  "HVRKWL7aYAA61gD": {
+    "title": "Workstation, Returned To Nature",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, overgrown hillside",
+    "note": "A wooden desk carrying a beige CRT, a tower and a keyboard sits in a clearing of ferns and creeper, with a cream office chair pushed in at a slightly hopeful angle. The vegetation comes right up to the desk legs and the light through the eucalyptus is genuinely lovely, which makes the whole thing read less like dumping and more like relocation. Nothing is smashed; the chair is simply waiting for whoever stepped away.",
+    "callouts": [
+      {
+        "u": 0.42,
+        "v": 0.5,
+        "t": "CRT (facing the trees)"
+      },
+      {
+        "u": 0.46,
+        "v": 0.56,
+        "t": "Keyboard, no desk mat"
+      },
+      {
+        "u": 0.6,
+        "v": 0.57,
+        "t": "Chair, pushed in politely"
+      },
+      {
+        "u": 0.1,
+        "v": 0.5,
+        "t": "Ferns, gaining ground"
+      }
+    ],
+    "curatedAt": "2026-10-24T18:00",
+    "wing": "lobby",
+    "hold": true
   }
 }
