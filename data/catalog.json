@@ -2640,5 +2640,35 @@
     "curatedAt": "2026-10-24T18:00",
     "wing": "lobby",
     "hold": true
+  },
+  "HSjuBVxXcAAK9Z9": {
+    "title": "The GPU Caste System",
+    "artist": "Unknown artist",
+    "medium": "Infographic, chart on white",
+    "note": "A vertical ranking of computing hardware, from a 72-GPU rack at the top down to a lone Intel Arc B580 at the bottom, with each tier annotated in coloured text describing the class of human it corresponds to: philosophers and kings near the top, street merchants near the bottom, \"Untouchable\" in red at the floor. The product renders are all official press shots, uniformly lit and dignified, which makes the social commentary feel like it was typed in afterwards by someone who had been awake too long. What sells it is the precision of the middle: 4x RTX 3090 is Middle Management, 2x RTX 4090 is an Officer, and someone clearly agonised over that distinction. A caste chart is a terrible way to organise people and a very funny way to organise graphics cards.",
+    "callouts": [
+      {
+        "u": 0.42,
+        "v": 0.13,
+        "t": "Top rack (destined for millennia)"
+      },
+      {
+        "u": 0.83,
+        "v": 0.845,
+        "t": "Mac Studios: peasantry"
+      },
+      {
+        "u": 0.85,
+        "v": 0.955,
+        "t": "Red text (no appeal)"
+      },
+      {
+        "u": 0.46,
+        "v": 0.335,
+        "t": "Tower PC, awkwardly ennobled"
+      }
+    ],
+    "curatedAt": "2026-11-09T18:00",
+    "wing": "wing-everything-at-once"
   }
 }
