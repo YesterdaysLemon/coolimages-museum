@@ -2670,5 +2670,86 @@
     ],
     "curatedAt": "2026-11-09T18:00",
     "wing": "wing-everything-at-once"
+  },
+  "HW7mLvPWYAAceGi": {
+    "title": "Two Does, Flash Photography",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, flash at night",
+    "note": "Two figures stand in a field of small white flowers at night, both wearing shed antlers tied into their hair, one upright and watchful, the other crouched with a hand lowered into the blossoms. The camera flash picks out every petal for about four metres and then surrenders to total black, which is doing most of the work here. The antlers are clearly real and clearly tied on, and the picture is better for not hiding it.",
+    "callouts": [
+      {
+        "u": 0.36,
+        "v": 0.13,
+        "t": "Antlers (borrowed, not grown)"
+      },
+      {
+        "u": 0.6,
+        "v": 0.87,
+        "t": "Hand down in the flowers"
+      },
+      {
+        "u": 0.85,
+        "v": 0.14,
+        "t": "Where the flash gives up"
+      }
+    ],
+    "curatedAt": "2026-11-13T18:00",
+    "wing": "wing-permitted-twilight"
+  },
+  "HW8FZYzaAAA6gwX": {
+    "title": "Feral In The Corridor",
+    "artist": "Unknown artist",
+    "medium": "Digital drawing",
+    "note": "A catgirl crouches on all fours in a washed-out institutional hallway, drawn in smeared greys with a yellow scribble of halo behind her head. Her face carries two sets of eyes — flat black ones on the mask, a blue and a red X beneath it — and a cloud of pixelated mouse cursors swarms above her like flies. The hands are hands, not paws, which is the detail that keeps it unsettling rather than cute.",
+    "callouts": [
+      {
+        "u": 0.46,
+        "v": 0.09,
+        "t": "Cursors (swarming)"
+      },
+      {
+        "u": 0.44,
+        "v": 0.38,
+        "t": "Eye: closed by error"
+      },
+      {
+        "u": 0.19,
+        "v": 0.63,
+        "t": "Hands, still hands"
+      }
+    ],
+    "curatedAt": "2026-11-13T18:00",
+    "wing": "lobby",
+    "hold": true
+  },
+  "HW9LzMuagAA4BxW": {
+    "title": "24th Omnidimensional Operations",
+    "artist": "Unknown artist",
+    "medium": "Embroidered patch, photographed on black",
+    "note": "A squadron patch in red, silver and midnight blue: three interlocking rings studded with red-irised eyes orbiting a single larger eye, over a blue grid horizon, with \"BEYOND ALL BOUNDS\" stitched along the bottom. Every convention of real military heraldry is observed exactly — the arced unit name, the four-pointed stars, the merrowed red border — which is what sells the absurd remit. The embroidery is genuinely good; you can see the satin stitch catching the light on the rings.",
+    "callouts": [
+      {
+        "u": 0.5,
+        "v": 0.5,
+        "t": "Central eye (unblinking)"
+      },
+      {
+        "u": 0.33,
+        "v": 0.42,
+        "t": "Eyes, evenly spaced"
+      },
+      {
+        "u": 0.5,
+        "v": 0.84,
+        "t": "Motto, fully committed"
+      },
+      {
+        "u": 0.5,
+        "v": 0.64,
+        "t": "Grid for the unmappable"
+      }
+    ],
+    "curatedAt": "2026-11-13T18:00",
+    "wing": "wing-devotional-diagrams"
   }
 }
