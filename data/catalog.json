@@ -2638,8 +2638,7 @@
       }
     ],
     "curatedAt": "2026-10-24T18:00",
-    "wing": "lobby",
-    "hold": true
+    "wing": "wing-somewhere-to-stand"
   },
   "HSjuBVxXcAAK9Z9": {
     "title": "The GPU Caste System",
@@ -2751,5 +2750,61 @@
     ],
     "curatedAt": "2026-11-13T18:00",
     "wing": "wing-devotional-diagrams"
+  },
+  "HXLuivqW8AAhDqb": {
+    "title": "Magical Girls, 1998 Edition",
+    "artist": "Almost certainly a model",
+    "medium": "Digital image, imaginary N64 title screen",
+    "note": "Six magical girls crowd a purple starfield in chunky late-nineties polygons, faces flat-shaded, hair resolved into about nine triangles each, one of them mid-sob with tears baked into the texture. The logo is airbrushed in pink and gold and the PRESS START sits exactly where muscle memory expects it. The joke is that no such cartridge existed, and yet every seam and dither pattern is argued so confidently that the memory of playing it starts to assemble itself anyway. It is nostalgia for a thing that was never manufactured.",
+    "callouts": [
+      {
+        "u": 0.2,
+        "v": 0.08,
+        "t": "Logo (airbrushed, certain)"
+      },
+      {
+        "u": 0.47,
+        "v": 0.17,
+        "t": "Tears (low-poly)"
+      },
+      {
+        "u": 0.74,
+        "v": 0.17,
+        "t": "Mouth: one polygon"
+      },
+      {
+        "u": 0.5,
+        "v": 0.95,
+        "t": "Press Start (nothing starts)"
+      }
+    ],
+    "curatedAt": "2026-11-17T18:00",
+    "wing": "wing-aero-afterlife"
+  },
+  "HXQU-agXsAAC1Ez": {
+    "title": "Marlboros, Stored Informally",
+    "artist": "Unknown photographer",
+    "medium": "Photograph, 35mm film",
+    "note": "A soft-focus film shot of a waistband: black lace, unbuttoned dark denim, and a full pack of Marlboro 100s wedged between the two like it was always meant to live there. The background dissolves into green and teal signage, so the only sharp things are the red chevron on the box and the stitched edge of the lace. It is a photograph entirely about pocket logistics, which is a surprisingly good subject. The pack is the most formally dressed object in the frame.",
+    "callouts": [
+      {
+        "u": 0.44,
+        "v": 0.55,
+        "t": "Pack (load-bearing)"
+      },
+      {
+        "u": 0.2,
+        "v": 0.45,
+        "t": "Lace, doing the holding"
+      },
+      {
+        "u": 0.68,
+        "v": 0.73,
+        "t": "Thumb (anchor point)"
+      }
+    ],
+    "curatedAt": "2026-11-17T18:00",
+    "wing": "lobby",
+    "hold": true
   }
 }
